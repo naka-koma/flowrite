@@ -1,4 +1,3 @@
 **/**
-!gas/**
-!gas/appsscript.json
-gas/.gitkeep
+!build/**
+!build/appsscript.json
