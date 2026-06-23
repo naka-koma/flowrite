@@ -95,12 +95,19 @@ Issueに紐づく場合はIssue番号を含める: `feature/123-add-budget-chart
 
 ### Claude Codeの作業手順
 
-実装タスクを受けたら以下の手順で進める:
+#### A. Issue先行パターン（「#N を実装して」）
 
-1. **ブランチ作成:** mainから作業ブランチを切る (`git checkout -b feature/xxx main`)
-2. **実装・コミット:** 変更を実装し、適切な粒度でコミットする
-3. **push・PR作成:** 作業が完了したら `git push -u origin <branch>` してPRを作成する。PRのタイトルとサマリは変更内容に基づいて自動生成する。Issueに紐づく場合はPR本文に `Closes #<number>` を含める
-4. **マージ・後片付け:** PRをマージし、リモートの作業ブランチを削除する (`gh pr merge --merge --delete-branch`)。マージ後は `git checkout main && git pull` でローカルを最新化する
+1. **Issue確認:** `gh issue view <number>` でIssueの内容を読み、要件を把握する
+2. **ブランチ作成:** mainから作業ブランチを切る (`git checkout -b feature/<number>-xxx main`)
+3. **実装・コミット:** 変更を実装し、適切な粒度でコミットする
+4. **push・PR作成:** `git push -u origin <branch>` してPRを作成する。PR本文に `Closes #<number>` を含める
+5. **マージ・後片付け:** `gh pr merge --merge --delete-branch` でマージ。`git checkout main && git pull` でローカルを最新化する
+
+#### B. Plan先行パターン（計画してからIssueを立てる）
+
+1. **計画:** ユーザーと一緒に設計・実装計画を練る
+2. **Issue作成:** `gh issue create` で計画内容をIssueに記録する
+3. **以降はAと同じ:** ブランチ作成→実装→PR（`Closes #<number>`付き）→マージ
 
 ## 作業時の注意
 
