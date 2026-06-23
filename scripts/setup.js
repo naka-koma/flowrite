@@ -59,7 +59,7 @@ async function main() {
     const gasClaspJson = resolve(root, "gas", ".clasp.json");
     if (existsSync(gasClaspJson)) {
       const json = JSON.parse(readFileSync(gasClaspJson, "utf8"));
-      json.rootDir = "gas";
+      json.rootDir = "build";
       writeFileSync(claspJsonPath, JSON.stringify(json, null, 2));
       execSync(`del "${gasClaspJson}"`, { stdio: "ignore" });
     }
