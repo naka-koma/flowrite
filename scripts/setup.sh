@@ -14,12 +14,11 @@ if ! command -v clasp &> /dev/null; then
   exit 1
 fi
 
-# フロントエンド依存インストール
-if [ ! -d "$PROJECT_ROOT/frontend/node_modules" ]; then
-  echo "=== npm install (frontend) ==="
-  cd "$PROJECT_ROOT/frontend"
-  npm install
+# 依存インストール
+if [ ! -d "$PROJECT_ROOT/node_modules" ]; then
+  echo "=== npm install ==="
   cd "$PROJECT_ROOT"
+  npm install
 fi
 
 # clasp login
