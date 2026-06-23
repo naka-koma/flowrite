@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "node scripts/build.js",
     "typecheck": "tsc --noEmit",
-    "deploy": "npm run build && clasp push && clasp deploy -d \"deploy\"",
+    "deploy": "npm run build && clasp push --force && clasp deploy -d \"deploy\"",
     "open": "clasp open",
     "open:webapp": "clasp open --webapp",
     "setup": "node scripts/setup.js"
