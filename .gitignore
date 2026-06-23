@@ -16,6 +16,9 @@ gas/index.html
 # GAS project config (generated from template)
 appsscript.json
 
+# Claude Code (local settings)
+.claude/settings.local.json
+
 # Editor
 .vscode/
 *.swp
