@@ -74,6 +74,33 @@ gas/
 - スプレッドシート操作は `getValues` / `setValues` で一括処理する（ループ内の逐次読み書き禁止）
 - `Logger.log` でデバッグログを残す
 
+## 開発フロー
+
+mainブランチへの直接pushは禁止。すべての変更はPRを経由する。
+
+### ブランチ運用
+
+1. mainから作業ブランチを作成する
+2. 作業ブランチで実装・コミットする
+3. pushしてPRを作成し、mainへのマージを依頼する
+
+### ブランチ命名規則
+
+- 機能追加: `feature/<簡潔な説明>` (例: `feature/add-budget-chart`)
+- バグ修正: `fix/<簡潔な説明>` (例: `fix/csv-encoding-error`)
+- リファクタリング: `refactor/<簡潔な説明>`
+- ドキュメント: `docs/<簡潔な説明>`
+
+Issueに紐づく場合はIssue番号を含める: `feature/123-add-budget-chart`
+
+### Claude Codeの作業手順
+
+実装タスクを受けたら以下の手順で進める:
+
+1. **ブランチ作成:** mainから作業ブランチを切る (`git checkout -b feature/xxx main`)
+2. **実装・コミット:** 変更を実装し、適切な粒度でコミットする
+3. **push・PR作成:** 作業が完了したら `git push -u origin <branch>` してPRを作成する。PRのタイトルとサマリは変更内容に基づいて自動生成する。Issueに紐づく場合はPR本文に `Closes #<number>` を含める
+
 ## 作業時の注意
 
 - `gas/index.html` はビルド成果物。フロントエンドの変更は `frontend/src` を編集してビルドし直す
