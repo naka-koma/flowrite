@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+frontend/dist/
+gas/index.html
+
+# Environment / secrets
+.env
+.env.local
+
+# clasp (contains scriptId and deploymentId)
+.clasp.json
+
+# GAS project config (generated from template)
+appsscript.json
+
+# Editor
+.vscode/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db

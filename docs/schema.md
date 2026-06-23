@@ -1,0 +1,52 @@
+# スプレッドシートスキーマ
+
+## シート一覧
+
+| シート名 | 用途 |
+|---|---|
+| raw_data | CSVから取り込んだ全トランザクションの蓄積 |
+| ai_log | Gemini APIへのリクエスト・レスポンスの記録 |
+
+---
+
+## raw_data シート
+
+### カラム定義
+
+| 列 | カラム名 | 型 | 説明 |
+|---|---|---|---|
+| A | id | string | MoneyForwardのユニークID（重複排除キー） |
+| B | date | string | 日付（YYYY/MM/DD形式） |
+| C | content | string | 内容（店舗名・サービス名） |
+| D | amount | number | 金額（支出は負値、収入は正値） |
+| E | institution | string | 保有金融機関名 |
+| F | category | string | 大項目 |
+| G | subcategory | string | 中項目 |
+| H | memo | string | メモ（空文字の場合あり） |
+| I | isTransfer | number | 振替フラグ（1=振替、0=通常） |
+| J | isTarget | number | 計算対象フラグ（1=対象、0=除外） |
+| K | importedAt | string | 取り込み日時（ISO 8601形式） |
+
+### インデックス
+- A列（id）で重複排除を行う。アップロード時に既存IDと照合してスキップする
+
+### 注意
+- 1行目はヘッダー行とする
+- `amount` は元のCSVの符号をそのまま保持する（支出は負値）
+- 集計時は `isTarget=1` かつ `isTransfer=0` の行のみ対象とする
+
+---
+
+## ai_log シート
+
+### カラム定義
+
+| 列 | カラム名 | 型 | 説明 |
+|---|---|---|---|
+| A | timestamp | string | リクエスト日時（ISO 8601形式） |
+| B | context | string | Geminiに渡したコンテキスト |
+| C | advice | string | Geminiから返ってきたアドバイス |
+
+### 注意
+- 1行目はヘッダー行とする
+- ログは追記のみ。削除・更新は行わない
