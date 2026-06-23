@@ -48,20 +48,38 @@ async function main() {
     run("clasp login");
   }
 
-  // clasp create
+  // clasp project
   const claspJsonPath = resolve(root, ".clasp.json");
   if (existsSync(claspJsonPath)) {
     console.log("clasp: project already exists (skip)");
   } else {
-    console.log("\n=== clasp create ===");
-    run("clasp create --title flowrite", { cwd: resolve(root, "gas") });
+    const scriptId = await rl.question(
+      "\nEnter existing GAS Script ID (leave empty to create new): "
+    );
 
-    const gasClaspJson = resolve(root, "gas", ".clasp.json");
-    if (existsSync(gasClaspJson)) {
-      const json = JSON.parse(readFileSync(gasClaspJson, "utf8"));
-      json.rootDir = "build";
-      writeFileSync(claspJsonPath, JSON.stringify(json, null, 2));
-      execSync(`del "${gasClaspJson}"`, { stdio: "ignore" });
+    if (scriptId) {
+      const claspJson = {
+        scriptId,
+        scriptExtensions: [".js", ".gs"],
+        htmlExtensions: [".html"],
+        jsonExtensions: [".json"],
+        filePushOrder: [],
+        skipSubdirectories: false,
+        rootDir: "build",
+      };
+      writeFileSync(claspJsonPath, JSON.stringify(claspJson, null, 2));
+      console.log(`clasp: connected to existing project (${scriptId})`);
+    } else {
+      console.log("\n=== clasp create ===");
+      run("clasp create --title flowrite", { cwd: resolve(root, "gas") });
+
+      const gasClaspJson = resolve(root, "gas", ".clasp.json");
+      if (existsSync(gasClaspJson)) {
+        const json = JSON.parse(readFileSync(gasClaspJson, "utf8"));
+        json.rootDir = "build";
+        writeFileSync(claspJsonPath, JSON.stringify(json, null, 2));
+        execSync(`del "${gasClaspJson}"`, { stdio: "ignore" });
+      }
     }
   }
 
