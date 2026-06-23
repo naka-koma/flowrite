@@ -101,13 +101,14 @@ Issueに紐づく場合はIssue番号を含める: `feature/123-add-budget-chart
 2. **ブランチ作成:** mainから作業ブランチを切る (`git checkout -b feature/<number>-xxx main`)
 3. **実装・コミット:** 変更を実装し、適切な粒度でコミットする
 4. **push・PR作成:** `git push -u origin <branch>` してPRを作成する。PR本文に `Closes #<number>` を含める
-5. **マージ・後片付け:** `gh pr merge --merge --delete-branch` でマージ。`git checkout main && git pull` でローカルを最新化する
 
 #### B. Plan先行パターン（計画してからIssueを立てる）
 
 1. **計画:** ユーザーと一緒に設計・実装計画を練る
 2. **Issue作成:** `gh issue create` で計画内容をIssueに記録する
-3. **以降はAと同じ:** ブランチ作成→実装→PR（`Closes #<number>`付き）→マージ
+3. **以降はAと同じ:** ブランチ作成→実装→PR（`Closes #<number>`付き）
+
+マージはユーザーが確認してから手動で行う。Claude Codeからは `gh pr merge` を実行しない。
 
 ## 作業時の注意
 
