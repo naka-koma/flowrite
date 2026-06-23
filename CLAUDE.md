@@ -100,6 +100,7 @@ Issueに紐づく場合はIssue番号を含める: `feature/123-add-budget-chart
 1. **ブランチ作成:** mainから作業ブランチを切る (`git checkout -b feature/xxx main`)
 2. **実装・コミット:** 変更を実装し、適切な粒度でコミットする
 3. **push・PR作成:** 作業が完了したら `git push -u origin <branch>` してPRを作成する。PRのタイトルとサマリは変更内容に基づいて自動生成する。Issueに紐づく場合はPR本文に `Closes #<number>` を含める
+4. **マージ・後片付け:** PRをマージし、リモートの作業ブランチを削除する (`gh pr merge --merge --delete-branch`)。マージ後は `git checkout main && git pull` でローカルを最新化する
 
 ## 作業時の注意
 
