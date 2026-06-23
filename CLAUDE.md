@@ -108,7 +108,18 @@ Issueに紐づく場合はIssue番号を含める: `feature/123-add-budget-chart
 2. **Issue作成:** `gh issue create` で計画内容をIssueに記録する
 3. **以降はAと同じ:** ブランチ作成→実装→PR（`Closes #<number>`付き）
 
-マージはユーザーが確認してから手動で行う。Claude Codeからは `gh pr merge` を実行しない。
+### マージに関する禁止事項
+
+**PRのマージはユーザーが手動で行う。Claude Codeからは絶対にマージしない。**
+
+以下の操作はすべて禁止:
+- `gh pr merge` — PRのマージ
+- `gh pr close` — PRのクローズ
+- `gh pr review --approve` — PRの承認
+- `gh api` でのマージAPI呼び出し
+- `git merge` — ローカルでのマージ
+
+Claude Codeの作業範囲はPR作成まで。マージ判断はユーザーに委ねる。
 
 ## 作業時の注意
 

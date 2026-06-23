@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(gh pr merge*)",
+      "Bash(gh pr close*)",
+      "Bash(gh pr review --approve*)",
+      "Bash(gh api */merges*)",
+      "Bash(gh api */pulls/*/merge*)",
+      "Bash(git merge *)",
+      "PowerShell(gh pr merge*)",
+      "PowerShell(gh pr close*)",
+      "PowerShell(gh pr review --approve*)",
+      "PowerShell(gh api */merges*)",
+      "PowerShell(gh api */pulls/*/merge*)",
+      "PowerShell(git merge *)"
+    ]
+  }
+}
