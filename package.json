@@ -8,6 +8,8 @@
     "build": "tsc && vite build",
     "typecheck": "tsc --noEmit",
     "deploy": "npm run build && clasp push",
+    "open": "clasp open",
+    "open:webapp": "clasp open --webapp",
     "setup": "node scripts/setup.js"
   },
   "dependencies": {

@@ -137,6 +137,8 @@ npm run setup
 | `npm run build` | TypeScriptチェック + Viteビルド（`gas/index.html` を生成） |
 | `npm run typecheck` | TypeScript型チェックのみ |
 | `npm run deploy` | ビルド + `clasp push`（GASへデプロイ） |
+| `npm run open` | GASスクリプトエディタをブラウザで開く |
+| `npm run open:webapp` | デプロイ済みWebAppをブラウザで開く |
 | `npm run setup` | 初回セットアップ |
 
 ### トラブルシューティング
