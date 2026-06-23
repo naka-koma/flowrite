@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "deploy": "npm run build && clasp push",
+    "setup": "node scripts/setup.js"
   },
   "dependencies": {
     "react": "^18.3.1",
