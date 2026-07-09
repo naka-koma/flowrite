@@ -24,6 +24,37 @@ function handleUpload(body) {
   return { success: true, inserted: newRows.length, skipped };
 }
 
+function parseCsvLine(line) {
+  const cols = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (inQuotes) {
+      if (char === '"' && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else if (char === '"') {
+        inQuotes = false;
+      } else {
+        current += char;
+      }
+    } else if (char === '"') {
+      inQuotes = true;
+    } else if (char === ",") {
+      cols.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  cols.push(current);
+
+  return cols;
+}
+
 function parseCsv(text) {
   const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "");
   // 1行目はヘッダー、スキップ
@@ -31,7 +62,7 @@ function parseCsv(text) {
   const now = new Date().toISOString();
 
   return dataLines.map((line) => {
-    const cols = line.split(",");
+    const cols = parseCsvLine(line);
     return {
       id: cols[9] || "",
       date: cols[1] || "",
