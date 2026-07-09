@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "deploy": "node scripts/deploy.js",
     "open": "clasp open",
-    "open:webapp": "clasp open --webapp",
+    "open:webapp": "node scripts/open-webapp.js",
     "setup": "node scripts/setup.js"
   },
   "dependencies": {
