@@ -19,7 +19,7 @@ export function useTrend() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch("/?action=trend")
+    fetch("?action=trend")
       .then((response) => response.json())
       .then((data: TrendResponse) => {
         if (cancelled) return;

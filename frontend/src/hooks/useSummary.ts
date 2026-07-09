@@ -20,7 +20,7 @@ export function useSummary(year: number, month: number) {
     let cancelled = false;
     setState({ status: "loading", data: null, errorMessage: null });
 
-    fetch(`/?action=summary&year=${year}&month=${month}`)
+    fetch(`?action=summary&year=${year}&month=${month}`)
       .then((response) => response.json())
       .then((data: SummaryResponse) => {
         if (cancelled) return;
