@@ -35,7 +35,7 @@ export function useUpload() {
 
     try {
       const csv = await readAsBase64(file);
-      const response = await fetch("/?action=upload", {
+      const response = await fetch("?action=upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ csv }),
