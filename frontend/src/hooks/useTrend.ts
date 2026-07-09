@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { TrendResponse } from "../types/api";
-import { apiUrl } from "../lib/apiBase";
+import { runScript } from "../lib/googleScriptRun";
 
 type TrendStatus = "loading" | "success" | "error";
 
@@ -20,9 +20,8 @@ export function useTrend() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch(apiUrl("?action=trend"))
-      .then((response) => response.json())
-      .then((data: TrendResponse) => {
+    runScript<TrendResponse>("handleTrend")
+      .then((data) => {
         if (cancelled) return;
 
         if (data.error) {

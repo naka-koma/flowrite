@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { UploadResponse } from "../types/api";
-import { apiUrl } from "../lib/apiBase";
+import { runScript } from "../lib/googleScriptRun";
 
 type UploadStatus = "idle" | "loading" | "success" | "error";
 
@@ -36,12 +36,7 @@ export function useUpload() {
 
     try {
       const csv = await readAsBase64(file);
-      const response = await fetch(apiUrl("?action=upload"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ csv }),
-      });
-      const data: UploadResponse = await response.json();
+      const data = await runScript<UploadResponse>("handleUpload", { csv });
 
       if (!data.success) {
         setState({
