@@ -24,6 +24,10 @@ appsscript.json
 *.swp
 *~
 
+# Playwright
+playwright-report/
+test-results/
+
 # OS
 .DS_Store
 Thumbs.db
