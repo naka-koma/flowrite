@@ -7,7 +7,11 @@ function doGet(e) {
     return route(e, "GET");
   }
 
-  return HtmlService.createHtmlOutputFromFile("index")
+  const html = HtmlService.createHtmlOutputFromFile("index");
+  const baseUrlScript = `<script>window.__FLOWRITE_BASE_URL__=${JSON.stringify(ScriptApp.getService().getUrl())};</script>`;
+  const content = html.getContent().replace("<head>", `<head>${baseUrlScript}`);
+
+  return HtmlService.createHtmlOutput(content)
     .setTitle("flowrite")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

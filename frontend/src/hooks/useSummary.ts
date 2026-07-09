@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { SummaryResponse } from "../types/api";
+import { apiUrl } from "../lib/apiBase";
 
 type SummaryStatus = "loading" | "success" | "error";
 
@@ -20,7 +21,7 @@ export function useSummary(year: number, month: number) {
     let cancelled = false;
     setState({ status: "loading", data: null, errorMessage: null });
 
-    fetch(`?action=summary&year=${year}&month=${month}`)
+    fetch(apiUrl(`?action=summary&year=${year}&month=${month}`))
       .then((response) => response.json())
       .then((data: SummaryResponse) => {
         if (cancelled) return;
