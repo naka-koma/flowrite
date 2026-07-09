@@ -12,9 +12,28 @@ export const handlers = [
     const action = url.searchParams.get("action");
 
     if (action === "summary") {
+      const year = Number(url.searchParams.get("year")) || 2024;
+      const month = Number(url.searchParams.get("month")) || 1;
+
+      // MonthSelectorが選択肢に出す最古の月（MONTH_RANGE=24ヶ月前）をデータなしケースとして扱う
+      const now = new Date();
+      const oldest = new Date(now.getFullYear(), now.getMonth() - 23, 1);
+      const isOldestMonth = year === oldest.getFullYear() && month === oldest.getMonth() + 1;
+
+      if (isOldestMonth) {
+        const response: SummaryResponse = {
+          year,
+          month,
+          totalExpense: 0,
+          totalIncome: 0,
+          categories: [],
+        };
+        return HttpResponse.json(response);
+      }
+
       const response: SummaryResponse = {
-        year: Number(url.searchParams.get("year")) || 2024,
-        month: Number(url.searchParams.get("month")) || 1,
+        year,
+        month,
         totalExpense: 150000,
         totalIncome: 300000,
         categories: [
