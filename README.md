@@ -144,8 +144,10 @@ gh pr create --fill
    - 「Google Apps Script API」をオンにする
    - 有効化後、反映まで数分かかる場合がある
 
-5. **空のGoogle スプレッドシートを作成**
-   - IDをメモしておく（URLの `https://docs.google.com/spreadsheets/d/【このID】/edit` の部分）
+5. **GoogleスプレッドシートにApps Scriptを作成**
+   - 使いたいGoogleスプレッドシートを開く
+   - 拡張機能 > Apps Script を開く（コンテナバインド型スクリプトが作成される）
+   - プロジェクトの設定から **Script ID** をコピーしておく
    - シートは空のままでOK（`raw_data`、`ai_log` はGASが自動作成する）
 
 ### 初回セットアップ
@@ -160,13 +162,13 @@ npm install
 # clasp をグローバルインストール
 npm install -g @google/clasp
 
-# セットアップを実行（ログイン→プロジェクト作成→ビルド→デプロイ）
+# セットアップを実行（ログイン→スクリプト接続→ビルド→デプロイ）
 npm run setup
 ```
 
 `npm run setup` は以下を順番に実行する：
 1. `clasp login`（ブラウザでGoogleアカウント認証）
-2. `clasp create`（GASプロジェクト作成）
+2. Script IDを入力してスプレッドシートのスクリプトに接続
 3. `npm run build`（フロントエンドビルド）
 4. `clasp push` + `clasp deploy`（GASへデプロイ）
 
@@ -174,7 +176,6 @@ npm run setup
 
 | プロパティ名 | 値 |
 |---|---|
-| `SPREADSHEET_ID` | 作成したスプレッドシートのID |
 | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) で取得したAPIキー |
 
 ### 環境変数（.env）
