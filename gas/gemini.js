@@ -1,6 +1,10 @@
 // GEMINI_MODEL未設定時に試すモデルの優先順位。無料枠のクォータが大きいものから並べる。
 const GEMINI_MODEL_FALLBACK_ORDER = ["gemini-3.5-flash", "gemini-3.1-flash-lite"];
 
+// フォールバック対象のHTTPステータス。429=クォータ超過、503=一時的な高負荷。
+// どちらも別モデルへの切り替えやリトライで回復しうる一時的なエラー。
+const GEMINI_RETRYABLE_STATUS_CODES = [429, 503];
+
 function getGeminiModelsToTry() {
   const configuredModel = PropertiesService.getScriptProperties().getProperty("GEMINI_MODEL");
   return configuredModel ? [configuredModel] : GEMINI_MODEL_FALLBACK_ORDER;
@@ -51,8 +55,8 @@ function handleAiAdvice(body) {
 
     Logger.log(`Gemini API error (model: ${model}): ${responseBody}`);
 
-    if (code !== 429) {
-      // クォータ超過以外のエラーはフォールバックせず即座に返す
+    if (!GEMINI_RETRYABLE_STATUS_CODES.includes(code)) {
+      // 一時的なエラー以外はフォールバックせず即座に返す
       break;
     }
   }
