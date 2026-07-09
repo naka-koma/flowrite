@@ -2,13 +2,16 @@ import { useState } from "react";
 import { UploadForm } from "./components/UploadForm";
 import { MonthSelector } from "./components/MonthSelector";
 import { SummaryTable } from "./components/SummaryTable";
+import { TrendChart } from "./components/TrendChart";
 import { useSummary } from "./hooks/useSummary";
+import { useTrend } from "./hooks/useTrend";
 
 export function App() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const { status, data, errorMessage } = useSummary(year, month);
+  const trend = useTrend();
 
   return (
     <div>
@@ -24,6 +27,11 @@ export function App() {
         }}
       />
       <SummaryTable data={data} errorMessage={errorMessage} isLoading={status === "loading"} />
+      <TrendChart
+        data={trend.data}
+        errorMessage={trend.errorMessage}
+        isLoading={trend.status === "loading"}
+      />
     </div>
   );
 }

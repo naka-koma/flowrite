@@ -48,6 +48,12 @@ export const handlers = [
     }
 
     if (action === "trend") {
+      // E2Eテスト専用: テストがヘッダーを付与した場合のみデータなしレスポンスを返す
+      if (request.headers.get("x-test-scenario") === "empty") {
+        const response: TrendResponse = { months: [] };
+        return HttpResponse.json(response);
+      }
+
       const response: TrendResponse = {
         months: [
           { year: 2024, month: 1, totalExpense: 150000, totalIncome: 300000 },
