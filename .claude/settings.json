@@ -1,5 +1,9 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(git branch -d *)",
+      "PowerShell(git branch -d *)"
+    ],
     "deny": [
       "Bash(gh pr merge*)",
       "Bash(gh pr close*)",
