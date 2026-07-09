@@ -55,8 +55,9 @@ npm run deploy
 - **レスポンス形式:** `ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON)`
 - **index.html:** `doGet` が返すファイル。`build/index.html` はビルド成果物なので手動編集禁止
 - **Shift-JIS:** `Utilities.newBlob` + `getDataAsString('Shift_JIS')` でデコードする
-- **秘匿情報:** スプレッドシートIDとGemini APIキーは `PropertiesService.getScriptProperties()` から取得する
-  - キー名: `SPREADSHEET_ID`、`GEMINI_API_KEY`
+- **秘匿情報:** Gemini APIキーは `PropertiesService.getScriptProperties()` から取得する
+  - キー名: `GEMINI_API_KEY`
+- **スプレッドシート:** コンテナバインド型スクリプトのため `SpreadsheetApp.getActiveSpreadsheet()` で取得する
 - **実行時間制限:** 1回の実行は最大6分。大量データ処理に注意
 
 ## フロントエンドの制約と注意事項

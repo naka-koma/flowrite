@@ -1,9 +1,5 @@
 function getSpreadsheet() {
-  const id = PropertiesService.getScriptProperties().getProperty("SPREADSHEET_ID");
-  if (!id) {
-    throw new Error("SPREADSHEET_ID is not set in script properties");
-  }
-  return SpreadsheetApp.openById(id);
+  return SpreadsheetApp.getActiveSpreadsheet();
 }
 
 function getRawDataSheet() {

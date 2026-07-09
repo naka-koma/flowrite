@@ -53,34 +53,32 @@ async function main() {
   if (existsSync(claspJsonPath)) {
     console.log("clasp: project already exists (skip)");
   } else {
-    const scriptId = await rl.question(
-      "\nEnter existing GAS Script ID (leave empty to create new): "
-    );
+    console.log(`
+スプレッドシートにバインドされたスクリプトのIDを入力してください。
 
-    if (scriptId) {
-      const claspJson = {
-        scriptId,
-        scriptExtensions: [".js", ".gs"],
-        htmlExtensions: [".html"],
-        jsonExtensions: [".json"],
-        filePushOrder: [],
-        skipSubdirectories: false,
-        rootDir: "build",
-      };
-      writeFileSync(claspJsonPath, JSON.stringify(claspJson, null, 2));
-      console.log(`clasp: connected to existing project (${scriptId})`);
-    } else {
-      console.log("\n=== clasp create ===");
-      run("clasp create --title flowrite", { cwd: resolve(root, "gas") });
+まだ作成していない場合:
+  1. 使いたいGoogleスプレッドシートを開く
+  2. 拡張機能 > Apps Script を開く
+  3. プロジェクトの設定からScript IDをコピー
+`);
+    const scriptId = await rl.question("Script ID: ");
 
-      const gasClaspJson = resolve(root, "gas", ".clasp.json");
-      if (existsSync(gasClaspJson)) {
-        const json = JSON.parse(readFileSync(gasClaspJson, "utf8"));
-        json.rootDir = "build";
-        writeFileSync(claspJsonPath, JSON.stringify(json, null, 2));
-        execSync(`del "${gasClaspJson}"`, { stdio: "ignore" });
-      }
+    if (!scriptId) {
+      console.error("Script ID は必須です。スプレッドシートから Apps Script を作成してください。");
+      process.exit(1);
     }
+
+    const claspJson = {
+      scriptId,
+      scriptExtensions: [".js", ".gs"],
+      htmlExtensions: [".html"],
+      jsonExtensions: [".json"],
+      filePushOrder: [],
+      skipSubdirectories: false,
+      rootDir: "build",
+    };
+    writeFileSync(claspJsonPath, JSON.stringify(claspJson, null, 2));
+    console.log(`clasp: connected to existing project (${scriptId})`);
   }
 
   // appsscript.json
@@ -89,9 +87,6 @@ async function main() {
     resolve(root, "appsscript.template.json"),
     resolve(root, "gas", "appsscript.json"),
   );
-
-  // spreadsheet ID
-  const spreadsheetId = await rl.question("\nEnter SPREADSHEET_ID: ");
 
   // build
   console.log("\n=== npm run build ===");
@@ -107,7 +102,7 @@ async function main() {
 
   // show instructions
   const claspJson = JSON.parse(readFileSync(claspJsonPath, "utf8"));
-  const scriptId = claspJson.scriptId;
+  const connectedScriptId = claspJson.scriptId;
 
   console.log(`
 ========================================
@@ -117,12 +112,11 @@ async function main() {
 Set script properties manually:
 
 1. Open in browser:
-   https://script.google.com/d/${scriptId}/edit
+   https://script.google.com/d/${connectedScriptId}/edit
 
 2. Project Settings > Script Properties
 
-   SPREADSHEET_ID : ${spreadsheetId}
-   GEMINI_API_KEY  : <your Gemini API key>
+   GEMINI_API_KEY : <your Gemini API key>
 
 3. Run 'npm run deploy' to deploy
 
