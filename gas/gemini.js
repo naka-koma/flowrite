@@ -1,10 +1,5 @@
 // GEMINI_MODEL未設定時に試すモデルの優先順位。無料枠のクォータが大きいものから並べる。
-const GEMINI_MODEL_FALLBACK_ORDER = [
-  "gemini-2.5-flash",
-  "gemini-2.5-flash-lite",
-  "gemini-3-flash",
-  "gemini-2.0-flash",
-];
+const GEMINI_MODEL_FALLBACK_ORDER = ["gemini-3.5-flash", "gemini-3.1-flash-lite"];
 
 function getGeminiModelsToTry() {
   const configuredModel = PropertiesService.getScriptProperties().getProperty("GEMINI_MODEL");
