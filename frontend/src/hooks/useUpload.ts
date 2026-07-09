@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { UploadResponse } from "../types/api";
+import { apiUrl } from "../lib/apiBase";
 
 type UploadStatus = "idle" | "loading" | "success" | "error";
 
@@ -35,7 +36,7 @@ export function useUpload() {
 
     try {
       const csv = await readAsBase64(file);
-      const response = await fetch("?action=upload", {
+      const response = await fetch(apiUrl("?action=upload"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ csv }),

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { TrendResponse } from "../types/api";
+import { apiUrl } from "../lib/apiBase";
 
 type TrendStatus = "loading" | "success" | "error";
 
@@ -19,7 +20,7 @@ export function useTrend() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch("?action=trend")
+    fetch(apiUrl("?action=trend"))
       .then((response) => response.json())
       .then((data: TrendResponse) => {
         if (cancelled) return;
