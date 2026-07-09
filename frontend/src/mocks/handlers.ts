@@ -47,6 +47,19 @@ export const handlers = [
     const action = url.searchParams.get("action");
 
     if (action === "upload") {
+      const body = (await request.json()) as { csv: string };
+      const csvText = atob(body.csv);
+
+      if (csvText.includes("INVALID")) {
+        const response: UploadResponse = {
+          success: false,
+          inserted: 0,
+          skipped: 0,
+          error: "CSVの形式が正しくありません",
+        };
+        return HttpResponse.json(response);
+      }
+
       const response: UploadResponse = {
         success: true,
         inserted: 12,
