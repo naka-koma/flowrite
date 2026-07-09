@@ -19,7 +19,13 @@
       "PowerShell(gh pr create *)",
       "PowerShell(gh auth status *)",
       "PowerShell(gh issue *)",
-      "PowerShell(npm run deploy)"
+      "PowerShell(npm run deploy)",
+      "Bash(npm run *)",
+      "PowerShell(npm run *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git branch *)",
+      "PowerShell($env:Path = *)",
+      "PowerShell($env:PATH = *)"
     ],
     "deny": [
       "Bash(gh pr merge*)",
