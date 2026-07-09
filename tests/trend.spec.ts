@@ -9,7 +9,11 @@ test("トレンドチャートが表示される", async ({ page }) => {
 });
 
 test("データなし時に適切なメッセージが表示される", async ({ page }) => {
-  await page.setExtraHTTPHeaders({ "x-test-scenario": "empty" });
+  await page.addInitScript(() => {
+    (window as unknown as { __MOCK_SCENARIO__?: { trendEmpty?: boolean } }).__MOCK_SCENARIO__ = {
+      trendEmpty: true,
+    };
+  });
   await page.goto("/");
 
   await expect(page.getByText("トレンドデータはありません")).toBeVisible();

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { SummaryResponse } from "../types/api";
-import { apiUrl } from "../lib/apiBase";
+import { runScript } from "../lib/googleScriptRun";
 
 type SummaryStatus = "loading" | "success" | "error";
 
@@ -21,9 +21,8 @@ export function useSummary(year: number, month: number) {
     let cancelled = false;
     setState({ status: "loading", data: null, errorMessage: null });
 
-    fetch(apiUrl(`?action=summary&year=${year}&month=${month}`))
-      .then((response) => response.json())
-      .then((data: SummaryResponse) => {
+    runScript<SummaryResponse>("handleSummary", { year, month })
+      .then((data) => {
         if (cancelled) return;
 
         if (data.error) {
