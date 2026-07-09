@@ -66,6 +66,14 @@ npm run deploy
 - **APIコール:** `google.script.run` は使わず、`fetch` で `?action=xxx` にリクエストする
 - **環境変数:** `import.meta.env` は使用不可。定数はソースに直書きするか、GASの初期レスポンスに含めて渡す
 
+## テスト方針
+
+- **E2E必須:** フロントエンド機能を実装するときは、PlaywrightのE2EテストとMSWモックを必ずセットで実装する
+- **テストの置き場:** `tests/<feature>.spec.ts`
+- **モックの置き場:** `frontend/src/mocks/handlers.ts` にエンドポイントのハンドラーを追加する
+- **実行:** `npm run test:e2e`
+- GAS WebAppへの実際のリクエストは発生させない（すべてMSWがインターセプト）
+
 ## コーディング規約
 
 ### 共通
