@@ -156,11 +156,8 @@ gh pr create --fill
 # Node.js をインストール（.mise.toml に従ってバージョンが決まる）
 mise install
 
-# 依存パッケージをインストール
+# 依存パッケージをインストール（clasp は devDependencies に含まれる）
 npm install
-
-# clasp をグローバルインストール
-npm install -g @google/clasp
 
 # セットアップを実行（ログイン→スクリプト接続→ビルド→デプロイ）
 npm run setup
@@ -185,6 +182,20 @@ npm run setup
 | 変数名 | 説明 |
 |---|---|
 | `DEPLOYMENT_ID` | GAS WebAppのデプロイメントID（`npm run deploy` で自動設定。手動指定も可） |
+
+### リモート環境からのデプロイ
+
+`clasp`は`npx clasp`経由で呼び出すため、`@google/clasp`のグローバルインストールは不要（`npm install`で完結する）。ただし`clasp login`によるOAuth認証情報（`~/.clasprc.json`）とプロジェクト設定（`.clasp.json`、いずれも`.gitignore`対象）はセットアップしたマシン上にしか存在しないため、Claude Code on the webのリモートセッションなど別の実行環境ではそのままでは`npm run deploy`が使えない。
+
+その場合は、実行環境（セッション/コンテナ）側の環境変数設定機能を使って以下を設定する。**秘匿情報をチャットやコード・リポジトリに直接貼り付けない**こと。
+
+| 環境変数 | 説明 |
+|---|---|
+| `CLASP_CREDENTIALS` | ログイン済み環境の `~/.clasprc.json` の中身（JSON文字列）。`.clasprc.json`が存在しない場合のみ、この内容から復元される |
+| `CLASP_SCRIPT_ID` | 接続先スプレッドシートのApps Script ID。`.clasp.json`が存在しない場合のみ、この値から復元される |
+| `DEPLOYMENT_ID` | 既存のWebAppデプロイメントID。未設定の場合、新規デプロイが作成されてしまうため、既存環境と同じWebApp URLを使い続けたい場合は設定すること |
+
+これらが設定されていれば、`npm run deploy` / `npm run setup` は初回でも `.clasprc.json` / `.clasp.json` / `gas/appsscript.json` を自動生成してからビルド・デプロイを行う。
 
 ### npm scripts
 

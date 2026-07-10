@@ -1,8 +1,9 @@
 import { execSync } from "node:child_process";
 import { createInterface } from "node:readline/promises";
-import { existsSync, readFileSync, writeFileSync, copyFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ensureAppsscriptJson } from "./lib/clasp-env.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
@@ -12,28 +13,12 @@ function run(cmd, opts = {}) {
   execSync(cmd, { stdio: "inherit", cwd: root, ...opts });
 }
 
-function hasCommand(cmd) {
-  try {
-    execSync(`${cmd} --version`, { stdio: "ignore" });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 const rl = createInterface({ input: process.stdin, output: process.stdout });
 
 async function main() {
   console.log("=== flowrite setup ===\n");
 
-  // clasp check
-  if (!hasCommand("clasp")) {
-    console.error("ERROR: clasp is not installed");
-    console.error("  npm install -g @google/clasp");
-    process.exit(1);
-  }
-
-  // npm install
+  // npm install（devDependencies の @google/clasp もここでインストールされる）
   if (!existsSync(resolve(root, "node_modules"))) {
     console.log("\n=== npm install ===");
     run("npm install");
@@ -43,9 +28,15 @@ async function main() {
   const clasprcPath = resolve(process.env.USERPROFILE || process.env.HOME, ".clasprc.json");
   if (existsSync(clasprcPath)) {
     console.log("clasp: already logged in (skip)");
+  } else if (process.env.CLASP_CREDENTIALS) {
+    writeFileSync(clasprcPath, process.env.CLASP_CREDENTIALS);
+    console.log("clasp: CLASP_CREDENTIALS から .clasprc.json を生成しました");
   } else {
     console.log("\n=== clasp login ===");
-    run("clasp login");
+    console.log(
+      "ブラウザを開けない環境（リモートセッション等）の場合は `npx clasp login --no-localhost` を使ってください。",
+    );
+    run("npx clasp login");
   }
 
   // clasp project
@@ -83,10 +74,7 @@ async function main() {
 
   // appsscript.json
   console.log("\n=== appsscript.json ===");
-  copyFileSync(
-    resolve(root, "appsscript.template.json"),
-    resolve(root, "gas", "appsscript.json"),
-  );
+  ensureAppsscriptJson(root);
 
   // build
   console.log("\n=== npm run build ===");
@@ -94,11 +82,11 @@ async function main() {
 
   // clasp push
   console.log("\n=== clasp push ===");
-  run("clasp push");
+  run("npx clasp push");
 
   // clasp deploy
   console.log("\n=== clasp deploy ===");
-  run('clasp deploy --description "initial deployment"');
+  run('npx clasp deploy --description "initial deployment"');
 
   // show instructions
   const claspJson = JSON.parse(readFileSync(claspJsonPath, "utf8"));

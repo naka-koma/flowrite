@@ -2,6 +2,7 @@ import { execSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ensureClaspAuth, ensureClaspProject, ensureAppsscriptJson } from "./lib/clasp-env.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
@@ -38,22 +39,30 @@ function saveDeploymentId(id) {
   console.log(`Saved DEPLOYMENT_ID to .env`);
 }
 
+// 0. 認証情報・プロジェクト設定を環境変数から復元（未ログイン環境向け）
+ensureClaspAuth();
+ensureClaspProject(root);
+ensureAppsscriptJson(root);
+
 // 1. ビルド
 run("npm run build");
 
 // 2. clasp push
-run("clasp push --force");
+run("npx clasp push --force");
 
 // 3. デプロイ
 const env = readEnv();
-let deployId = env.DEPLOYMENT_ID;
+let deployId = env.DEPLOYMENT_ID || process.env.DEPLOYMENT_ID;
 
 if (deployId) {
-  console.log(`\nUpdating deployment from .env: ${deployId}`);
-  run(`clasp deploy -i ${deployId} -d "deploy"`);
+  console.log(`\nUpdating deployment: ${deployId}`);
+  run(`npx clasp deploy -i ${deployId} -d "deploy"`);
+  if (!env.DEPLOYMENT_ID) {
+    saveDeploymentId(deployId);
+  }
 } else {
-  console.log("\nNo DEPLOYMENT_ID in .env. Creating new webapp deployment...");
-  const output = getOutput('clasp deploy -d "deploy"');
+  console.log("\nNo DEPLOYMENT_ID found. Creating new webapp deployment...");
+  const output = getOutput('npx clasp deploy -d "deploy"');
   const match = output.match(/Deployed (\S+)/);
   if (match) {
     deployId = match[1];
