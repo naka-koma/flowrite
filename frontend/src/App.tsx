@@ -44,29 +44,58 @@ export function App() {
   const trend = useTrend();
 
   return (
-    <div>
-      <h1>flowrite</h1>
-      <p>家計管理ダッシュボード</p>
-      <UploadForm />
-      <MonthSelector
-        year={year}
-        month={month}
-        onChange={(newYear, newMonth) => {
-          setYear(newYear);
-          setMonth(newMonth);
-        }}
-      />
-      <SummaryTable
-        data={summary.data}
-        errorMessage={summary.errorMessage}
-        isLoading={summary.status === "loading"}
-      />
-      <TrendChart
-        data={trend.data}
-        errorMessage={trend.errorMessage}
-        isLoading={trend.status === "loading"}
-      />
-      <AiAdvice context={buildAiContext(summary, trend)} />
+    <div className="min-h-screen bg-base-200">
+      <div className="mx-auto max-w-3xl px-4 py-8">
+        <header className="mb-6">
+          <h1 className="text-3xl font-bold">flowrite</h1>
+          <p className="text-base-content/70">家計管理ダッシュボード</p>
+        </header>
+
+        <div className="flex flex-col gap-6">
+          <section className="card bg-base-100 shadow-sm">
+            <div className="card-body">
+              <UploadForm />
+            </div>
+          </section>
+
+          <section className="card bg-base-100 shadow-sm">
+            <div className="card-body">
+              <h2 className="mb-3 text-lg font-semibold">月次サマリー</h2>
+              <MonthSelector
+                year={year}
+                month={month}
+                onChange={(newYear, newMonth) => {
+                  setYear(newYear);
+                  setMonth(newMonth);
+                }}
+              />
+              <SummaryTable
+                data={summary.data}
+                errorMessage={summary.errorMessage}
+                isLoading={summary.status === "loading"}
+              />
+            </div>
+          </section>
+
+          <section className="card bg-base-100 shadow-sm">
+            <div className="card-body">
+              <h2 className="mb-3 text-lg font-semibold">トレンド</h2>
+              <TrendChart
+                data={trend.data}
+                errorMessage={trend.errorMessage}
+                isLoading={trend.status === "loading"}
+              />
+            </div>
+          </section>
+
+          <section className="card bg-base-100 shadow-sm">
+            <div className="card-body">
+              <h2 className="mb-3 text-lg font-semibold">AIアドバイス</h2>
+              <AiAdvice context={buildAiContext(summary, trend)} />
+            </div>
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

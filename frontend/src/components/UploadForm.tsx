@@ -15,16 +15,25 @@ export function UploadForm() {
 
   return (
     <div>
-      <input
-        type="file"
-        accept=".csv"
-        aria-label="CSVファイル"
-        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-      />
-      <button onClick={handleSubmit} disabled={!file || status === "loading"}>
-        アップロード
-      </button>
-      {status === "loading" && <p>アップロード中...</p>}
+      <h2 className="mb-3 text-lg font-semibold">CSVアップロード</h2>
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          type="file"
+          accept=".csv"
+          aria-label="CSVファイル"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          className="file-input file-input-bordered"
+        />
+        <button
+          onClick={handleSubmit}
+          disabled={!file || status === "loading"}
+          className="btn btn-primary"
+        >
+          アップロード
+        </button>
+        {status === "loading" && <span className="loading loading-spinner loading-sm" />}
+      </div>
+      {status === "loading" && <p className="mt-2 text-sm text-base-content/70">アップロード中...</p>}
       <UploadResult result={result} errorMessage={errorMessage} />
     </div>
   );

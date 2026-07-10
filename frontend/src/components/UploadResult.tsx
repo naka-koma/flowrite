@@ -7,7 +7,11 @@ interface UploadResultProps {
 
 export function UploadResult({ result, errorMessage }: UploadResultProps) {
   if (errorMessage) {
-    return <p role="alert">エラー: {errorMessage}</p>;
+    return (
+      <p role="alert" className="alert alert-error mt-3">
+        エラー: {errorMessage}
+      </p>
+    );
   }
 
   if (!result) {
@@ -15,9 +19,13 @@ export function UploadResult({ result, errorMessage }: UploadResultProps) {
   }
 
   return (
-    <div>
-      <p>追加件数: {result.inserted}</p>
-      <p>スキップ件数: {result.skipped}</p>
+    <div className="mt-3 flex gap-4 text-sm">
+      <p>
+        追加件数: <span className="font-semibold">{result.inserted}</span>
+      </p>
+      <p>
+        スキップ件数: <span className="font-semibold">{result.skipped}</span>
+      </p>
     </div>
   );
 }
