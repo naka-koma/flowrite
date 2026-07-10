@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import "./index.css";
 
 async function main() {
   // import.meta.env.DEV はViteがビルド時に true/false に置換するコンパイル時定数。

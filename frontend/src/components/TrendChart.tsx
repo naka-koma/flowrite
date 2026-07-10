@@ -21,15 +21,24 @@ const INCOME_COLOR = "#2a78d6";
 
 export function TrendChart({ data, errorMessage, isLoading }: TrendChartProps) {
   if (isLoading) {
-    return <p>読み込み中...</p>;
+    return (
+      <p className="flex items-center gap-2">
+        <span className="loading loading-spinner loading-sm" />
+        読み込み中...
+      </p>
+    );
   }
 
   if (errorMessage) {
-    return <p role="alert">エラー: {errorMessage}</p>;
+    return (
+      <p role="alert" className="alert alert-error">
+        エラー: {errorMessage}
+      </p>
+    );
   }
 
   if (!data || data.months.length === 0) {
-    return <p>トレンドデータはありません</p>;
+    return <p className="text-base-content/70">トレンドデータはありません</p>;
   }
 
   const chartData = data.months.map((m) => ({

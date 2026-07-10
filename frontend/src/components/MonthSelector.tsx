@@ -31,6 +31,7 @@ export function MonthSelector({ year, month, onChange }: MonthSelectorProps) {
       aria-label="対象年月"
       value={`${year}-${month}`}
       onChange={(e) => handleChange(e.target.value)}
+      className="select select-bordered mb-4 w-full max-w-xs"
     >
       {options.map((option) => (
         <option key={`${option.year}-${option.month}`} value={`${option.year}-${option.month}`}>
