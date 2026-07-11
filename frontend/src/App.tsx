@@ -1,4 +1,5 @@
 import { useState } from "react";
+import logoUrl from "./assets/favicon-32.png";
 import { UploadForm } from "./components/UploadForm";
 import { MonthSelector } from "./components/MonthSelector";
 import { YearSelector } from "./components/YearSelector";
@@ -75,7 +76,7 @@ export function App() {
   }
 
   return (
-    <div className="drawer">
+    <div className="drawer lg:drawer-open">
       <input
         id="app-drawer"
         type="checkbox"
@@ -84,17 +85,20 @@ export function App() {
         onChange={(e) => setMenuOpen(e.target.checked)}
       />
       <div className="drawer-content min-h-screen bg-base-200">
-        <div className="mx-auto max-w-3xl px-4 py-6 sm:py-8">
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
           <header className="mb-6 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setMenuOpen(true)}
-              aria-label="メニューを開く"
-              className="btn btn-ghost btn-circle"
-            >
-              ☰
-            </button>
-            <h1 className="text-2xl font-bold sm:text-3xl">flowrite</h1>
+            <div className="flex items-center gap-2 rounded-box border border-base-300 bg-base-100 px-3 py-2">
+              <button
+                type="button"
+                onClick={() => setMenuOpen(true)}
+                aria-label="メニューを開く"
+                className="btn btn-ghost btn-circle btn-sm lg:hidden"
+              >
+                ☰
+              </button>
+              <img src={logoUrl} alt="" className="h-7 w-7 rounded" />
+              <h1 className="text-2xl font-bold sm:text-3xl">flowrite</h1>
+            </div>
             <button
               type="button"
               onClick={toggleHideAmounts}
@@ -181,7 +185,7 @@ export function App() {
 
       <div className="drawer-side z-50">
         <label htmlFor="app-drawer" aria-label="メニューを閉じる" className="drawer-overlay"></label>
-        <ul className="menu bg-base-100 min-h-full w-64 gap-1 p-4 text-base-content">
+        <ul className="menu bg-base-100 min-h-full w-64 gap-1 p-4 text-base-content lg:border-r lg:border-base-300">
           <li>
             <button type="button" onClick={() => navigate("dashboard")}>
               ホーム
