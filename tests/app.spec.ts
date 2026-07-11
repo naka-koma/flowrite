@@ -18,3 +18,17 @@ test("スマホ幅でも横スクロールが発生しない", async ({ page }) 
   }));
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 });
+
+test("各セクションの見出しとBodyの間に区切り線が入り、スタイルが統一されている", async ({ page }) => {
+  await page.goto("/");
+
+  const sectionHeadings = ["CSVアップロード", "サマリー", "トレンド", "AIアドバイス"];
+
+  for (const name of sectionHeadings) {
+    const heading = page.getByRole("heading", { name, exact: true });
+    await expect(heading).toBeVisible();
+
+    const borderBottomWidth = await heading.evaluate((el) => getComputedStyle(el).borderBottomWidth);
+    expect(borderBottomWidth).not.toBe("0px");
+  }
+});

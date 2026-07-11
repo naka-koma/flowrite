@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useUpload } from "../hooks/useUpload";
 import { UploadResult } from "./UploadResult";
+import { SECTION_HEADING_CLASS } from "../lib/ui";
 
 export function UploadForm() {
   const [files, setFiles] = useState<File[]>([]);
@@ -15,7 +16,7 @@ export function UploadForm() {
 
   return (
     <div>
-      <h2 className="mb-3 text-lg font-semibold">CSVアップロード</h2>
+      <h2 className={SECTION_HEADING_CLASS}>CSVアップロード</h2>
       <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
         <input
           type="file"

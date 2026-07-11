@@ -13,6 +13,7 @@ import { useTheme } from "./hooks/useTheme";
 import { useAmountVisibility } from "./hooks/useAmountVisibility";
 import { formatISODate, getMondayOfWeek } from "./lib/week";
 import { formatYen } from "./lib/money";
+import { SECTION_HEADING_CLASS } from "./lib/ui";
 import type { SummaryParams, SummaryUnit } from "./types/api";
 
 function buildAiContext(
@@ -117,7 +118,7 @@ export function App() {
 
               <section className="card bg-base-100 shadow-sm">
                 <div className="card-body p-4 sm:p-6">
-                  <h2 className="mb-3 text-lg font-semibold">サマリー</h2>
+                  <h2 className={SECTION_HEADING_CLASS}>サマリー</h2>
 
                   <div role="tablist" className="tabs tabs-boxed mb-4 w-fit">
                     {(Object.keys(UNIT_LABELS) as SummaryUnit[]).map((u) => (
@@ -157,7 +158,7 @@ export function App() {
 
               <section className="card bg-base-100 shadow-sm">
                 <div className="card-body p-4 sm:p-6">
-                  <h2 className="mb-3 text-lg font-semibold">トレンド</h2>
+                  <h2 className={SECTION_HEADING_CLASS}>トレンド</h2>
                   <TrendChart
                     data={trend.data}
                     errorMessage={trend.errorMessage}
@@ -169,7 +170,7 @@ export function App() {
 
               <section className="card bg-base-100 shadow-sm">
                 <div className="card-body p-4 sm:p-6">
-                  <h2 className="mb-3 text-lg font-semibold">AIアドバイス</h2>
+                  <h2 className={SECTION_HEADING_CLASS}>AIアドバイス</h2>
                   <AiAdvice context={buildAiContext(summary, trend)} hideAmounts={hideAmounts} />
                 </div>
               </section>
