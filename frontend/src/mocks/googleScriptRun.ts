@@ -126,6 +126,27 @@ function mockHandleTrend() {
   };
 }
 
+let migrationsApplied = false;
+
+function mockHandleRunMigrations() {
+  if (migrationsApplied) {
+    return { results: [], appliedCount: 0 };
+  }
+  migrationsApplied = true;
+
+  return {
+    results: [
+      {
+        id: "001_normalize_raw_data_amount",
+        description: "raw_dataのamount列に残っている文字列（クォート・カンマ付き）を数値に正規化する",
+        success: true,
+        result: { updated: 3 },
+      },
+    ],
+    appliedCount: 1,
+  };
+}
+
 function mockHandleAiAdvice(body: { context: string }) {
   if (!body.context) {
     return { success: false, error: "context field is required" };
@@ -148,6 +169,8 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleTrend();
     case "handleAiAdvice":
       return mockHandleAiAdvice(args[0] as { context: string });
+    case "handleRunMigrations":
+      return mockHandleRunMigrations();
     default:
       throw new Error(`Unknown function: ${functionName}`);
   }
