@@ -6,6 +6,7 @@ import { WeekSelector } from "./components/WeekSelector";
 import { SummaryTable } from "./components/SummaryTable";
 import { TrendChart } from "./components/TrendChart";
 import { AiAdvice } from "./components/AiAdvice";
+import { AdminSection } from "./components/AdminSection";
 import { useSummary } from "./hooks/useSummary";
 import { useTrend } from "./hooks/useTrend";
 import { formatISODate, getMondayOfWeek } from "./lib/week";
@@ -129,6 +130,13 @@ export function App() {
             <div className="card-body">
               <h2 className="mb-3 text-lg font-semibold">AIアドバイス</h2>
               <AiAdvice context={buildAiContext(summary, trend)} />
+            </div>
+          </section>
+
+          <section className="card bg-base-100 shadow-sm">
+            <div className="card-body">
+              <h2 className="mb-3 text-lg font-semibold">管理</h2>
+              <AdminSection />
             </div>
           </section>
         </div>

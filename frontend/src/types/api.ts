@@ -60,3 +60,17 @@ export interface AiAdviceResponse {
   advice: string;
   error?: string;
 }
+
+export interface MigrationResult {
+  id: string;
+  description: string;
+  success: boolean;
+  result?: unknown;
+  error?: string;
+}
+
+export interface RunMigrationsResponse {
+  results: MigrationResult[];
+  appliedCount: number;
+  error?: string;
+}
