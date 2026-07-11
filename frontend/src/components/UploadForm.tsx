@@ -3,14 +3,14 @@ import { useUpload } from "../hooks/useUpload";
 import { UploadResult } from "./UploadResult";
 
 export function UploadForm() {
-  const [file, setFile] = useState<File | null>(null);
-  const { status, result, errorMessage, upload } = useUpload();
+  const [files, setFiles] = useState<File[]>([]);
+  const { status, results, upload } = useUpload();
 
   const handleSubmit = () => {
-    if (!file) {
+    if (files.length === 0) {
       return;
     }
-    upload(file);
+    upload(files);
   };
 
   return (
@@ -20,13 +20,14 @@ export function UploadForm() {
         <input
           type="file"
           accept=".csv"
+          multiple
           aria-label="CSVファイル"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
           className="file-input file-input-bordered"
         />
         <button
           onClick={handleSubmit}
-          disabled={!file || status === "loading"}
+          disabled={files.length === 0 || status === "loading"}
           className="btn btn-primary"
         >
           アップロード
@@ -34,7 +35,7 @@ export function UploadForm() {
         {status === "loading" && <span className="loading loading-spinner loading-sm" />}
       </div>
       {status === "loading" && <p className="mt-2 text-sm text-base-content/70">アップロード中...</p>}
-      <UploadResult result={result} errorMessage={errorMessage} />
+      <UploadResult results={results} />
     </div>
   );
 }
