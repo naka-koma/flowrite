@@ -1,10 +1,12 @@
 import { useAiAdvice } from "../hooks/useAiAdvice";
+import { maskYenAmounts } from "../lib/money";
 
 interface AiAdviceProps {
   context: string;
+  hideAmounts: boolean;
 }
 
-export function AiAdvice({ context }: AiAdviceProps) {
+export function AiAdvice({ context, hideAmounts }: AiAdviceProps) {
   const { status, advice, errorMessage, fetchAdvice } = useAiAdvice();
 
   return (
@@ -23,7 +25,9 @@ export function AiAdvice({ context }: AiAdviceProps) {
           エラー: {errorMessage}
         </p>
       )}
-      {status === "success" && <p className="mt-3 whitespace-pre-wrap">{advice}</p>}
+      {status === "success" && (
+        <p className="mt-3 whitespace-pre-wrap">{hideAmounts ? maskYenAmounts(advice ?? "") : advice}</p>
+      )}
     </div>
   );
 }

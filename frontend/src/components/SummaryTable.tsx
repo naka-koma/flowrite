@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { SummaryResponse } from "../types/api";
+import { formatAmount } from "../lib/money";
 import { CategoryPieChart } from "./CategoryPieChart";
 import { TransactionList } from "./TransactionList";
 
@@ -7,9 +8,10 @@ interface SummaryTableProps {
   data: SummaryResponse | null;
   errorMessage: string | null;
   isLoading: boolean;
+  hideAmounts: boolean;
 }
 
-export function SummaryTable({ data, errorMessage, isLoading }: SummaryTableProps) {
+export function SummaryTable({ data, errorMessage, isLoading, hideAmounts }: SummaryTableProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   if (isLoading) {
@@ -39,6 +41,7 @@ export function SummaryTable({ data, errorMessage, isLoading }: SummaryTableProp
   }
 
   const selected = data.categories.find((c) => c.name === selectedCategory) ?? null;
+  const amountText = (amount: number) => (hideAmounts ? "***" : formatAmount(amount));
 
   return (
     <div>
@@ -47,14 +50,14 @@ export function SummaryTable({ data, errorMessage, isLoading }: SummaryTableProp
       </p>
       <div className="mb-3 flex gap-6">
         <p>
-          合計支出: <span className="font-semibold text-error">{data.totalExpense}</span>
+          合計支出: <span className="font-semibold text-error">{amountText(data.totalExpense)}</span>
         </p>
         <p>
-          合計収入: <span className="font-semibold text-success">{data.totalIncome}</span>
+          合計収入: <span className="font-semibold text-success">{amountText(data.totalIncome)}</span>
         </p>
       </div>
 
-      <CategoryPieChart categories={data.categories} onSelectCategory={setSelectedCategory} />
+      <CategoryPieChart categories={data.categories} onSelectCategory={setSelectedCategory} hideAmounts={hideAmounts} />
 
       <div className="mt-4 overflow-x-auto">
         <table className="table">
@@ -76,7 +79,7 @@ export function SummaryTable({ data, errorMessage, isLoading }: SummaryTableProp
                     {category.name}
                   </button>
                 </td>
-                <td>{category.total}</td>
+                <td>{amountText(category.total)}</td>
               </tr>
             ))}
           </tbody>
@@ -88,6 +91,7 @@ export function SummaryTable({ data, errorMessage, isLoading }: SummaryTableProp
           categoryName={selected.name}
           transactions={selected.transactions}
           onClose={() => setSelectedCategory(null)}
+          hideAmounts={hideAmounts}
         />
       )}
     </div>

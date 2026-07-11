@@ -9,17 +9,19 @@ import {
   YAxis,
 } from "recharts";
 import type { TrendResponse } from "../types/api";
+import { formatYen } from "../lib/money";
 
 interface TrendChartProps {
   data: TrendResponse | null;
   errorMessage: string | null;
   isLoading: boolean;
+  hideAmounts: boolean;
 }
 
 const EXPENSE_COLOR = "#e34948";
 const INCOME_COLOR = "#2a78d6";
 
-export function TrendChart({ data, errorMessage, isLoading }: TrendChartProps) {
+export function TrendChart({ data, errorMessage, isLoading, hideAmounts }: TrendChartProps) {
   if (isLoading) {
     return (
       <p className="flex items-center gap-2">
@@ -52,8 +54,8 @@ export function TrendChart({ data, errorMessage, isLoading }: TrendChartProps) {
       <LineChart data={chartData}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="label" />
-        <YAxis />
-        <Tooltip />
+        <YAxis hide={hideAmounts} />
+        <Tooltip formatter={(value: number) => (hideAmounts ? "***円" : formatYen(value))} />
         <Legend />
         <Line type="monotone" dataKey="支出" stroke={EXPENSE_COLOR} strokeWidth={2} />
         <Line type="monotone" dataKey="収入" stroke={INCOME_COLOR} strokeWidth={2} />

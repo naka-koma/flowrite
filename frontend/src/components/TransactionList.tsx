@@ -1,12 +1,14 @@
 import type { Transaction } from "../types/api";
+import { formatAmount } from "../lib/money";
 
 interface TransactionListProps {
   categoryName: string;
   transactions: Transaction[];
   onClose: () => void;
+  hideAmounts: boolean;
 }
 
-export function TransactionList({ categoryName, transactions, onClose }: TransactionListProps) {
+export function TransactionList({ categoryName, transactions, onClose, hideAmounts }: TransactionListProps) {
   return (
     <div className="mt-4">
       <div className="mb-2 flex items-center justify-between">
@@ -32,7 +34,7 @@ export function TransactionList({ categoryName, transactions, onClose }: Transac
                 <tr key={`${t.date}-${t.content}-${i}`}>
                   <td>{t.date}</td>
                   <td>{t.content}</td>
-                  <td>{t.amount}</td>
+                  <td>{hideAmounts ? "***" : formatAmount(t.amount)}</td>
                 </tr>
               ))}
             </tbody>
