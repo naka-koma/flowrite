@@ -32,11 +32,11 @@ function buildAiContext(
     );
   }
 
-  if (trend.data && trend.data.months.length > 0) {
-    const monthsText = trend.data.months
-      .map((m) => `${m.year}/${m.month} 支出${m.totalExpense}円・収入${m.totalIncome}円`)
+  if (trend.data && trend.data.points.length > 0) {
+    const pointsText = trend.data.points
+      .map((p) => `${p.label} 支出${p.totalExpense}円・収入${p.totalIncome}円`)
       .join("、");
-    parts.push(`月次推移: ${monthsText}`);
+    parts.push(`推移: ${pointsText}`);
   }
 
   return parts.join("\n");
@@ -63,7 +63,7 @@ export function App() {
         : { unit: "month", year, month };
 
   const summary = useSummary(summaryParams);
-  const trend = useTrend();
+  const trend = useTrend(unit);
 
   function navigate(next: "dashboard" | "settings") {
     setScreen(next);

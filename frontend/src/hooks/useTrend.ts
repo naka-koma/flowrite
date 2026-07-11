@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { TrendResponse } from "../types/api";
+import type { SummaryUnit, TrendResponse } from "../types/api";
 import { runScript } from "../lib/googleScriptRun";
 
 type TrendStatus = "loading" | "success" | "error";
@@ -10,7 +10,7 @@ interface TrendState {
   errorMessage: string | null;
 }
 
-export function useTrend() {
+export function useTrend(unit: SummaryUnit) {
   const [state, setState] = useState<TrendState>({
     status: "loading",
     data: null,
@@ -19,8 +19,9 @@ export function useTrend() {
 
   useEffect(() => {
     let cancelled = false;
+    setState({ status: "loading", data: null, errorMessage: null });
 
-    runScript<TrendResponse>("handleTrend")
+    runScript<TrendResponse>("handleTrend", { unit })
       .then((data) => {
         if (cancelled) return;
 
@@ -40,7 +41,7 @@ export function useTrend() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [unit]);
 
   return state;
 }

@@ -37,14 +37,14 @@ export function TrendChart({ data, errorMessage, isLoading }: TrendChartProps) {
     );
   }
 
-  if (!data || data.months.length === 0) {
+  if (!data || data.points.length === 0) {
     return <p className="text-base-content/70">トレンドデータはありません</p>;
   }
 
-  const chartData = data.months.map((m) => ({
-    label: `${m.year}/${m.month}`,
-    支出: m.totalExpense,
-    収入: m.totalIncome,
+  const chartData = data.points.map((p) => ({
+    label: p.label,
+    支出: p.totalExpense,
+    収入: p.totalIncome,
   }));
 
   return (
