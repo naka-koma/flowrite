@@ -2,7 +2,8 @@ import { test, expect } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "設定を開く" }).click();
+  await page.getByRole("button", { name: "メニューを開く" }).click();
+  await page.getByRole("button", { name: "設定" }).click();
 });
 
 test("デフォルトのプロンプトが表示される", async ({ page }) => {
@@ -25,7 +26,8 @@ test("保存した内容が再読み込み後も反映される", async ({ page 
   await expect(page.getByText("保存しました")).toBeVisible();
 
   await page.reload();
-  await page.getByRole("button", { name: "設定を開く" }).click();
+  await page.getByRole("button", { name: "メニューを開く" }).click();
+  await page.getByRole("button", { name: "設定" }).click();
 
   await expect(page.getByLabel("プロンプト")).toHaveValue("節約志向で厳しめにアドバイスしてください。");
   await expect(page.getByLabel("使用モデル")).toHaveValue("gemini-3.5-flash");
