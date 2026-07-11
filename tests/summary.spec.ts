@@ -25,6 +25,21 @@ test("カテゴリー別の円グラフが表示される", async ({ page }) => 
   await expect(page.locator(".recharts-pie")).toBeVisible();
 });
 
+test("表示直後から円グラフの上部が欠けずに完成形で表示される（スマホ幅）", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto("/");
+
+  const pie = page.locator(".recharts-pie");
+  await expect(pie).toBeVisible();
+
+  const box = await pie.boundingBox();
+  expect(box).not.toBeNull();
+  // 完成形のドーナツ円グラフは縦横比がほぼ1:1になる。
+  // マウントアニメーションの途中で上部が描画されていない状態だと縦幅が横幅よりかなり小さくなる
+  const ratio = box!.height / box!.width;
+  expect(ratio).toBeGreaterThan(0.85);
+});
+
 test("カテゴリーを選択すると取引明細が表示される", async ({ page }) => {
   await page.goto("/");
 
