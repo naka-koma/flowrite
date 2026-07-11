@@ -16,14 +16,14 @@ export function UploadForm() {
   return (
     <div>
       <h2 className="mb-3 text-lg font-semibold">CSVアップロード</h2>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
         <input
           type="file"
           accept=".csv"
           multiple
           aria-label="CSVファイル"
           onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-          className="file-input file-input-bordered"
+          className="file-input file-input-bordered w-full sm:w-auto"
         />
         <button
           onClick={handleSubmit}

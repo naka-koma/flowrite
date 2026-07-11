@@ -64,21 +64,21 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-base-200">
-      <div className="mx-auto max-w-3xl px-4 py-8">
+      <div className="mx-auto max-w-3xl px-4 py-6 sm:py-8">
         <header className="mb-6">
-          <h1 className="text-3xl font-bold">flowrite</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">flowrite</h1>
           <p className="text-base-content/70">家計管理ダッシュボード</p>
         </header>
 
         <div className="flex flex-col gap-6">
           <section className="card bg-base-100 shadow-sm">
-            <div className="card-body">
+            <div className="card-body p-4 sm:p-6">
               <UploadForm />
             </div>
           </section>
 
           <section className="card bg-base-100 shadow-sm">
-            <div className="card-body">
+            <div className="card-body p-4 sm:p-6">
               <h2 className="mb-3 text-lg font-semibold">サマリー</h2>
 
               <div role="tablist" className="tabs tabs-boxed mb-4 w-fit">
@@ -117,7 +117,7 @@ export function App() {
           </section>
 
           <section className="card bg-base-100 shadow-sm">
-            <div className="card-body">
+            <div className="card-body p-4 sm:p-6">
               <h2 className="mb-3 text-lg font-semibold">トレンド</h2>
               <TrendChart
                 data={trend.data}
@@ -128,21 +128,21 @@ export function App() {
           </section>
 
           <section className="card bg-base-100 shadow-sm">
-            <div className="card-body">
+            <div className="card-body p-4 sm:p-6">
               <h2 className="mb-3 text-lg font-semibold">AIアドバイス</h2>
               <AiAdvice context={buildAiContext(summary, trend)} />
             </div>
           </section>
 
           <section className="card bg-base-100 shadow-sm">
-            <div className="card-body">
+            <div className="card-body p-4 sm:p-6">
               <h2 className="mb-3 text-lg font-semibold">AI設定</h2>
               <SettingsForm />
             </div>
           </section>
 
           <section className="card bg-base-100 shadow-sm">
-            <div className="card-body">
+            <div className="card-body p-4 sm:p-6">
               <h2 className="mb-3 text-lg font-semibold">管理</h2>
               <AdminSection />
             </div>

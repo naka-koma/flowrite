@@ -4,3 +4,17 @@ test("ページが正しく表示される", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "flowrite" })).toBeVisible();
 });
+
+test("スマホ幅でも横スクロールが発生しない", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto("/");
+
+  await expect(page.getByRole("heading", { name: "flowrite" })).toBeVisible();
+  await expect(page.locator(".recharts-pie")).toBeVisible();
+
+  const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+  }));
+  expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+});
