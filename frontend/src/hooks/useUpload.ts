@@ -1,13 +1,12 @@
 import { useState } from "react";
-import type { UploadResponse } from "../types/api";
+import type { UploadResponse, FileUploadResult } from "../types/api";
 import { runScript } from "../lib/googleScriptRun";
 
-type UploadStatus = "idle" | "loading" | "success" | "error";
+type UploadStatus = "idle" | "loading" | "success";
 
 interface UploadState {
   status: UploadStatus;
-  result: UploadResponse | null;
-  errorMessage: string | null;
+  results: FileUploadResult[];
 }
 
 function readAsBase64(file: File): Promise<string> {
@@ -24,34 +23,44 @@ function readAsBase64(file: File): Promise<string> {
   });
 }
 
-export function useUpload() {
-  const [state, setState] = useState<UploadState>({
-    status: "idle",
-    result: null,
-    errorMessage: null,
-  });
+async function uploadOne(file: File): Promise<FileUploadResult> {
+  try {
+    const csv = await readAsBase64(file);
+    const data = await runScript<UploadResponse>("handleUpload", { csv });
 
-  const upload = async (file: File) => {
-    setState({ status: "loading", result: null, errorMessage: null });
-
-    try {
-      const csv = await readAsBase64(file);
-      const data = await runScript<UploadResponse>("handleUpload", { csv });
-
-      if (!data.success) {
-        setState({
-          status: "error",
-          result: null,
-          errorMessage: data.error ?? "アップロードに失敗しました",
-        });
-        return;
-      }
-
-      setState({ status: "success", result: data, errorMessage: null });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "アップロードに失敗しました";
-      setState({ status: "error", result: null, errorMessage: message });
+    if (!data.success) {
+      return {
+        fileName: file.name,
+        success: false,
+        inserted: 0,
+        skipped: 0,
+        error: data.error ?? "アップロードに失敗しました",
+      };
     }
+
+    return { fileName: file.name, success: true, inserted: data.inserted, skipped: data.skipped };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "アップロードに失敗しました";
+    return { fileName: file.name, success: false, inserted: 0, skipped: 0, error: message };
+  }
+}
+
+export function useUpload() {
+  const [state, setState] = useState<UploadState>({ status: "idle", results: [] });
+
+  const upload = async (files: File[]) => {
+    if (files.length === 0) {
+      return;
+    }
+    setState({ status: "loading", results: [] });
+
+    // 同時書き込みによる重複判定の競合を避けるため、順次アップロードする
+    const results: FileUploadResult[] = [];
+    for (const file of files) {
+      results.push(await uploadOne(file));
+    }
+
+    setState({ status: "success", results });
   };
 
   return { ...state, upload };

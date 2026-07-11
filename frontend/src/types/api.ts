@@ -5,6 +5,14 @@ export interface UploadResponse {
   error?: string;
 }
 
+export interface FileUploadResult {
+  fileName: string;
+  success: boolean;
+  inserted: number;
+  skipped: number;
+  error?: string;
+}
+
 export interface CategoryTotal {
   name: string;
   total: number;
