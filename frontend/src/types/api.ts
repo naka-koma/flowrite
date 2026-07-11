@@ -43,15 +43,17 @@ export interface SummaryResponse {
   error?: string;
 }
 
-export interface MonthData {
-  year: number;
-  month: number;
+export interface TrendPoint {
+  label: string;
   totalExpense: number;
   totalIncome: number;
 }
 
+export type TrendParams = { unit: SummaryUnit };
+
 export interface TrendResponse {
-  months: MonthData[];
+  unit: SummaryUnit;
+  points: TrendPoint[];
   error?: string;
 }
 

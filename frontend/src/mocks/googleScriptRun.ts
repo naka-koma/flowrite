@@ -1,4 +1,4 @@
-import type { Settings, SummaryParams } from "../types/api";
+import type { Settings, SummaryParams, TrendParams } from "../types/api";
 
 interface ScriptRun {
   withSuccessHandler(cb: (result: unknown) => void): ScriptRun;
@@ -110,18 +110,45 @@ function mockHandleSummary(params: SummaryParams) {
   };
 }
 
-function mockHandleTrend() {
+function mockHandleTrend(params: TrendParams) {
+  const unit = params?.unit ?? "month";
+
   if (getScenario().trendEmpty) {
-    return { months: [] };
+    return { unit, points: [] };
+  }
+
+  if (unit === "year") {
+    return {
+      unit,
+      points: [
+        { label: "2022年", totalExpense: 1750000, totalIncome: 3500000 },
+        { label: "2023年", totalExpense: 1820000, totalIncome: 3550000 },
+        { label: "2024年", totalExpense: 1800000, totalIncome: 3600000 },
+      ],
+    };
+  }
+
+  if (unit === "week") {
+    return {
+      unit,
+      points: [
+        { label: "06/02", totalExpense: 32000, totalIncome: 0 },
+        { label: "06/09", totalExpense: 28000, totalIncome: 0 },
+        { label: "06/16", totalExpense: 35000, totalIncome: 0 },
+        { label: "06/23", totalExpense: 30000, totalIncome: 300000 },
+        { label: "06/30", totalExpense: 41000, totalIncome: 0 },
+      ],
+    };
   }
 
   return {
-    months: [
-      { year: 2024, month: 1, totalExpense: 150000, totalIncome: 300000 },
-      { year: 2024, month: 2, totalExpense: 130000, totalIncome: 300000 },
-      { year: 2024, month: 3, totalExpense: 160000, totalIncome: 300000 },
-      { year: 2024, month: 4, totalExpense: 145000, totalIncome: 300000 },
-      { year: 2024, month: 5, totalExpense: 170000, totalIncome: 300000 },
+    unit,
+    points: [
+      { label: "2024/1", totalExpense: 150000, totalIncome: 300000 },
+      { label: "2024/2", totalExpense: 130000, totalIncome: 300000 },
+      { label: "2024/3", totalExpense: 160000, totalIncome: 300000 },
+      { label: "2024/4", totalExpense: 145000, totalIncome: 300000 },
+      { label: "2024/5", totalExpense: 170000, totalIncome: 300000 },
     ],
   };
 }
@@ -197,7 +224,7 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
     case "handleSummary":
       return mockHandleSummary(args[0] as SummaryParams);
     case "handleTrend":
-      return mockHandleTrend();
+      return mockHandleTrend(args[0] as TrendParams);
     case "handleAiAdvice":
       return mockHandleAiAdvice(args[0] as { context: string });
     case "handleRunMigrations":

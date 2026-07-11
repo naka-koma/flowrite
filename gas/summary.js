@@ -91,15 +91,42 @@ function handleSummary(params) {
   return { unit, year, month, label, totalExpense, totalIncome, categories };
 }
 
-function handleTrend() {
+function getMondayOfWeek_(date) {
+  const day = (date.getDay() + 6) % 7; // 月曜=0 ... 日曜=6
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() - day);
+}
+
+function resolveTrendGroup_(unit, date) {
+  if (unit === "year") {
+    const y = date.getFullYear();
+    return { key: `${y}`, sortKey: y, label: `${y}年` };
+  }
+
+  if (unit === "week") {
+    const monday = getMondayOfWeek_(date);
+    const tz = Session.getScriptTimeZone();
+    return {
+      key: Utilities.formatDate(monday, tz, "yyyy-MM-dd"),
+      sortKey: monday.getTime(),
+      label: Utilities.formatDate(monday, tz, "MM/dd"),
+    };
+  }
+
+  const y = date.getFullYear();
+  const m = date.getMonth() + 1;
+  return { key: `${y}-${m}`, sortKey: y * 100 + m, label: `${y}/${m}` };
+}
+
+function handleTrend(params) {
+  const unit = (params && params.unit) || "month";
   const sheet = getRawDataSheet();
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) {
-    return { months: [] };
+    return { unit, points: [] };
   }
 
   const data = sheet.getRange(2, 1, lastRow - 1, 11).getValues();
-  const monthMap = {};
+  const groupMap = {};
 
   for (const row of data) {
     const isTarget = row[9];
@@ -107,26 +134,23 @@ function handleTrend() {
     if (isTarget !== 1 || isTransfer === 1) continue;
 
     const date = new Date(row[1]);
-    const y = date.getFullYear();
-    const m = date.getMonth() + 1;
-    const key = `${y}-${m}`;
+    const { key, sortKey, label } = resolveTrendGroup_(unit, date);
 
-    if (!monthMap[key]) {
-      monthMap[key] = { year: y, month: m, totalExpense: 0, totalIncome: 0 };
+    if (!groupMap[key]) {
+      groupMap[key] = { sortKey, label, totalExpense: 0, totalIncome: 0 };
     }
 
     const amount = row[3];
     if (amount < 0) {
-      monthMap[key].totalExpense += Math.abs(amount);
+      groupMap[key].totalExpense += Math.abs(amount);
     } else {
-      monthMap[key].totalIncome += amount;
+      groupMap[key].totalIncome += amount;
     }
   }
 
-  const months = Object.values(monthMap).sort((a, b) => {
-    if (a.year !== b.year) return a.year - b.year;
-    return a.month - b.month;
-  });
+  const points = Object.values(groupMap)
+    .sort((a, b) => a.sortKey - b.sortKey)
+    .map(({ label, totalExpense, totalIncome }) => ({ label, totalExpense, totalIncome }));
 
-  return { months };
+  return { unit, points };
 }
