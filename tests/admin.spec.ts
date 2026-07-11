@@ -1,8 +1,11 @@
 import { test, expect } from "@playwright/test";
 
-test("マイグレーションを実行すると結果が表示される", async ({ page }) => {
+test.beforeEach(async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "設定を開く" }).click();
+});
 
+test("マイグレーションを実行すると結果が表示される", async ({ page }) => {
   page.on("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "マイグレーション実行" }).click();
 
@@ -10,8 +13,6 @@ test("マイグレーションを実行すると結果が表示される", async
 });
 
 test("確認ダイアログをキャンセルすると実行されない", async ({ page }) => {
-  await page.goto("/");
-
   page.on("dialog", (dialog) => dialog.dismiss());
   await page.getByRole("button", { name: "マイグレーション実行" }).click();
 
@@ -19,8 +20,6 @@ test("確認ダイアログをキャンセルすると実行されない", async
 });
 
 test("同じマイグレーションは二重に適用されない", async ({ page }) => {
-  await page.goto("/");
-
   page.on("dialog", (dialog) => dialog.accept());
 
   await page.getByRole("button", { name: "マイグレーション実行" }).click();
