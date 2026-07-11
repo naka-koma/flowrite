@@ -42,11 +42,24 @@ function mockHandleSummary(params: { year: number; month: number }) {
     totalExpense: 150000,
     totalIncome: 300000,
     categories: [
-      { name: "食費", total: 40000 },
-      { name: "交通費", total: 20000 },
-      { name: "娯楽", total: 15000 },
-      { name: "光熱費", total: 12000 },
-      { name: "その他", total: 63000 },
+      {
+        name: "食費",
+        total: 40000,
+        transactions: [
+          { content: "スーパー", date: `${year}/${String(month).padStart(2, "0")}/03`, amount: 3000 },
+          { content: "コンビニ", date: `${year}/${String(month).padStart(2, "0")}/10`, amount: 800 },
+        ],
+      },
+      {
+        name: "交通費",
+        total: 20000,
+        transactions: [
+          { content: "電車", date: `${year}/${String(month).padStart(2, "0")}/05`, amount: 5000 },
+        ],
+      },
+      { name: "娯楽", total: 15000, transactions: [] },
+      { name: "光熱費", total: 12000, transactions: [] },
+      { name: "その他", total: 63000, transactions: [] },
     ],
   };
 }

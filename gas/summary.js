@@ -27,18 +27,28 @@ function handleSummary(params) {
 
     const amount = row[3];
     const category = row[5];
+    const content = row[2];
 
     if (amount < 0) {
       const absAmount = Math.abs(amount);
       totalExpense += absAmount;
-      categoryMap[category] = (categoryMap[category] || 0) + absAmount;
+      if (!categoryMap[category]) {
+        categoryMap[category] = { total: 0, transactions: [] };
+      }
+      categoryMap[category].total += absAmount;
+      const formattedDate = Utilities.formatDate(date, Session.getScriptTimeZone(), "yyyy/MM/dd");
+      categoryMap[category].transactions.push({ content, date: formattedDate, amount: absAmount });
     } else {
       totalIncome += amount;
     }
   }
 
   const categories = Object.entries(categoryMap)
-    .map(([name, total]) => ({ name, total }))
+    .map(([name, value]) => ({
+      name,
+      total: value.total,
+      transactions: value.transactions.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)),
+    }))
     .sort((a, b) => b.total - a.total);
 
   return { year, month, totalExpense, totalIncome, categories };
