@@ -66,3 +66,46 @@ test("集計単位を切り替えても既存の月単位表示に戻れる", as
   await expect(page.getByLabel("対象年月")).toBeVisible();
   await expect(page.getByText("合計支出: 150000")).toBeVisible();
 });
+
+test("前月/次月ボタンで月を切り替えられる", async ({ page }) => {
+  await page.goto("/");
+
+  const now = new Date();
+  const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const label = (d: Date) => `${d.getFullYear()}年${d.getMonth() + 1}月`;
+
+  await page.getByRole("button", { name: "前の月" }).click();
+  await expect(page.getByTestId("period-label")).toHaveText(label(prevMonth));
+
+  await page.getByRole("button", { name: "次の月" }).click();
+  await page.getByRole("button", { name: "次の月" }).click();
+  await expect(page.getByTestId("period-label")).toHaveText(label(nextMonth));
+});
+
+test("前年/次年ボタンで年を切り替えられる", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: "年" }).click();
+
+  const now = new Date();
+
+  await page.getByRole("button", { name: "前の年" }).click();
+  await expect(page.getByTestId("period-label")).toHaveText(`${now.getFullYear() - 1}年`);
+
+  await page.getByRole("button", { name: "次の年" }).click();
+  await page.getByRole("button", { name: "次の年" }).click();
+  await expect(page.getByTestId("period-label")).toHaveText(`${now.getFullYear() + 1}年`);
+});
+
+test("前週/次週ボタンで週を切り替えられる", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: "週" }).click();
+
+  const initialLabel = await page.getByTestId("period-label").textContent();
+
+  await page.getByRole("button", { name: "前の週" }).click();
+  await expect(page.getByTestId("period-label")).not.toHaveText(initialLabel ?? "");
+
+  await page.getByRole("button", { name: "次の週" }).click();
+  await expect(page.getByTestId("period-label")).toHaveText(initialLabel ?? "");
+});
