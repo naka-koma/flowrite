@@ -10,7 +10,9 @@ import { SettingsScreen } from "./components/SettingsScreen";
 import { useSummary } from "./hooks/useSummary";
 import { useTrend } from "./hooks/useTrend";
 import { useTheme } from "./hooks/useTheme";
+import { useAmountVisibility } from "./hooks/useAmountVisibility";
 import { formatISODate, getMondayOfWeek } from "./lib/week";
+import { formatYen } from "./lib/money";
 import type { SummaryParams, SummaryUnit } from "./types/api";
 
 function buildAiContext(
@@ -25,16 +27,16 @@ function buildAiContext(
 
   if (hasSummaryData && summary.data) {
     const categoryText = summary.data.categories
-      .map((c) => `${c.name}: ${c.total}円`)
+      .map((c) => `${c.name}: ${formatYen(c.total)}`)
       .join("、");
     parts.push(
-      `${summary.data.label}: 支出${summary.data.totalExpense}円、収入${summary.data.totalIncome}円${categoryText ? `（内訳: ${categoryText}）` : ""}`,
+      `${summary.data.label}: 支出${formatYen(summary.data.totalExpense)}、収入${formatYen(summary.data.totalIncome)}${categoryText ? `（内訳: ${categoryText}）` : ""}`,
     );
   }
 
   if (trend.data && trend.data.points.length > 0) {
     const pointsText = trend.data.points
-      .map((p) => `${p.label} 支出${p.totalExpense}円・収入${p.totalIncome}円`)
+      .map((p) => `${p.label} 支出${formatYen(p.totalExpense)}・収入${formatYen(p.totalIncome)}`)
       .join("、");
     parts.push(`推移: ${pointsText}`);
   }
@@ -49,6 +51,7 @@ export function App() {
   const [screen, setScreen] = useState<"dashboard" | "settings">("dashboard");
   const [menuOpen, setMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { hideAmounts, toggleHideAmounts } = useAmountVisibility();
   const [unit, setUnit] = useState<SummaryUnit>("month");
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -91,6 +94,15 @@ export function App() {
               ☰
             </button>
             <h1 className="text-2xl font-bold sm:text-3xl">flowrite</h1>
+            <button
+              type="button"
+              onClick={toggleHideAmounts}
+              aria-label={hideAmounts ? "金額を表示する" : "金額を隠す"}
+              aria-pressed={hideAmounts}
+              className="btn btn-ghost btn-circle ml-auto"
+            >
+              {hideAmounts ? "🙈" : "👁"}
+            </button>
           </header>
 
           {screen === "settings" ? (
@@ -138,6 +150,7 @@ export function App() {
                     data={summary.data}
                     errorMessage={summary.errorMessage}
                     isLoading={summary.status === "loading"}
+                    hideAmounts={hideAmounts}
                   />
                 </div>
               </section>
@@ -149,6 +162,7 @@ export function App() {
                     data={trend.data}
                     errorMessage={trend.errorMessage}
                     isLoading={trend.status === "loading"}
+                    hideAmounts={hideAmounts}
                   />
                 </div>
               </section>
@@ -156,7 +170,7 @@ export function App() {
               <section className="card bg-base-100 shadow-sm">
                 <div className="card-body p-4 sm:p-6">
                   <h2 className="mb-3 text-lg font-semibold">AIアドバイス</h2>
-                  <AiAdvice context={buildAiContext(summary, trend)} />
+                  <AiAdvice context={buildAiContext(summary, trend)} hideAmounts={hideAmounts} />
                 </div>
               </section>
             </div>

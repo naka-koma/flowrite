@@ -1,9 +1,11 @@
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import type { CategoryTotal } from "../types/api";
+import { formatYen } from "../lib/money";
 
 interface CategoryPieChartProps {
   categories: CategoryTotal[];
   onSelectCategory: (name: string) => void;
+  hideAmounts: boolean;
 }
 
 // カテゴリー識別用の固定順カテゴリカルパレット（dataviz skill準拠）
@@ -44,7 +46,7 @@ function buildSlices(categories: CategoryTotal[]): Slice[] {
   ];
 }
 
-export function CategoryPieChart({ categories, onSelectCategory }: CategoryPieChartProps) {
+export function CategoryPieChart({ categories, onSelectCategory, hideAmounts }: CategoryPieChartProps) {
   const slices = buildSlices(categories);
 
   return (
@@ -71,7 +73,7 @@ export function CategoryPieChart({ categories, onSelectCategory }: CategoryPieCh
             />
           ))}
         </Pie>
-        <Tooltip formatter={(value: number) => `${value.toLocaleString()}円`} />
+        <Tooltip formatter={(value: number) => (hideAmounts ? "***円" : formatYen(value))} />
         <Legend />
       </PieChart>
     </ResponsiveContainer>
