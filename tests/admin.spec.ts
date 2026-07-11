@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
+import { openSettings } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "メニューを開く" }).click();
-  await page.getByRole("button", { name: "設定" }).click();
+  await openSettings(page);
 });
 
 test("マイグレーションを実行すると結果が表示される", async ({ page }) => {
