@@ -18,19 +18,38 @@ function buildOptions(): number[] {
 
 export function YearSelector({ year, onChange }: YearSelectorProps) {
   const options = buildOptions();
+  const allOptions = options.includes(year) ? options : [year, ...options];
 
   return (
-    <select
-      aria-label="対象年"
-      value={year}
-      onChange={(e) => onChange(Number(e.target.value))}
-      className="select select-bordered mb-4 w-full max-w-xs"
-    >
-      {options.map((option) => (
-        <option key={option} value={option}>
-          {option}年
-        </option>
-      ))}
-    </select>
+    <div className="mb-4 flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => onChange(year - 1)}
+        aria-label="前の年"
+        className="btn btn-square btn-sm"
+      >
+        ‹
+      </button>
+      <select
+        aria-label="対象年"
+        value={year}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="select select-bordered w-full max-w-xs"
+      >
+        {allOptions.map((option) => (
+          <option key={option} value={option}>
+            {option}年
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        onClick={() => onChange(year + 1)}
+        aria-label="次の年"
+        className="btn btn-square btn-sm"
+      >
+        ›
+      </button>
+    </div>
   );
 }

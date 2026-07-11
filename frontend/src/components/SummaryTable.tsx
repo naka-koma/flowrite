@@ -42,7 +42,9 @@ export function SummaryTable({ data, errorMessage, isLoading }: SummaryTableProp
 
   return (
     <div>
-      <p className="mb-2 text-sm text-base-content/70">{data.label}</p>
+      <p data-testid="period-label" className="mb-2 text-sm text-base-content/70">
+        {data.label}
+      </p>
       <div className="mb-3 flex gap-6">
         <p>
           合計支出: <span className="font-semibold text-error">{data.totalExpense}</span>
