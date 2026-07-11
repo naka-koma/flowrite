@@ -36,3 +36,33 @@ test("カテゴリーを選択すると取引明細が表示される", async ({
   await page.getByRole("button", { name: "閉じる" }).click();
   await expect(page.getByText("食費の取引明細")).not.toBeVisible();
 });
+
+test("年タブに切り替えると年単位の集計が表示される", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("tab", { name: "年" }).click();
+
+  await expect(page.getByLabel("対象年")).toBeVisible();
+  await expect(page.getByText("合計支出: 1800000")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "住居" })).toBeVisible();
+});
+
+test("週タブに切り替えると週単位の集計が表示される", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("tab", { name: "週" }).click();
+
+  await expect(page.getByLabel("対象週")).toBeVisible();
+  await expect(page.getByText("合計支出: 35000")).toBeVisible();
+});
+
+test("集計単位を切り替えても既存の月単位表示に戻れる", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("tab", { name: "年" }).click();
+  await expect(page.getByText("合計支出: 1800000")).toBeVisible();
+
+  await page.getByRole("tab", { name: "月" }).click();
+  await expect(page.getByLabel("対象年月")).toBeVisible();
+  await expect(page.getByText("合計支出: 150000")).toBeVisible();
+});

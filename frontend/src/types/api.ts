@@ -25,9 +25,18 @@ export interface CategoryTotal {
   transactions: Transaction[];
 }
 
+export type SummaryUnit = "month" | "year" | "week";
+
+export type SummaryParams =
+  | { unit: "month"; year: number; month: number }
+  | { unit: "year"; year: number }
+  | { unit: "week"; weekStart: string };
+
 export interface SummaryResponse {
+  unit: SummaryUnit;
   year: number;
-  month: number;
+  month?: number;
+  label: string;
   totalExpense: number;
   totalIncome: number;
   categories: CategoryTotal[];

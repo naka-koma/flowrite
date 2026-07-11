@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { SummaryResponse } from "../types/api";
+import type { SummaryParams, SummaryResponse } from "../types/api";
 import { runScript } from "../lib/googleScriptRun";
 
 type SummaryStatus = "loading" | "success" | "error";
@@ -10,18 +10,21 @@ interface SummaryState {
   errorMessage: string | null;
 }
 
-export function useSummary(year: number, month: number) {
+export function useSummary(params: SummaryParams) {
   const [state, setState] = useState<SummaryState>({
     status: "loading",
     data: null,
     errorMessage: null,
   });
 
+  // paramsはunitごとに形が異なるため、内容の変化をJSON文字列で比較する
+  const paramsKey = JSON.stringify(params);
+
   useEffect(() => {
     let cancelled = false;
     setState({ status: "loading", data: null, errorMessage: null });
 
-    runScript<SummaryResponse>("handleSummary", { year, month })
+    runScript<SummaryResponse>("handleSummary", params)
       .then((data) => {
         if (cancelled) return;
 
@@ -41,7 +44,7 @@ export function useSummary(year: number, month: number) {
     return () => {
       cancelled = true;
     };
-  }, [year, month]);
+  }, [paramsKey]);
 
   return state;
 }
