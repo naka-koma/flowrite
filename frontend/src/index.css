@@ -1,2 +1,73 @@
 @import "tailwindcss";
-@plugin "daisyui";
+@plugin "daisyui" {
+  themes: fluorite --default, fluorite-dark --prefersdark;
+}
+
+/* 蛍石（フローライト）モチーフのアプリアイコンから抽出したパープル〜グリーンのパレット */
+@plugin "daisyui/theme" {
+  name: "fluorite";
+  default: true;
+  color-scheme: light;
+  --color-base-100: #faf9fc;
+  --color-base-200: #f1eef7;
+  --color-base-300: #e3dcef;
+  --color-base-content: #2a2438;
+  --color-primary: #3f8f80;
+  --color-primary-content: #ffffff;
+  --color-secondary: #5d4680;
+  --color-secondary-content: #ffffff;
+  --color-accent: #5fb8a3;
+  --color-accent-content: #0f2e28;
+  --color-neutral: #2e1e4f;
+  --color-neutral-content: #ede9f5;
+  --color-info: #4f8fd1;
+  --color-info-content: #ffffff;
+  --color-success: #3f8f6a;
+  --color-success-content: #ffffff;
+  --color-warning: #c98a3a;
+  --color-warning-content: #2b1a05;
+  --color-error: #c1466b;
+  --color-error-content: #ffffff;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@plugin "daisyui/theme" {
+  name: "fluorite-dark";
+  prefersdark: true;
+  color-scheme: dark;
+  --color-base-100: #1c1730;
+  --color-base-200: #150f26;
+  --color-base-300: #100b1d;
+  --color-base-content: #e7e2f3;
+  --color-primary: #5fcbb0;
+  --color-primary-content: #06241f;
+  --color-secondary: #a58bd6;
+  --color-secondary-content: #241a3d;
+  --color-accent: #7fe0c9;
+  --color-accent-content: #06251f;
+  --color-neutral: #ede9f5;
+  --color-neutral-content: #241a3d;
+  --color-info: #7cb3ea;
+  --color-info-content: #0b2745;
+  --color-success: #6fd3a6;
+  --color-success-content: #06301d;
+  --color-warning: #e3ab5c;
+  --color-warning-content: #3a2405;
+  --color-error: #e88aa8;
+  --color-error-content: #3a0f1d;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
