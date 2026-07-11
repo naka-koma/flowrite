@@ -1,4 +1,4 @@
-import type { Settings, SummaryParams, TrendParams } from "../types/api";
+import type { Settings, SummaryParams, SummaryUnit, TrendParams, TrendPoint } from "../types/api";
 
 interface ScriptRun {
   withSuccessHandler(cb: (result: unknown) => void): ScriptRun;
@@ -8,6 +8,7 @@ interface ScriptRun {
 
 interface MockScenario {
   trendEmpty?: boolean;
+  trendManyPoints?: boolean;
 }
 
 function getScenario(): MockScenario {
@@ -110,11 +111,40 @@ function mockHandleSummary(params: SummaryParams) {
   };
 }
 
+// 表示件数の上限（TrendChart側のUNIT_VISIBLE_LIMITSと同じ想定）を超えるダミーデータを生成する
+function generateManyPoints(unit: SummaryUnit): TrendPoint[] {
+  if (unit === "year") {
+    return Array.from({ length: 8 }, (_, i) => ({
+      label: `${2018 + i}年`,
+      totalExpense: 1500000 + i * 10000,
+      totalIncome: 3500000,
+    }));
+  }
+
+  if (unit === "week") {
+    return Array.from({ length: 20 }, (_, i) => ({
+      label: `${String((i % 12) + 1).padStart(2, "0")}/${String((i % 4) * 7 + 1).padStart(2, "0")}`,
+      totalExpense: 20000 + i * 500,
+      totalIncome: 0,
+    }));
+  }
+
+  return Array.from({ length: 20 }, (_, i) => ({
+    label: `2023/${(i % 12) + 1}`,
+    totalExpense: 100000 + i * 1000,
+    totalIncome: 300000,
+  }));
+}
+
 function mockHandleTrend(params: TrendParams) {
   const unit = params?.unit ?? "month";
 
   if (getScenario().trendEmpty) {
     return { unit, points: [] };
+  }
+
+  if (getScenario().trendManyPoints) {
+    return { unit, points: generateManyPoints(unit) };
   }
 
   if (unit === "year") {
