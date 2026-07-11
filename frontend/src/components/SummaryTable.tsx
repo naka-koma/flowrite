@@ -1,4 +1,7 @@
+import { useState } from "react";
 import type { SummaryResponse } from "../types/api";
+import { CategoryPieChart } from "./CategoryPieChart";
+import { TransactionList } from "./TransactionList";
 
 interface SummaryTableProps {
   data: SummaryResponse | null;
@@ -7,6 +10,8 @@ interface SummaryTableProps {
 }
 
 export function SummaryTable({ data, errorMessage, isLoading }: SummaryTableProps) {
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
   if (isLoading) {
     return (
       <p className="flex items-center gap-2">
@@ -28,6 +33,8 @@ export function SummaryTable({ data, errorMessage, isLoading }: SummaryTableProp
     return <p className="text-base-content/70">この月のデータはありません</p>;
   }
 
+  const selected = data.categories.find((c) => c.name === selectedCategory) ?? null;
+
   return (
     <div>
       <div className="mb-3 flex gap-6">
@@ -38,7 +45,10 @@ export function SummaryTable({ data, errorMessage, isLoading }: SummaryTableProp
           合計収入: <span className="font-semibold text-success">{data.totalIncome}</span>
         </p>
       </div>
-      <div className="overflow-x-auto">
+
+      <CategoryPieChart categories={data.categories} onSelectCategory={setSelectedCategory} />
+
+      <div className="mt-4 overflow-x-auto">
         <table className="table">
           <thead>
             <tr>
@@ -49,13 +59,29 @@ export function SummaryTable({ data, errorMessage, isLoading }: SummaryTableProp
           <tbody>
             {data.categories.map((category) => (
               <tr key={category.name}>
-                <td>{category.name}</td>
+                <td>
+                  <button
+                    type="button"
+                    className="link link-hover text-left"
+                    onClick={() => setSelectedCategory(category.name)}
+                  >
+                    {category.name}
+                  </button>
+                </td>
                 <td>{category.total}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {selected && (
+        <TransactionList
+          categoryName={selected.name}
+          transactions={selected.transactions}
+          onClose={() => setSelectedCategory(null)}
+        />
+      )}
     </div>
   );
 }

@@ -13,9 +13,16 @@ export interface FileUploadResult {
   error?: string;
 }
 
+export interface Transaction {
+  content: string;
+  date: string;
+  amount: number;
+}
+
 export interface CategoryTotal {
   name: string;
   total: number;
+  transactions: Transaction[];
 }
 
 export interface SummaryResponse {
