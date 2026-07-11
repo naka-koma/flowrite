@@ -22,6 +22,8 @@ user-invocable: true
 
 ## 注意
 
-- `clasp login` 未実施かつ `CLASP_CREDENTIALS` 環境変数も未設定の場合はログインを促す（README.mdの「リモート環境からのデプロイ」参照）
+- `clasp login` 未実施かつ `CLASP_CREDENTIALS` 環境変数も未設定の場合は `npm run setup` を促す（README.mdの「リモート環境からのデプロイ」参照）
+  - GUIブラウザを自動起動できない環境（リモートセッション等）では `CLASP_LOGIN_NO_LOCALHOST=1 npm run setup` を使い、表示された認可URLをユーザーに開いてもらい、リダイレクト先のURL全体を貼り付けてもらう
 - `.clasp.json` が存在せず `CLASP_SCRIPT_ID` 環境変数も未設定の場合は、Script IDの入力（`npm run setup`）を促す
+- 新規環境で `npm run setup` を実行する際、既存のWebAppデプロイメントIDを把握していれば入力するようユーザーに確認する（空欄のまま進めると別のデプロイメントが新規作成され、既存のWebApp URLとは別物になる）
 - デプロイは本番環境への反映であることをユーザーに明示する

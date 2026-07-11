@@ -4,6 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ensureAppsscriptJson } from "./lib/clasp-env.js";
+import { pushAndDeploy } from "./lib/deploy-core.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
@@ -33,10 +34,19 @@ async function main() {
     console.log("clasp: CLASP_CREDENTIALS から .clasprc.json を生成しました");
   } else {
     console.log("\n=== clasp login ===");
-    console.log(
-      "ブラウザを開けない環境（リモートセッション等）の場合は `npx clasp login --no-localhost` を使ってください。",
-    );
-    run("npx clasp login");
+    // GUIブラウザを自動起動できない環境（リモートセッション等）では
+    // CLASP_LOGIN_NO_LOCALHOST=1 を指定する。
+    // 認可URLが表示されるので、ブラウザで開いて許可した後、
+    // リダイレクト先（localhostに接続できないエラーページ）のURL全体を
+    // アドレスバーからコピーしてターミナルに貼り付ける。
+    if (process.env.CLASP_LOGIN_NO_LOCALHOST) {
+      run("npx clasp login --no-localhost");
+    } else {
+      console.log(
+        "GUIブラウザがない環境の場合は `CLASP_LOGIN_NO_LOCALHOST=1 npm run setup` を使ってください。",
+      );
+      run("npx clasp login");
+    }
   }
 
   // clasp project
@@ -76,17 +86,23 @@ async function main() {
   console.log("\n=== appsscript.json ===");
   ensureAppsscriptJson(root);
 
-  // build
-  console.log("\n=== npm run build ===");
-  run("npm run build");
+  // 既存のデプロイメントIDがあれば再利用する（なければ新規作成）
+  const envPath = resolve(root, ".env");
+  const envDeploymentIdMatch =
+    existsSync(envPath) && readFileSync(envPath, "utf8").match(/^DEPLOYMENT_ID=(.+)$/m);
+  const hasDeploymentId = Boolean(process.env.DEPLOYMENT_ID || envDeploymentIdMatch);
 
-  // clasp push
-  console.log("\n=== clasp push ===");
-  run("npx clasp push");
+  let deploymentId;
+  if (!hasDeploymentId) {
+    const answer = await rl.question(
+      "\n既存のWebAppデプロイメントIDがあれば入力してください（なければ空欄でEnter → 新規作成）\nDeployment ID: ",
+    );
+    deploymentId = answer || undefined;
+  }
 
-  // clasp deploy
-  console.log("\n=== clasp deploy ===");
-  run('npx clasp deploy --description "initial deployment"');
+  // build + clasp push + clasp deploy
+  console.log("\n=== build & deploy ===");
+  pushAndDeploy(root, { description: "initial deployment", deploymentId });
 
   // show instructions
   const claspJson = JSON.parse(readFileSync(claspJsonPath, "utf8"));

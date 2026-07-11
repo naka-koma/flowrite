@@ -197,6 +197,21 @@ npm run setup
 
 これらが設定されていれば、`npm run deploy` / `npm run setup` は初回でも `.clasprc.json` / `.clasp.json` / `gas/appsscript.json` を自動生成してからビルド・デプロイを行う。
 
+#### 環境変数を用意せず、その場でログインする場合
+
+`CLASP_CREDENTIALS` を用意していない新規環境では、`npm run setup` を対話的に実行してその場で `clasp login` することもできる。GUIブラウザを自動起動できない環境（リモートセッション等）では、`--no-localhost` フラグを使う必要があるため、以下のように実行する。
+
+```bash
+CLASP_LOGIN_NO_LOCALHOST=1 npm run setup
+```
+
+流れ:
+1. 認可URLが表示されるので、任意の端末のブラウザで開いてGoogleアカウントで許可する
+2. 許可すると `http://localhost:8888/?code=...` へリダイレクトされ、「接続できません」というエラーページが表示される（正常な挙動。ローカルサーバーを立てていないため）
+3. そのエラーページの**アドレスバーに表示されている完全なURL**（`code=`を含む）をコピーし、ターミナルの `After authorizing, copy the URL from your browser and paste it here:` プロンプトに貼り付ける
+4. `.clasp.json` が未生成の場合はScript IDの入力を求められる
+5. 既存のWebAppデプロイメントIDがあれば入力する（空欄でEnterすると新規デプロイメントを作成する。既存のURLを維持したい場合は必ず入力すること）
+
 ### npm scripts
 
 | コマンド | 説明 |
