@@ -1,4 +1,4 @@
-import type { SummaryParams } from "../types/api";
+import type { Settings, SummaryParams } from "../types/api";
 
 interface ScriptRun {
   withSuccessHandler(cb: (result: unknown) => void): ScriptRun;
@@ -147,6 +147,37 @@ function mockHandleRunMigrations() {
   };
 }
 
+const DEFAULT_MOCK_PROMPT =
+  "あなたは家計管理のアドバイザーです。以下の支出データを分析し、具体的で実行可能なアドバイスを日本語で提供してください。";
+const MOCK_SETTINGS_STORAGE_KEY = "__mock_settings__";
+
+// 実際のGASでは設定はスプレッドシートに永続化されるため、モックでも
+// ページリロードをまたいで再現できるよう sessionStorage に保存する
+function loadMockSettings(): Settings {
+  const raw = sessionStorage.getItem(MOCK_SETTINGS_STORAGE_KEY);
+  if (raw) {
+    try {
+      return JSON.parse(raw) as Settings;
+    } catch {
+      // 壊れたデータは無視してデフォルトにフォールバック
+    }
+  }
+  return { prompt: DEFAULT_MOCK_PROMPT, model: "" };
+}
+
+function mockHandleGetSettings() {
+  return loadMockSettings();
+}
+
+function mockHandleUpdateSettings(body: { prompt?: string; model?: string }) {
+  const settings: Settings = {
+    prompt: body.prompt?.trim() || DEFAULT_MOCK_PROMPT,
+    model: body.model?.trim() ?? "",
+  };
+  sessionStorage.setItem(MOCK_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  return { success: true };
+}
+
 function mockHandleAiAdvice(body: { context: string }) {
   if (!body.context) {
     return { success: false, error: "context field is required" };
@@ -171,6 +202,10 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleAiAdvice(args[0] as { context: string });
     case "handleRunMigrations":
       return mockHandleRunMigrations();
+    case "handleGetSettings":
+      return mockHandleGetSettings();
+    case "handleUpdateSettings":
+      return mockHandleUpdateSettings(args[0] as { prompt?: string; model?: string });
     default:
       throw new Error(`Unknown function: ${functionName}`);
   }

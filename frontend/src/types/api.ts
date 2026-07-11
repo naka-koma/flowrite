@@ -74,3 +74,14 @@ export interface RunMigrationsResponse {
   appliedCount: number;
   error?: string;
 }
+
+export interface Settings {
+  prompt: string;
+  model: string;
+  error?: string;
+}
+
+export interface UpdateSettingsResponse {
+  success: boolean;
+  error?: string;
+}

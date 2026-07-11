@@ -6,7 +6,7 @@ const GEMINI_MODEL_FALLBACK_ORDER = ["gemini-3.5-flash", "gemini-3.1-flash-lite"
 const GEMINI_RETRYABLE_STATUS_CODES = [429, 503];
 
 function getGeminiModelsToTry() {
-  const configuredModel = PropertiesService.getScriptProperties().getProperty("GEMINI_MODEL");
+  const configuredModel = getAiModel() || PropertiesService.getScriptProperties().getProperty("GEMINI_MODEL");
   return configuredModel ? [configuredModel] : GEMINI_MODEL_FALLBACK_ORDER;
 }
 
@@ -37,7 +37,7 @@ function handleAiAdvice(body) {
     return { success: false, error: "GEMINI_API_KEY is not set in script properties" };
   }
 
-  const prompt = `あなたは家計管理のアドバイザーです。以下の支出データを分析し、具体的で実行可能なアドバイスを日本語で提供してください。\n\n${context}`;
+  const prompt = `${getAiPrompt()}\n\n${context}`;
 
   for (const model of getGeminiModelsToTry()) {
     const { code, body: responseBody } = callGeminiApi(model, apiKey, prompt);
