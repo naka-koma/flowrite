@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { UploadForm } from "./components/UploadForm";
 import { MonthSelector } from "./components/MonthSelector";
+import { YearSelector } from "./components/YearSelector";
+import { WeekSelector } from "./components/WeekSelector";
 import { SummaryTable } from "./components/SummaryTable";
 import { TrendChart } from "./components/TrendChart";
 import { AiAdvice } from "./components/AiAdvice";
 import { useSummary } from "./hooks/useSummary";
 import { useTrend } from "./hooks/useTrend";
+import { formatISODate, getMondayOfWeek } from "./lib/week";
+import type { SummaryParams, SummaryUnit } from "./types/api";
 
 function buildAiContext(
   summary: ReturnType<typeof useSummary>,
@@ -22,7 +26,7 @@ function buildAiContext(
       .map((c) => `${c.name}: ${c.total}円`)
       .join("、");
     parts.push(
-      `${summary.data.year}年${summary.data.month}月: 支出${summary.data.totalExpense}円、収入${summary.data.totalIncome}円${categoryText ? `（内訳: ${categoryText}）` : ""}`,
+      `${summary.data.label}: 支出${summary.data.totalExpense}円、収入${summary.data.totalIncome}円${categoryText ? `（内訳: ${categoryText}）` : ""}`,
     );
   }
 
@@ -36,11 +40,24 @@ function buildAiContext(
   return parts.join("\n");
 }
 
+const UNIT_LABELS: Record<SummaryUnit, string> = { month: "月", year: "年", week: "週" };
+
 export function App() {
   const now = new Date();
+  const [unit, setUnit] = useState<SummaryUnit>("month");
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
-  const summary = useSummary(year, month);
+  const [summaryYear, setSummaryYear] = useState(now.getFullYear());
+  const [weekStart, setWeekStart] = useState(formatISODate(getMondayOfWeek(now)));
+
+  const summaryParams: SummaryParams =
+    unit === "year"
+      ? { unit: "year", year: summaryYear }
+      : unit === "week"
+        ? { unit: "week", weekStart }
+        : { unit: "month", year, month };
+
+  const summary = useSummary(summaryParams);
   const trend = useTrend();
 
   return (
@@ -60,15 +77,35 @@ export function App() {
 
           <section className="card bg-base-100 shadow-sm">
             <div className="card-body">
-              <h2 className="mb-3 text-lg font-semibold">月次サマリー</h2>
-              <MonthSelector
-                year={year}
-                month={month}
-                onChange={(newYear, newMonth) => {
-                  setYear(newYear);
-                  setMonth(newMonth);
-                }}
-              />
+              <h2 className="mb-3 text-lg font-semibold">サマリー</h2>
+
+              <div role="tablist" className="tabs tabs-boxed mb-4 w-fit">
+                {(Object.keys(UNIT_LABELS) as SummaryUnit[]).map((u) => (
+                  <button
+                    key={u}
+                    type="button"
+                    role="tab"
+                    className={`tab ${unit === u ? "tab-active" : ""}`}
+                    onClick={() => setUnit(u)}
+                  >
+                    {UNIT_LABELS[u]}
+                  </button>
+                ))}
+              </div>
+
+              {unit === "month" && (
+                <MonthSelector
+                  year={year}
+                  month={month}
+                  onChange={(newYear, newMonth) => {
+                    setYear(newYear);
+                    setMonth(newMonth);
+                  }}
+                />
+              )}
+              {unit === "year" && <YearSelector year={summaryYear} onChange={setSummaryYear} />}
+              {unit === "week" && <WeekSelector weekStart={weekStart} onChange={setWeekStart} />}
+
               <SummaryTable
                 data={summary.data}
                 errorMessage={summary.errorMessage}

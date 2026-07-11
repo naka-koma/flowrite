@@ -29,14 +29,20 @@ export function SummaryTable({ data, errorMessage, isLoading }: SummaryTableProp
     );
   }
 
-  if (!data || data.categories.length === 0) {
-    return <p className="text-base-content/70">この月のデータはありません</p>;
+  if (!data) {
+    return <p className="text-base-content/70">この期間のデータはありません</p>;
+  }
+
+  if (data.categories.length === 0) {
+    const unitLabel = data.unit === "year" ? "年" : data.unit === "week" ? "週" : "月";
+    return <p className="text-base-content/70">この{unitLabel}のデータはありません</p>;
   }
 
   const selected = data.categories.find((c) => c.name === selectedCategory) ?? null;
 
   return (
     <div>
+      <p className="mb-2 text-sm text-base-content/70">{data.label}</p>
       <div className="mb-3 flex gap-6">
         <p>
           合計支出: <span className="font-semibold text-error">{data.totalExpense}</span>

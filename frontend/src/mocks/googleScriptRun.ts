@@ -1,3 +1,5 @@
+import type { SummaryParams } from "../types/api";
+
 interface ScriptRun {
   withSuccessHandler(cb: (result: unknown) => void): ScriptRun;
   withFailureHandler(cb: (error: Error) => void): ScriptRun;
@@ -23,7 +25,41 @@ function mockHandleUpload(body: { csv: string }) {
   return { success: true, inserted: 12, skipped: 3 };
 }
 
-function mockHandleSummary(params: { year: number; month: number }) {
+function mockHandleSummary(params: SummaryParams) {
+  if (params.unit === "year") {
+    return {
+      unit: "year" as const,
+      year: params.year,
+      label: `${params.year}年`,
+      totalExpense: 1800000,
+      totalIncome: 3600000,
+      categories: [
+        { name: "食費", total: 480000, transactions: [] },
+        { name: "交通費", total: 240000, transactions: [] },
+        { name: "住居", total: 960000, transactions: [] },
+        { name: "娯楽", total: 120000, transactions: [] },
+      ],
+    };
+  }
+
+  if (params.unit === "week") {
+    return {
+      unit: "week" as const,
+      year: Number(params.weekStart.slice(0, 4)),
+      label: `${params.weekStart}の週`,
+      totalExpense: 35000,
+      totalIncome: 0,
+      categories: [
+        {
+          name: "食費",
+          total: 20000,
+          transactions: [{ content: "スーパー", date: params.weekStart, amount: 3000 }],
+        },
+        { name: "娯楽", total: 15000, transactions: [] },
+      ],
+    };
+  }
+
   const year = Number(params.year);
   const month = Number(params.month);
 
@@ -33,12 +69,22 @@ function mockHandleSummary(params: { year: number; month: number }) {
   const isOldestMonth = year === oldest.getFullYear() && month === oldest.getMonth() + 1;
 
   if (isOldestMonth) {
-    return { year, month, totalExpense: 0, totalIncome: 0, categories: [] };
+    return {
+      unit: "month" as const,
+      year,
+      month,
+      label: `${year}年${month}月`,
+      totalExpense: 0,
+      totalIncome: 0,
+      categories: [],
+    };
   }
 
   return {
+    unit: "month" as const,
     year,
     month,
+    label: `${year}年${month}月`,
     totalExpense: 150000,
     totalIncome: 300000,
     categories: [
@@ -97,7 +143,7 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
     case "handleUpload":
       return mockHandleUpload(args[0] as { csv: string });
     case "handleSummary":
-      return mockHandleSummary(args[0] as { year: number; month: number });
+      return mockHandleSummary(args[0] as SummaryParams);
     case "handleTrend":
       return mockHandleTrend();
     case "handleAiAdvice":

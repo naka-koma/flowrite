@@ -1,15 +1,52 @@
-function handleSummary(params) {
+function resolveSummaryPeriod_(params) {
+  const unit = params.unit || "month";
+
+  if (unit === "week") {
+    if (!params.weekStart) {
+      return { error: "weekStart is required" };
+    }
+    const start = new Date(params.weekStart);
+    if (isNaN(start.getTime())) {
+      return { error: "weekStart is invalid" };
+    }
+    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7);
+    const endInclusive = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+    const tz = Session.getScriptTimeZone();
+    const label = `${Utilities.formatDate(start, tz, "yyyy/MM/dd")} 〜 ${Utilities.formatDate(endInclusive, tz, "yyyy/MM/dd")}`;
+    return { unit, year: start.getFullYear(), start, end, label };
+  }
+
+  if (unit === "year") {
+    const year = Number(params.year);
+    if (!year) {
+      return { error: "year is required" };
+    }
+    const start = new Date(year, 0, 1);
+    const end = new Date(year + 1, 0, 1);
+    return { unit, year, start, end, label: `${year}年` };
+  }
+
   const year = Number(params.year);
   const month = Number(params.month);
-
   if (!year || !month) {
-    return { success: false, error: "year and month are required" };
+    return { error: "year and month are required" };
   }
+  const start = new Date(year, month - 1, 1);
+  const end = new Date(year, month, 1);
+  return { unit: "month", year, month, start, end, label: `${year}年${month}月` };
+}
+
+function handleSummary(params) {
+  const period = resolveSummaryPeriod_(params);
+  if (period.error) {
+    return { success: false, error: period.error };
+  }
+  const { unit, year, month, start, end, label } = period;
 
   const sheet = getRawDataSheet();
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) {
-    return { year, month, totalExpense: 0, totalIncome: 0, categories: [] };
+    return { unit, year, month, label, totalExpense: 0, totalIncome: 0, categories: [] };
   }
 
   const data = sheet.getRange(2, 1, lastRow - 1, 11).getValues();
@@ -23,7 +60,7 @@ function handleSummary(params) {
     if (isTarget !== 1 || isTransfer === 1) continue;
 
     const date = new Date(row[1]);
-    if (date.getFullYear() !== year || date.getMonth() + 1 !== month) continue;
+    if (date < start || date >= end) continue;
 
     const amount = row[3];
     const category = row[5];
@@ -51,7 +88,7 @@ function handleSummary(params) {
     }))
     .sort((a, b) => b.total - a.total);
 
-  return { year, month, totalExpense, totalIncome, categories };
+  return { unit, year, month, label, totalExpense, totalIncome, categories };
 }
 
 function handleTrend() {
