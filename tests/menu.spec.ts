@@ -1,0 +1,36 @@
+import { test, expect } from "@playwright/test";
+
+test("ハンバーガーメニューから設定画面とホームに遷移できる", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "flowrite" })).toBeVisible();
+
+  await page.getByRole("button", { name: "メニューを開く" }).click();
+  await page.getByRole("button", { name: "設定" }).click();
+  await expect(page.getByRole("heading", { name: "設定", exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "メニューを開く" }).click();
+  await page.getByRole("button", { name: "ホーム" }).click();
+  await expect(page.getByRole("heading", { name: "設定", exact: true })).not.toBeVisible();
+});
+
+test("メニュー外をクリックするとメニューが閉じる", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "メニューを開く" }).click();
+  await expect(page.getByRole("button", { name: "設定" })).toBeVisible();
+
+  await page.getByLabel("メニューを閉じる").click({ force: true });
+  await expect(page.getByRole("button", { name: "設定" })).not.toBeVisible();
+});
+
+test.describe("モバイル幅", () => {
+  test.use({ viewport: { width: 375, height: 800 } });
+
+  test("ハンバーガーメニューから設定画面に遷移できる", async ({ page }) => {
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "メニューを開く" }).click();
+    await page.getByRole("button", { name: "設定" }).click();
+    await expect(page.getByRole("heading", { name: "設定", exact: true })).toBeVisible();
+  });
+});

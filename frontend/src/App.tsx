@@ -47,6 +47,7 @@ const UNIT_LABELS: Record<SummaryUnit, string> = { month: "月", year: "年", we
 export function App() {
   const now = new Date();
   const [screen, setScreen] = useState<"dashboard" | "settings">("dashboard");
+  const [menuOpen, setMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const [unit, setUnit] = useState<SummaryUnit>("month");
   const [year, setYear] = useState(now.getFullYear());
@@ -64,98 +65,122 @@ export function App() {
   const summary = useSummary(summaryParams);
   const trend = useTrend();
 
-  if (screen === "settings") {
-    return (
-      <div className="min-h-screen bg-base-200">
-        <div className="mx-auto max-w-3xl px-4 py-6 sm:py-8">
-          <SettingsScreen theme={theme} onChangeTheme={setTheme} onBack={() => setScreen("dashboard")} />
-        </div>
-      </div>
-    );
+  function navigate(next: "dashboard" | "settings") {
+    setScreen(next);
+    setMenuOpen(false);
   }
 
   return (
-    <div className="min-h-screen bg-base-200">
-      <div className="mx-auto max-w-3xl px-4 py-6 sm:py-8">
-        <header className="mb-6 flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold sm:text-3xl">flowrite</h1>
-            <p className="text-base-content/70">家計管理ダッシュボード</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setScreen("settings")}
-            aria-label="設定を開く"
-            className="btn btn-ghost btn-circle"
-          >
-            ⚙
-          </button>
-        </header>
-
-        <div className="flex flex-col gap-6">
-          <section className="card bg-base-100 shadow-sm">
-            <div className="card-body p-4 sm:p-6">
-              <UploadForm />
+    <div className="drawer">
+      <input
+        id="app-drawer"
+        type="checkbox"
+        className="drawer-toggle"
+        checked={menuOpen}
+        onChange={(e) => setMenuOpen(e.target.checked)}
+      />
+      <div className="drawer-content min-h-screen bg-base-200">
+        <div className="mx-auto max-w-3xl px-4 py-6 sm:py-8">
+          <header className="mb-6 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-label="メニューを開く"
+              className="btn btn-ghost btn-circle"
+            >
+              ☰
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold sm:text-3xl">flowrite</h1>
+              <p className="text-base-content/70">家計管理ダッシュボード</p>
             </div>
-          </section>
+          </header>
 
-          <section className="card bg-base-100 shadow-sm">
-            <div className="card-body p-4 sm:p-6">
-              <h2 className="mb-3 text-lg font-semibold">サマリー</h2>
+          {screen === "settings" ? (
+            <SettingsScreen theme={theme} onChangeTheme={setTheme} onBack={() => navigate("dashboard")} />
+          ) : (
+            <div className="flex flex-col gap-6">
+              <section className="card bg-base-100 shadow-sm">
+                <div className="card-body p-4 sm:p-6">
+                  <UploadForm />
+                </div>
+              </section>
 
-              <div role="tablist" className="tabs tabs-boxed mb-4 w-fit">
-                {(Object.keys(UNIT_LABELS) as SummaryUnit[]).map((u) => (
-                  <button
-                    key={u}
-                    type="button"
-                    role="tab"
-                    className={`tab ${unit === u ? "tab-active" : ""}`}
-                    onClick={() => setUnit(u)}
-                  >
-                    {UNIT_LABELS[u]}
-                  </button>
-                ))}
-              </div>
+              <section className="card bg-base-100 shadow-sm">
+                <div className="card-body p-4 sm:p-6">
+                  <h2 className="mb-3 text-lg font-semibold">サマリー</h2>
 
-              {unit === "month" && (
-                <MonthSelector
-                  year={year}
-                  month={month}
-                  onChange={(newYear, newMonth) => {
-                    setYear(newYear);
-                    setMonth(newMonth);
-                  }}
-                />
-              )}
-              {unit === "year" && <YearSelector year={summaryYear} onChange={setSummaryYear} />}
-              {unit === "week" && <WeekSelector weekStart={weekStart} onChange={setWeekStart} />}
+                  <div role="tablist" className="tabs tabs-boxed mb-4 w-fit">
+                    {(Object.keys(UNIT_LABELS) as SummaryUnit[]).map((u) => (
+                      <button
+                        key={u}
+                        type="button"
+                        role="tab"
+                        className={`tab ${unit === u ? "tab-active" : ""}`}
+                        onClick={() => setUnit(u)}
+                      >
+                        {UNIT_LABELS[u]}
+                      </button>
+                    ))}
+                  </div>
 
-              <SummaryTable
-                data={summary.data}
-                errorMessage={summary.errorMessage}
-                isLoading={summary.status === "loading"}
-              />
+                  {unit === "month" && (
+                    <MonthSelector
+                      year={year}
+                      month={month}
+                      onChange={(newYear, newMonth) => {
+                        setYear(newYear);
+                        setMonth(newMonth);
+                      }}
+                    />
+                  )}
+                  {unit === "year" && <YearSelector year={summaryYear} onChange={setSummaryYear} />}
+                  {unit === "week" && <WeekSelector weekStart={weekStart} onChange={setWeekStart} />}
+
+                  <SummaryTable
+                    data={summary.data}
+                    errorMessage={summary.errorMessage}
+                    isLoading={summary.status === "loading"}
+                  />
+                </div>
+              </section>
+
+              <section className="card bg-base-100 shadow-sm">
+                <div className="card-body p-4 sm:p-6">
+                  <h2 className="mb-3 text-lg font-semibold">トレンド</h2>
+                  <TrendChart
+                    data={trend.data}
+                    errorMessage={trend.errorMessage}
+                    isLoading={trend.status === "loading"}
+                  />
+                </div>
+              </section>
+
+              <section className="card bg-base-100 shadow-sm">
+                <div className="card-body p-4 sm:p-6">
+                  <h2 className="mb-3 text-lg font-semibold">AIアドバイス</h2>
+                  <AiAdvice context={buildAiContext(summary, trend)} />
+                </div>
+              </section>
             </div>
-          </section>
-
-          <section className="card bg-base-100 shadow-sm">
-            <div className="card-body p-4 sm:p-6">
-              <h2 className="mb-3 text-lg font-semibold">トレンド</h2>
-              <TrendChart
-                data={trend.data}
-                errorMessage={trend.errorMessage}
-                isLoading={trend.status === "loading"}
-              />
-            </div>
-          </section>
-
-          <section className="card bg-base-100 shadow-sm">
-            <div className="card-body p-4 sm:p-6">
-              <h2 className="mb-3 text-lg font-semibold">AIアドバイス</h2>
-              <AiAdvice context={buildAiContext(summary, trend)} />
-            </div>
-          </section>
+          )}
         </div>
+      </div>
+
+      <div className="drawer-side z-50">
+        <label htmlFor="app-drawer" aria-label="メニューを閉じる" className="drawer-overlay"></label>
+        <ul className="menu bg-base-100 min-h-full w-64 gap-1 p-4 text-base-content">
+          <li>
+            <button type="button" onClick={() => navigate("dashboard")}>
+              ホーム
+            </button>
+          </li>
+          <li>
+            <button type="button" onClick={() => navigate("settings")}>
+              設定
+            </button>
+          </li>
+        </ul>
       </div>
     </div>
   );
