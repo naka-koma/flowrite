@@ -1,32 +1,38 @@
 @import "tailwindcss";
 @plugin "daisyui" {
-  themes: fluorite --default, fluorite-dark --prefersdark;
+  themes: mint-clarity --default, abyss-green --prefersdark, indigo-mystery, shadow-sun, cool-violet, sunny-quartz;
 }
 
-/* 蛍石（フローライト）モチーフのアプリアイコンから抽出したパープル〜グリーンのパレット */
+/*
+ * 蛍石（フローライト）の結晶がもつ色合いをモチーフにした6つのテーマ。
+ * 各テーマのbase/primary/secondary/accent等の組み合わせはWCAG 2.1 AA
+ * （通常テキスト4.5:1、UIコンポーネント3:1）のコントラスト比を満たすよう調整済み。
+ */
+
+/* ライト1: Mint Clarity（ミント・クラリティ）- 透明感のあるミントグリーン */
 @plugin "daisyui/theme" {
-  name: "fluorite";
+  name: "mint-clarity";
   default: true;
   color-scheme: light;
-  --color-base-100: #faf9fc;
-  --color-base-200: #f1eef7;
-  --color-base-300: #e3dcef;
-  --color-base-content: #2a2438;
-  --color-primary: #3f8f80;
+  --color-base-100: #ffffff;
+  --color-base-200: #f0fff4;
+  --color-base-300: #dff5e6;
+  --color-base-content: #163326;
+  --color-primary: #188049;
   --color-primary-content: #ffffff;
-  --color-secondary: #5d4680;
+  --color-secondary: #8a5fd1;
   --color-secondary-content: #ffffff;
-  --color-accent: #5fb8a3;
-  --color-accent-content: #0f2e28;
-  --color-neutral: #2e1e4f;
-  --color-neutral-content: #ede9f5;
-  --color-info: #4f8fd1;
+  --color-accent: #5fbe8c;
+  --color-accent-content: #0c2c1c;
+  --color-neutral: #1b3a2c;
+  --color-neutral-content: #e7f7ee;
+  --color-info: #1f6fa8;
   --color-info-content: #ffffff;
-  --color-success: #3f8f6a;
+  --color-success: #188049;
   --color-success-content: #ffffff;
-  --color-warning: #c98a3a;
-  --color-warning-content: #2b1a05;
-  --color-error: #c1466b;
+  --color-warning: #9c6209;
+  --color-warning-content: #ffffff;
+  --color-error: #b23a56;
   --color-error-content: #ffffff;
   --radius-selector: 0.5rem;
   --radius-field: 0.5rem;
@@ -38,30 +44,167 @@
   --noise: 0;
 }
 
+/* ライト2: Cool Violet（クール・バイオレット）- 淡いラベンダーとパープル */
 @plugin "daisyui/theme" {
-  name: "fluorite-dark";
+  name: "cool-violet";
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #e7eeff;
+  --color-base-300: #d3defb;
+  --color-base-content: #23264a;
+  --color-primary: #6a5fd1;
+  --color-primary-content: #ffffff;
+  --color-secondary: #1f7f9e;
+  --color-secondary-content: #ffffff;
+  --color-accent: #8f7fe8;
+  --color-accent-content: #1e1a3d;
+  --color-neutral: #2a2c52;
+  --color-neutral-content: #e9eafb;
+  --color-info: #1f7f9e;
+  --color-info-content: #ffffff;
+  --color-success: #1f7a50;
+  --color-success-content: #ffffff;
+  --color-warning: #9c6209;
+  --color-warning-content: #ffffff;
+  --color-error: #b23a56;
+  --color-error-content: #ffffff;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* ライト3: Sunny Quartz（サニー・クォーツ）- 明るいイエローとスカイブルー */
+@plugin "daisyui/theme" {
+  name: "sunny-quartz";
+  color-scheme: light;
+  --color-base-100: #fffffc;
+  --color-base-200: #fffbdd;
+  --color-base-300: #f5eac0;
+  --color-base-content: #3a3222;
+  --color-primary: #146f9c;
+  --color-primary-content: #ffffff;
+  --color-secondary: #d9a63e;
+  --color-secondary-content: #2e2004;
+  --color-accent: #e8c572;
+  --color-accent-content: #332404;
+  --color-neutral: #4a4022;
+  --color-neutral-content: #f7f0dc;
+  --color-info: #146f9c;
+  --color-info-content: #ffffff;
+  --color-success: #3f7f3f;
+  --color-success-content: #ffffff;
+  --color-warning: #9c6209;
+  --color-warning-content: #ffffff;
+  --color-error: #b23a56;
+  --color-error-content: #ffffff;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* ダーク1: Deep Abyss Green（ディープ・アビス・グリーン）- 深い緑の蛍石 */
+@plugin "daisyui/theme" {
+  name: "abyss-green";
   prefersdark: true;
   color-scheme: dark;
-  --color-base-100: #1c1730;
-  --color-base-200: #150f26;
-  --color-base-300: #100b1d;
-  --color-base-content: #e7e2f3;
-  --color-primary: #5fcbb0;
-  --color-primary-content: #06241f;
-  --color-secondary: #a58bd6;
-  --color-secondary-content: #241a3d;
-  --color-accent: #7fe0c9;
-  --color-accent-content: #06251f;
-  --color-neutral: #ede9f5;
-  --color-neutral-content: #241a3d;
-  --color-info: #7cb3ea;
-  --color-info-content: #0b2745;
-  --color-success: #6fd3a6;
-  --color-success-content: #06301d;
-  --color-warning: #e3ab5c;
-  --color-warning-content: #3a2405;
-  --color-error: #e88aa8;
-  --color-error-content: #3a0f1d;
+  --color-base-100: #123b35;
+  --color-base-200: #0a2f2b;
+  --color-base-300: #071f1b;
+  --color-base-content: #e6f5ee;
+  --color-primary: #7fdba0;
+  --color-primary-content: #06251a;
+  --color-secondary: #256b57;
+  --color-secondary-content: #eafbf3;
+  --color-accent: #c9e6a0;
+  --color-accent-content: #253014;
+  --color-neutral: #0e2b26;
+  --color-neutral-content: #cfefe0;
+  --color-info: #6fb8e0;
+  --color-info-content: #062338;
+  --color-success: #7fdba0;
+  --color-success-content: #06251a;
+  --color-warning: #e0c46f;
+  --color-warning-content: #382a05;
+  --color-error: #e88a8a;
+  --color-error-content: #380a0a;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* ダーク2: Indigo Mystery（インディゴ・ミステリー）- 濃いブルーとパープルのグラデーション */
+@plugin "daisyui/theme" {
+  name: "indigo-mystery";
+  color-scheme: dark;
+  --color-base-100: #1d1f3d;
+  --color-base-200: #14152e;
+  --color-base-300: #0c0d1f;
+  --color-base-content: #e5e6fa;
+  --color-primary: #8f99ff;
+  --color-primary-content: #131335;
+  --color-secondary: #b98fff;
+  --color-secondary-content: #1e1235;
+  --color-accent: #c97a63;
+  --color-accent-content: #2e0f08;
+  --color-neutral: #0c0d1f;
+  --color-neutral-content: #c7c9f0;
+  --color-info: #7fb0ff;
+  --color-info-content: #071b36;
+  --color-success: #7fe0b0;
+  --color-success-content: #06301e;
+  --color-warning: #e8b870;
+  --color-warning-content: #382504;
+  --color-error: #e0725a;
+  --color-error-content: #300a04;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* ダーク3: Shadow Sun（シャドウ・サン）- 暗闇に浮かぶ琥珀色・黄色の蛍石 */
+@plugin "daisyui/theme" {
+  name: "shadow-sun";
+  color-scheme: dark;
+  --color-base-100: #201c15;
+  --color-base-200: #17140e;
+  --color-base-300: #0e0c08;
+  --color-base-content: #f2ead9;
+  --color-primary: #e8b94a;
+  --color-primary-content: #2e1d04;
+  --color-secondary: #c98a3a;
+  --color-secondary-content: #2a1804;
+  --color-accent: #f4d37a;
+  --color-accent-content: #332405;
+  --color-neutral: #14120d;
+  --color-neutral-content: #e0d3b0;
+  --color-info: #7fb0e0;
+  --color-info-content: #08233a;
+  --color-success: #8fcb8a;
+  --color-success-content: #0c2b0a;
+  --color-warning: #e8b94a;
+  --color-warning-content: #2e1d04;
+  --color-error: #e08a6a;
+  --color-error-content: #331408;
   --radius-selector: 0.5rem;
   --radius-field: 0.5rem;
   --radius-box: 0.75rem;
