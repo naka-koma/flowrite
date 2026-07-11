@@ -59,6 +59,10 @@ export function CategoryPieChart({ categories, onSelectCategory, hideAmounts }: 
           innerRadius={60}
           outerRadius={100}
           paddingAngle={2}
+          // マウント/更新のたびに約1.9秒かけて中心角0°から扇形が伸びるアニメーションが入るため、
+          // 表示直後や集計単位切り替え直後は円の上部が描画されておらず「見切れて」見えていた。
+          // アニメーションを無効化し、常に完成形の円グラフを即時表示する
+          isAnimationActive={false}
           onClick={(entry: Slice) => {
             if (!entry.isAggregate) {
               onSelectCategory(entry.name);
