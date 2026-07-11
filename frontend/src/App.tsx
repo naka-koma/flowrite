@@ -90,10 +90,7 @@ export function App() {
             >
               ☰
             </button>
-            <div>
-              <h1 className="text-2xl font-bold sm:text-3xl">flowrite</h1>
-              <p className="text-base-content/70">家計管理ダッシュボード</p>
-            </div>
+            <h1 className="text-2xl font-bold sm:text-3xl">flowrite</h1>
           </header>
 
           {screen === "settings" ? (
