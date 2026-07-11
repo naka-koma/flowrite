@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { SummaryUnit, TrendResponse } from "../types/api";
+import type { TrendResponse } from "../types/api";
 import { formatYen } from "../lib/money";
 
 interface TrendChartProps {
@@ -17,20 +17,18 @@ interface TrendChartProps {
   errorMessage: string | null;
   isLoading: boolean;
   hideAmounts: boolean;
+  visibleCount: number;
 }
 
 const EXPENSE_COLOR = "#e34948";
 const INCOME_COLOR = "#2a78d6";
 
-// 1画面に表示するデータ件数の上限（単位ごと）。超える分は横スクロールで確認する
-const UNIT_VISIBLE_LIMITS: Record<SummaryUnit, number> = { month: 12, year: 5, week: 12 };
 const PX_PER_POINT = 56;
 
-export function TrendChart({ data, errorMessage, isLoading, hideAmounts }: TrendChartProps) {
+export function TrendChart({ data, errorMessage, isLoading, hideAmounts, visibleCount }: TrendChartProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const points = data?.points ?? [];
-  const limit = data ? UNIT_VISIBLE_LIMITS[data.unit] : 0;
-  const shouldScroll = points.length > limit;
+  const shouldScroll = points.length > visibleCount;
 
   useEffect(() => {
     if (shouldScroll && scrollRef.current) {

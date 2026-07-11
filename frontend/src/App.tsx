@@ -13,6 +13,7 @@ import { useSummary } from "./hooks/useSummary";
 import { useTrend } from "./hooks/useTrend";
 import { useTheme } from "./hooks/useTheme";
 import { useAmountVisibility } from "./hooks/useAmountVisibility";
+import { useTrendDisplayCount } from "./hooks/useTrendDisplayCount";
 import { formatISODate, getMondayOfWeek } from "./lib/week";
 import { formatYen } from "./lib/money";
 import { SECTION_HEADING_CLASS } from "./lib/ui";
@@ -55,6 +56,7 @@ export function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { hideAmounts, toggleHideAmounts } = useAmountVisibility();
+  const { visibleCount: trendVisibleCount, setVisibleCount: setTrendVisibleCount } = useTrendDisplayCount();
   const [unit, setUnit] = useState<SummaryUnit>("month");
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -112,7 +114,13 @@ export function App() {
           </header>
 
           {screen === "settings" ? (
-            <SettingsScreen theme={theme} onChangeTheme={setTheme} onBack={() => navigate("dashboard")} />
+            <SettingsScreen
+              theme={theme}
+              onChangeTheme={setTheme}
+              trendVisibleCount={trendVisibleCount}
+              onChangeTrendVisibleCount={setTrendVisibleCount}
+              onBack={() => navigate("dashboard")}
+            />
           ) : (
             <div className="flex flex-col gap-6">
               <section className="card bg-base-100 shadow-sm">
@@ -169,6 +177,7 @@ export function App() {
                     errorMessage={trend.errorMessage}
                     isLoading={trend.status === "loading"}
                     hideAmounts={hideAmounts}
+                    visibleCount={trendVisibleCount}
                   />
                 </div>
               </section>
