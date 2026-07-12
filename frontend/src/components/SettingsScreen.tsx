@@ -28,28 +28,28 @@ export function SettingsScreen({
         <h1 className="text-xl font-bold">設定</h1>
       </div>
 
-      <section className="card bg-base-100 shadow-sm">
+      <section className="card bg-base-100">
         <div className="card-body p-4 sm:p-6">
           <h2 className="mb-3 text-lg font-semibold">テーマ</h2>
           <ThemeSelector theme={theme} onChange={onChangeTheme} />
         </div>
       </section>
 
-      <section className="card bg-base-100 shadow-sm">
+      <section className="card bg-base-100">
         <div className="card-body p-4 sm:p-6">
           <h2 className="mb-3 text-lg font-semibold">表示設定</h2>
           <TrendDisplayCountSetting visibleCount={trendVisibleCount} onChange={onChangeTrendVisibleCount} />
         </div>
       </section>
 
-      <section className="card bg-base-100 shadow-sm">
+      <section className="card bg-base-100">
         <div className="card-body p-4 sm:p-6">
           <h2 className="mb-3 text-lg font-semibold">AI設定</h2>
           <SettingsForm />
         </div>
       </section>
 
-      <section className="card bg-base-100 shadow-sm">
+      <section className="card bg-base-100">
         <div className="card-body p-4 sm:p-6">
           <h2 className="mb-3 text-lg font-semibold">管理</h2>
           <AdminSection />
