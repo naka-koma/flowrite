@@ -37,6 +37,20 @@ test("スマホ幅でも横スクロールが発生しない", async ({ page }) 
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 });
 
+test("背景にWebGLの流体グラデーションが描画される", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "flowrite" })).toBeVisible();
+
+  const background = page.getByTestId("liquid-background");
+  await expect(background).toBeAttached();
+  await expect(background.locator("canvas")).toBeAttached();
+
+  expect(pageErrors).toEqual([]);
+});
+
 test("各セクションの見出しとBodyの間に区切り線が入り、スタイルが統一されている", async ({ page }) => {
   await page.goto("/");
 

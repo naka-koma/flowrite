@@ -9,6 +9,7 @@ import { SummaryTable } from "./components/SummaryTable";
 import { TrendChart } from "./components/TrendChart";
 import { AiAdvice } from "./components/AiAdvice";
 import { SettingsScreen } from "./components/SettingsScreen";
+import { LiquidBackground } from "./components/LiquidBackground";
 import { useSummary } from "./hooks/useSummary";
 import { useTrend } from "./hooks/useTrend";
 import { useTheme } from "./hooks/useTheme";
@@ -80,6 +81,7 @@ export function App() {
 
   return (
     <div className="drawer lg:drawer-open">
+      <LiquidBackground theme={theme} />
       <input
         id="app-drawer"
         type="checkbox"
