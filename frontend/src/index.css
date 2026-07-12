@@ -222,12 +222,13 @@
  * - .card / .glass-surface: 半透明背景 + backdrop-blur ですりガラス感と奥行きを表現
  * - .btn-primary / .tab-active: 白いハイライトではなく、アクセントカラー自体の柔らかい内発光で存在感を出す
  */
-/*
- * 背景の流体グラデーションはLiquidBackground（Three.js + カスタムフラグメントシェーダー）が描画する。
- * ここではWebGLコンテキストの初期化前後の一瞬に見える下地として、単色のフォールバックのみを敷く
- */
 body {
   background-color: var(--color-base-200);
+  background-image:
+    radial-gradient(55rem 55rem at 6% -10%, color-mix(in oklab, var(--color-primary) 30%, transparent), transparent 68%),
+    radial-gradient(50rem 50rem at 105% 15%, color-mix(in oklab, var(--color-secondary) 26%, transparent), transparent 68%),
+    radial-gradient(48rem 48rem at 40% 115%, color-mix(in oklab, var(--color-accent) 24%, transparent), transparent 68%);
+  background-attachment: fixed;
 }
 
 .glass-surface,
