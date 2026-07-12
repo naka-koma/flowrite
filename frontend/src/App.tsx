@@ -123,13 +123,13 @@ export function App() {
             />
           ) : (
             <div className="flex flex-col gap-6">
-              <section className="card bg-base-100 shadow-sm">
+              <section className="card bg-base-100">
                 <div className="card-body p-4 sm:p-6">
                   <UploadForm />
                 </div>
               </section>
 
-              <section className="card bg-base-100 shadow-sm">
+              <section className="card bg-base-100">
                 <div className="card-body p-4 sm:p-6">
                   <h2 className={SECTION_HEADING_CLASS}>サマリー</h2>
 
@@ -169,7 +169,7 @@ export function App() {
                 </div>
               </section>
 
-              <section className="card bg-base-100 shadow-sm">
+              <section className="card bg-base-100">
                 <div className="card-body p-4 sm:p-6">
                   <h2 className={SECTION_HEADING_CLASS}>トレンド</h2>
                   <TrendChart
@@ -182,7 +182,7 @@ export function App() {
                 </div>
               </section>
 
-              <section className="card bg-base-100 shadow-sm">
+              <section className="card bg-base-100">
                 <div className="card-body p-4 sm:p-6">
                   <h2 className={SECTION_HEADING_CLASS}>AIアドバイス</h2>
                   <AiAdvice context={buildAiContext(summary, trend)} hideAmounts={hideAmounts} />
