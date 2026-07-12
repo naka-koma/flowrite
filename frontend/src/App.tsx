@@ -9,6 +9,7 @@ import { SummaryTable } from "./components/SummaryTable";
 import { TrendChart } from "./components/TrendChart";
 import { AiAdvice } from "./components/AiAdvice";
 import { SettingsScreen } from "./components/SettingsScreen";
+import { LiquidBackground } from "./components/LiquidBackground";
 import { useSummary } from "./hooks/useSummary";
 import { useTrend } from "./hooks/useTrend";
 import { useTheme } from "./hooks/useTheme";
@@ -80,6 +81,7 @@ export function App() {
 
   return (
     <div className="drawer lg:drawer-open">
+      <LiquidBackground theme={theme} />
       <input
         id="app-drawer"
         type="checkbox"
@@ -87,10 +89,10 @@ export function App() {
         checked={menuOpen}
         onChange={(e) => setMenuOpen(e.target.checked)}
       />
-      <div className="drawer-content min-h-screen bg-base-200">
+      <div className="drawer-content min-h-screen">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
           <header className="mb-6 flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-box border border-base-300 bg-base-100 px-3 py-2">
+            <div className="glass-surface flex items-center gap-2 rounded-box px-3 py-2">
               <button
                 type="button"
                 onClick={() => setMenuOpen(true)}
@@ -195,7 +197,7 @@ export function App() {
 
       <div className="drawer-side z-50">
         <label htmlFor="app-drawer" aria-label="メニューを閉じる" className="drawer-overlay"></label>
-        <ul className="menu bg-base-100 min-h-full w-64 gap-1 p-4 text-base-content lg:border-r lg:border-base-300">
+        <ul className="menu glass-surface min-h-full w-64 gap-1 p-4 text-base-content lg:border-r-0">
           <li>
             <button type="button" onClick={() => navigate("dashboard")}>
               ホーム

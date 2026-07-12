@@ -37,7 +37,9 @@ test.describe("モバイル幅", () => {
     await page.getByRole("button", { name: "メニューを開く" }).click();
     await expect(page.getByRole("button", { name: "設定" })).toBeVisible();
 
-    await page.getByLabel("メニューを閉じる").click({ force: true });
+    // オーバーレイの中心座標はサイドバー（幅256px）の開閉アニメーション中に重なることがあるため、
+    // サイドバーの外側であることが確実な座標をクリックする
+    await page.getByLabel("メニューを閉じる").click({ force: true, position: { x: 350, y: 10 } });
     await expect(page.getByRole("button", { name: "設定" })).not.toBeVisible();
   });
 });
