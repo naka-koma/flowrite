@@ -88,6 +88,7 @@ export interface CalendarDay {
   totalExpense: number;
   totalIncome: number;
   balance: number;
+  transactions: Transaction[];
 }
 
 export interface MonthlyCalendarParams {

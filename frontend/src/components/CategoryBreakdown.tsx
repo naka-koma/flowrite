@@ -5,21 +5,18 @@ import { CategoryPieChart } from "./CategoryPieChart";
 import { TransactionList } from "./TransactionList";
 
 interface CategoryBreakdownProps {
-  title: string;
   categories: CategoryTotal[];
   hideAmounts: boolean;
   emptyMessage: string;
 }
 
-export function CategoryBreakdown({ title, categories, hideAmounts, emptyMessage }: CategoryBreakdownProps) {
+export function CategoryBreakdown({ categories, hideAmounts, emptyMessage }: CategoryBreakdownProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const selected = categories.find((c) => c.name === selectedCategory) ?? null;
   const amountText = (amount: number) => (hideAmounts ? "***" : formatAmount(amount));
 
   return (
     <div>
-      <h3 className="mb-3 text-base font-semibold">{title}</h3>
-
       {categories.length === 0 ? (
         <p className="text-base-content/70">{emptyMessage}</p>
       ) : (
@@ -55,7 +52,7 @@ export function CategoryBreakdown({ title, categories, hideAmounts, emptyMessage
 
           {selected && (
             <TransactionList
-              categoryName={selected.name}
+              title={selected.name}
               transactions={selected.transactions}
               onClose={() => setSelectedCategory(null)}
               hideAmounts={hideAmounts}

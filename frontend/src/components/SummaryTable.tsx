@@ -88,7 +88,7 @@ export function SummaryTable({ data, errorMessage, isLoading, hideAmounts }: Sum
 
       {selected && (
         <TransactionList
-          categoryName={selected.name}
+          title={selected.name}
           transactions={selected.transactions}
           onClose={() => setSelectedCategory(null)}
           hideAmounts={hideAmounts}

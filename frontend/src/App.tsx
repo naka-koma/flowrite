@@ -11,7 +11,6 @@ import { AiAdvice } from "./components/AiAdvice";
 import { SettingsScreen } from "./components/SettingsScreen";
 import { ReportScreen } from "./components/ReportScreen";
 import { TransactionScreen } from "./components/TransactionScreen";
-import { CalendarScreen } from "./components/CalendarScreen";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { useSummary } from "./hooks/useSummary";
 import { useTrend } from "./hooks/useTrend";
@@ -28,9 +27,7 @@ const UNIT_LABELS: Record<SummaryUnit, string> = { month: "月", year: "年", we
 
 export function App() {
   const now = new Date();
-  const [screen, setScreen] = useState<"dashboard" | "settings" | "report" | "transactions" | "calendar">(
-    "dashboard",
-  );
+  const [screen, setScreen] = useState<"dashboard" | "settings" | "report" | "transactions">("dashboard");
   const [menuOpen, setMenuOpen] = useState(false);
   const {
     status: preferencesStatus,
@@ -64,7 +61,7 @@ export function App() {
     return <LoadingScreen />;
   }
 
-  function navigate(next: "dashboard" | "settings" | "report" | "transactions" | "calendar") {
+  function navigate(next: "dashboard" | "settings" | "report" | "transactions") {
     setScreen(next);
     setMenuOpen(false);
   }
@@ -199,8 +196,6 @@ export function App() {
             />
           ) : screen === "transactions" ? (
             <TransactionScreen hideAmounts={hideAmounts} onBack={() => navigate("dashboard")} />
-          ) : screen === "calendar" ? (
-            <CalendarScreen hideAmounts={hideAmounts} onBack={() => navigate("dashboard")} />
           ) : (
             <div className="flex flex-col gap-6">
               <section className="card bg-base-100" data-testid="period-selector">
@@ -266,11 +261,6 @@ export function App() {
           <li>
             <button type="button" onClick={() => navigate("report")}>
               レポート
-            </button>
-          </li>
-          <li>
-            <button type="button" onClick={() => navigate("calendar")}>
-              カレンダー
             </button>
           </li>
           <li>

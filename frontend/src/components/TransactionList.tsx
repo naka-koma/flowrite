@@ -2,17 +2,17 @@ import type { Transaction } from "../types/api";
 import { formatAmount } from "../lib/money";
 
 interface TransactionListProps {
-  categoryName: string;
+  title: string;
   transactions: Transaction[];
   onClose: () => void;
   hideAmounts: boolean;
 }
 
-export function TransactionList({ categoryName, transactions, onClose, hideAmounts }: TransactionListProps) {
+export function TransactionList({ title, transactions, onClose, hideAmounts }: TransactionListProps) {
   return (
     <div className="mt-4">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="font-semibold">{categoryName}の取引明細</h3>
+        <h3 className="font-semibold">{title}の取引明細</h3>
         <button type="button" onClick={onClose} className="btn btn-ghost btn-sm">
           閉じる
         </button>

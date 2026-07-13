@@ -206,13 +206,14 @@ function handleMonthlyCalendar(params) {
 
   const dayMap = {};
   for (let d = 1; d <= new Date(year, month, 0).getDate(); d++) {
-    dayMap[d] = { totalExpense: 0, totalIncome: 0 };
+    dayMap[d] = { totalExpense: 0, totalIncome: 0, transactions: [] };
   }
 
   const sheet = getRawDataSheet();
   const lastRow = sheet.getLastRow();
   let totalExpense = 0;
   let totalIncome = 0;
+  const tz = Session.getScriptTimeZone();
 
   if (lastRow > 1) {
     const data = sheet.getRange(2, 1, lastRow - 1, 11).getValues();
@@ -226,7 +227,14 @@ function handleMonthlyCalendar(params) {
       if (date < start || date >= end) continue;
 
       const amount = row[3];
+      const content = row[2];
       const day = date.getDate();
+
+      dayMap[day].transactions.push({
+        content,
+        date: Utilities.formatDate(date, tz, "yyyy/MM/dd"),
+        amount,
+      });
 
       if (amount < 0) {
         const absAmount = Math.abs(amount);
@@ -239,7 +247,6 @@ function handleMonthlyCalendar(params) {
     }
   }
 
-  const tz = Session.getScriptTimeZone();
   const days = Object.keys(dayMap)
     .map(Number)
     .sort((a, b) => a - b)
@@ -253,6 +260,7 @@ function handleMonthlyCalendar(params) {
         totalExpense: dayTotals.totalExpense,
         totalIncome: dayTotals.totalIncome,
         balance: dayTotals.totalIncome - dayTotals.totalExpense,
+        transactions: dayTotals.transactions,
       };
     });
 

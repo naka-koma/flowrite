@@ -66,3 +66,46 @@ test("戻るボタンでダッシュボードに戻れる", async ({ page }) => 
   await page.getByRole("button", { name: "ダッシュボードに戻る" }).click();
   await expect(page.getByRole("heading", { name: "レポート" })).not.toBeVisible();
 });
+
+test("レポート画面内にカレンダーセクションが表示される", async ({ page }) => {
+  await page.goto("/");
+  await openReport(page);
+
+  await expect(page.getByText("カレンダー")).toBeVisible();
+  await expect(page.getByText("当月収入:")).toBeVisible();
+  await expect(page.getByText("当月支出:")).toBeVisible();
+  await expect(page.getByText("当月収支:")).toBeVisible();
+
+  for (const label of ["日", "月", "火", "水", "木", "金", "土"]) {
+    await expect(page.getByText(label, { exact: true })).toBeVisible();
+  }
+});
+
+test("カレンダーの日をクリックするとその日の取引明細が表示される", async ({ page }) => {
+  await page.goto("/");
+  await openReport(page);
+
+  await expect(page.getByText("-1,500", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /^5/ }).click();
+
+  await expect(page.getByText("5日の取引明細")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "店舗5" })).toBeVisible();
+
+  await page.getByRole("button", { name: "閉じる" }).click();
+  await expect(page.getByText("5日の取引明細")).not.toBeVisible();
+});
+
+test("セクションの▼をクリックすると開閉できる", async ({ page }) => {
+  await page.goto("/");
+  await openReport(page);
+
+  await expect(page.getByText("全体推移")).toBeVisible();
+  await expect(page.locator(".recharts-bar").first()).toBeVisible();
+
+  await page.getByRole("button", { name: "全体推移" }).click();
+
+  await expect(page.locator(".recharts-bar")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "全体推移" }).click();
+  await expect(page.locator(".recharts-bar").first()).toBeVisible();
+});
