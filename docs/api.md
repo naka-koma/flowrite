@@ -286,23 +286,23 @@ AIアドバイスのプロンプト・使用モデル設定を更新する。
 
 ## `handleGetAiAttributes()`
 
-登録されているユーザー属性情報（Key-Value）の一覧を返す。引数なし。
+登録されているユーザー属性情報（id・Key・Value）の一覧を返す。引数なし。
 
 **戻り値**
 ```js
 {
   "attributes": [
-    { "key": "ワークスタイル", "value": "在宅リモートワーク中心" },
-    { "key": "直近の目標", "value": "投資の種銭を月5万作りたい" }
+    { "id": "xxxxxxxx-xxxx-...", "key": "ワークスタイル", "value": "在宅リモートワーク中心" },
+    { "id": "yyyyyyyy-yyyy-...", "key": "直近の目標", "value": "投資の種銭を月5万作りたい" }
   ]
 }
 ```
 
 ---
 
-## `handleUpsertAiAttribute(body)`
+## `handleAddAiAttribute(body)`
 
-属性情報を1件登録・更新する。同じ`key`が既に存在する場合は`value`を上書きする。
+属性情報を1件新規追加する。idはGAS側で生成する。
 
 **引数**
 ```js
@@ -314,21 +314,29 @@ AIアドバイスのプロンプト・使用モデル設定を更新する。
 
 **戻り値**
 ```js
-{ "success": true }
+{
+  "success": true,
+  "attribute": { "id": "xxxxxxxx-xxxx-...", "key": "ワークスタイル", "value": "在宅リモートワーク中心" }
+}
 ```
 
 **注意**
 - `key`/`value` が空文字の場合は `{ "success": false, "error": "key and value are required" }` を返す
+- 同じ`key`を持つ属性が既にあっても上書きせず、新しい行として追加する（`id`で識別するため）
 
 ---
 
-## `handleDeleteAiAttribute(body)`
+## `handleUpdateAiAttribute(body)`
 
-指定した`key`の属性情報を削除する。
+指定した`id`の属性情報のkey/valueを更新する。
 
 **引数**
 ```js
-{ "key": "ワークスタイル" }
+{
+  "id": "xxxxxxxx-xxxx-...",
+  "key": "ワークスタイル",
+  "value": "フルリモート"
+}
 ```
 
 **戻り値**
@@ -337,7 +345,27 @@ AIアドバイスのプロンプト・使用モデル設定を更新する。
 ```
 
 **注意**
-- 該当する`key`が存在しない場合も `{ "success": true }` を返す（冪等）
+- 該当する`id`が存在しない場合は `{ "success": false, "error": "attribute not found" }` を返す
+- `key`/`value` が空文字の場合は `{ "success": false, "error": "key and value are required" }` を返す
+
+---
+
+## `handleDeleteAiAttribute(body)`
+
+指定した`id`の属性情報を削除する。
+
+**引数**
+```js
+{ "id": "xxxxxxxx-xxxx-..." }
+```
+
+**戻り値**
+```js
+{ "success": true }
+```
+
+**注意**
+- 該当する`id`が存在しない場合も `{ "success": true }` を返す（冪等）
 
 ---
 

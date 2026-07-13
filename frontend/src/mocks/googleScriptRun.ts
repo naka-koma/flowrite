@@ -1,4 +1,5 @@
 import type {
+  AddAiAttributeParams,
   AddCategoryParams,
   AiAttribute,
   CalendarDay,
@@ -12,9 +13,9 @@ import type {
   TransactionRow,
   TrendParams,
   TrendPoint,
+  UpdateAiAttributeParams,
   UpdateCategoryParams,
   UpdatePreferenceParams,
-  UpsertAiAttributeParams,
 } from "../types/api";
 
 interface ScriptRun {
@@ -408,7 +409,21 @@ function mockHandleGetAiAttributes() {
   return { attributes: loadMockAiAttributes() };
 }
 
-function mockHandleUpsertAiAttribute(body: UpsertAiAttributeParams) {
+function mockHandleAddAiAttribute(body: AddAiAttributeParams) {
+  const key = body.key?.trim();
+  const value = body.value?.trim();
+  if (!key || !value) {
+    return { success: false, error: "key and value are required" };
+  }
+
+  const attribute: AiAttribute = { id: crypto.randomUUID(), key, value };
+  const attributes = loadMockAiAttributes();
+  attributes.push(attribute);
+  saveMockAiAttributes(attributes);
+  return { success: true, attribute };
+}
+
+function mockHandleUpdateAiAttribute(body: UpdateAiAttributeParams) {
   const key = body.key?.trim();
   const value = body.value?.trim();
   if (!key || !value) {
@@ -416,18 +431,19 @@ function mockHandleUpsertAiAttribute(body: UpsertAiAttributeParams) {
   }
 
   const attributes = loadMockAiAttributes();
-  const existing = attributes.find((a) => a.key === key);
-  if (existing) {
-    existing.value = value;
-  } else {
-    attributes.push({ key, value });
+  const existing = attributes.find((a) => a.id === body.id);
+  if (!existing) {
+    return { success: false, error: "attribute not found" };
   }
+
+  existing.key = key;
+  existing.value = value;
   saveMockAiAttributes(attributes);
   return { success: true };
 }
 
 function mockHandleDeleteAiAttribute(body: DeleteAiAttributeParams) {
-  const attributes = loadMockAiAttributes().filter((a) => a.key !== body.key);
+  const attributes = loadMockAiAttributes().filter((a) => a.id !== body.id);
   saveMockAiAttributes(attributes);
   return { success: true };
 }
@@ -592,8 +608,10 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleUpdateSettings(args[0] as { prompt?: string; model?: string });
     case "handleGetAiAttributes":
       return mockHandleGetAiAttributes();
-    case "handleUpsertAiAttribute":
-      return mockHandleUpsertAiAttribute(args[0] as UpsertAiAttributeParams);
+    case "handleAddAiAttribute":
+      return mockHandleAddAiAttribute(args[0] as AddAiAttributeParams);
+    case "handleUpdateAiAttribute":
+      return mockHandleUpdateAiAttribute(args[0] as UpdateAiAttributeParams);
     case "handleDeleteAiAttribute":
       return mockHandleDeleteAiAttribute(args[0] as DeleteAiAttributeParams);
     case "handleGetPreferences":

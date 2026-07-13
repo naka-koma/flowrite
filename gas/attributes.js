@@ -5,15 +5,15 @@ function handleGetAiAttributes() {
     return { attributes: [] };
   }
 
-  const values = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+  const values = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
   const attributes = values
     .filter((row) => row[0])
-    .map((row) => ({ key: row[0], value: row[1] }));
+    .map((row) => ({ id: row[0], key: row[1], value: row[2] }));
 
   return { attributes };
 }
 
-function handleUpsertAiAttribute(body) {
+function handleAddAiAttribute(body) {
   const key = (body.key || "").trim();
   const value = (body.value || "").trim();
 
@@ -22,26 +22,45 @@ function handleUpsertAiAttribute(body) {
   }
 
   const sheet = getAiAttributesSheet();
-  const lastRow = sheet.getLastRow();
+  const id = Utilities.getUuid();
+  sheet.appendRow([id, key, value]);
 
-  if (lastRow > 1) {
-    const keys = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-    for (let i = 0; i < keys.length; i++) {
-      if (keys[i][0] === key) {
-        sheet.getRange(i + 2, 2).setValue(value);
-        return { success: true };
-      }
-    }
+  return { success: true, attribute: { id, key, value } };
+}
+
+function handleUpdateAiAttribute(body) {
+  const id = body.id;
+  const key = (body.key || "").trim();
+  const value = (body.value || "").trim();
+
+  if (!id) {
+    return { success: false, error: "id is required" };
+  }
+  if (!key || !value) {
+    return { success: false, error: "key and value are required" };
   }
 
-  sheet.appendRow([key, value]);
+  const sheet = getAiAttributesSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) {
+    return { success: false, error: "attribute not found" };
+  }
+
+  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  const rowIndex = ids.findIndex((row) => row[0] === id);
+
+  if (rowIndex === -1) {
+    return { success: false, error: "attribute not found" };
+  }
+
+  sheet.getRange(rowIndex + 2, 2, 1, 2).setValues([[key, value]]);
   return { success: true };
 }
 
 function handleDeleteAiAttribute(body) {
-  const key = body.key;
-  if (!key) {
-    return { success: false, error: "key is required" };
+  const id = body.id;
+  if (!id) {
+    return { success: false, error: "id is required" };
   }
 
   const sheet = getAiAttributesSheet();
@@ -50,8 +69,8 @@ function handleDeleteAiAttribute(body) {
     return { success: true };
   }
 
-  const keys = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-  const rowIndex = keys.findIndex((row) => row[0] === key);
+  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  const rowIndex = ids.findIndex((row) => row[0] === id);
 
   if (rowIndex !== -1) {
     sheet.deleteRow(rowIndex + 2);
