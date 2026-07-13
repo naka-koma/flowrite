@@ -32,6 +32,21 @@ export type SummaryParams =
   | { unit: "year"; year: number }
   | { unit: "week"; weekStart: string };
 
+export interface PeriodComparisonEntry {
+  label: string;
+  totalExpense: number;
+  totalIncome: number;
+  balance: number;
+  expenseDiff: number;
+  incomeDiff: number;
+  balanceDiff: number;
+}
+
+export interface PeriodComparison {
+  previousMonth: PeriodComparisonEntry;
+  previousYear: PeriodComparisonEntry;
+}
+
 export interface SummaryResponse {
   unit: SummaryUnit;
   year: number;
@@ -40,6 +55,8 @@ export interface SummaryResponse {
   totalExpense: number;
   totalIncome: number;
   categories: CategoryTotal[];
+  incomeCategories: CategoryTotal[];
+  comparison?: PeriodComparison;
   error?: string;
 }
 
