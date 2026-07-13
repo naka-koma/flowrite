@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { AiAdviceResponse } from "../types/api";
+import type { AiAdviceResponse, SummaryParams } from "../types/api";
 import { runScript } from "../lib/googleScriptRun";
 
 type AiAdviceStatus = "idle" | "loading" | "success" | "error";
@@ -17,11 +17,11 @@ export function useAiAdvice() {
     errorMessage: null,
   });
 
-  const fetchAdvice = async (context: string) => {
+  const fetchAdvice = async (params: SummaryParams) => {
     setState({ status: "loading", advice: null, errorMessage: null });
 
     try {
-      const data = await runScript<AiAdviceResponse>("handleAiAdvice", { context });
+      const data = await runScript<AiAdviceResponse>("handleAiAdvice", params);
 
       if (!data.success) {
         setState({

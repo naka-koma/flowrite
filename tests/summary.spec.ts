@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { periodSelector } from "./helpers";
+import { periodSelector, selectPeriodUnit } from "./helpers";
 
 test("年月を選択するとカテゴリー別支出一覧が表示される", async ({ page }) => {
   await page.goto("/");
@@ -57,7 +57,7 @@ test("カテゴリーを選択すると取引明細が表示される", async ({
 test("年タブに切り替えると年単位の集計が表示される", async ({ page }) => {
   await page.goto("/");
 
-  await periodSelector(page).getByRole("tab", { name: "年" }).click();
+  await selectPeriodUnit(page, "year");
 
   await expect(periodSelector(page).getByLabel("対象年")).toBeVisible();
   await expect(page.getByText("合計支出: 1,800,000")).toBeVisible();
@@ -67,7 +67,7 @@ test("年タブに切り替えると年単位の集計が表示される", async
 test("週タブに切り替えると週単位の集計が表示される", async ({ page }) => {
   await page.goto("/");
 
-  await periodSelector(page).getByRole("tab", { name: "週" }).click();
+  await selectPeriodUnit(page, "week");
 
   await expect(periodSelector(page).getByLabel("対象週")).toBeVisible();
   await expect(page.getByText("合計支出: 35,000")).toBeVisible();
@@ -76,10 +76,10 @@ test("週タブに切り替えると週単位の集計が表示される", async
 test("集計単位を切り替えても既存の月単位表示に戻れる", async ({ page }) => {
   await page.goto("/");
 
-  await periodSelector(page).getByRole("tab", { name: "年" }).click();
+  await selectPeriodUnit(page, "year");
   await expect(page.getByText("合計支出: 1,800,000")).toBeVisible();
 
-  await periodSelector(page).getByRole("tab", { name: "月" }).click();
+  await selectPeriodUnit(page, "month");
   await expect(periodSelector(page).getByLabel("対象年月")).toBeVisible();
   await expect(page.getByText("合計支出: 150,000")).toBeVisible();
 });
@@ -102,7 +102,7 @@ test("前月/次月ボタンで月を切り替えられる", async ({ page }) =>
 
 test("前年/次年ボタンで年を切り替えられる", async ({ page }) => {
   await page.goto("/");
-  await periodSelector(page).getByRole("tab", { name: "年" }).click();
+  await selectPeriodUnit(page, "year");
 
   const now = new Date();
 
@@ -116,7 +116,7 @@ test("前年/次年ボタンで年を切り替えられる", async ({ page }) =>
 
 test("前週/次週ボタンで週を切り替えられる", async ({ page }) => {
   await page.goto("/");
-  await periodSelector(page).getByRole("tab", { name: "週" }).click();
+  await selectPeriodUnit(page, "week");
 
   const initialLabel = await page.getByTestId("period-label").textContent();
 

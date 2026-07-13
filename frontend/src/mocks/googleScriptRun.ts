@@ -329,9 +329,12 @@ function mockHandleUpdateSettings(body: { prompt?: string; model?: string }) {
   return { success: true };
 }
 
-function mockHandleAiAdvice(body: { context: string }) {
-  if (!body.context) {
-    return { success: false, error: "context field is required" };
+function mockHandleAiAdvice(params: SummaryParams) {
+  const summary = mockHandleSummary(params);
+  const hasData = summary.categories.length > 0 || summary.totalExpense > 0 || summary.totalIncome > 0;
+
+  if (!hasData) {
+    return { success: false, error: "指定した期間のデータがありません" };
   }
 
   return {
@@ -454,7 +457,7 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
     case "handleTrend":
       return mockHandleTrend(args[0] as TrendParams);
     case "handleAiAdvice":
-      return mockHandleAiAdvice(args[0] as { context: string });
+      return mockHandleAiAdvice(args[0] as SummaryParams);
     case "handleRunMigrations":
       return mockHandleRunMigrations();
     case "handleGetSettings":

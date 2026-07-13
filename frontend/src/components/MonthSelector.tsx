@@ -5,6 +5,7 @@ interface MonthSelectorProps {
   selectLabel?: string;
   prevLabel?: string;
   nextLabel?: string;
+  compact?: boolean;
 }
 
 const MONTH_RANGE = 24;
@@ -33,6 +34,7 @@ export function MonthSelector({
   selectLabel = "対象年月",
   prevLabel = "前の月",
   nextLabel = "次の月",
+  compact = false,
 }: MonthSelectorProps) {
   const options = buildOptions();
   const hasCurrent = options.some((o) => o.year === year && o.month === month);
@@ -49,12 +51,12 @@ export function MonthSelector({
   };
 
   return (
-    <div className="mb-4 flex items-center gap-2">
+    <div className={`flex items-center gap-2 ${compact ? "" : "mb-4"}`}>
       <button
         type="button"
         onClick={() => goToOffset(-1)}
         aria-label={prevLabel}
-        className="btn btn-square btn-sm"
+        className={`btn btn-square ${compact ? "btn-xs" : "btn-sm"}`}
       >
         ‹
       </button>
@@ -62,7 +64,7 @@ export function MonthSelector({
         aria-label={selectLabel}
         value={`${year}-${month}`}
         onChange={(e) => handleChange(e.target.value)}
-        className="select select-bordered w-full max-w-xs"
+        className={`select select-bordered ${compact ? "select-sm w-auto" : "w-full max-w-xs"}`}
       >
         {allOptions.map((option) => (
           <option key={`${option.year}-${option.month}`} value={`${option.year}-${option.month}`}>
@@ -74,7 +76,7 @@ export function MonthSelector({
         type="button"
         onClick={() => goToOffset(1)}
         aria-label={nextLabel}
-        className="btn btn-square btn-sm"
+        className={`btn btn-square ${compact ? "btn-xs" : "btn-sm"}`}
       >
         ›
       </button>

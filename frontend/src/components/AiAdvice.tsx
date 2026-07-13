@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { MonthSelector } from "./MonthSelector";
 import { YearSelector } from "./YearSelector";
-import { useSummary } from "../hooks/useSummary";
 import { useAiAdvice } from "../hooks/useAiAdvice";
-import { formatYen, maskYenAmounts } from "../lib/money";
+import { maskYenAmounts } from "../lib/money";
 import type { SummaryParams } from "../types/api";
 
 type AiPeriodUnit = "month" | "year" | "all";
@@ -12,17 +11,6 @@ const UNIT_LABELS: Record<AiPeriodUnit, string> = { month: "月", year: "年", a
 
 interface AiAdviceProps {
   hideAmounts: boolean;
-}
-
-function buildContext(summary: ReturnType<typeof useSummary>): string {
-  if (!summary.data) return "";
-
-  const hasData =
-    summary.data.categories.length > 0 || summary.data.totalExpense > 0 || summary.data.totalIncome > 0;
-  if (!hasData) return "";
-
-  const categoryText = summary.data.categories.map((c) => `${c.name}: ${formatYen(c.total)}`).join("、");
-  return `${summary.data.label}: 支出${formatYen(summary.data.totalExpense)}、収入${formatYen(summary.data.totalIncome)}${categoryText ? `（内訳: ${categoryText}）` : ""}`;
 }
 
 export function AiAdvice({ hideAmounts }: AiAdviceProps) {
@@ -34,10 +22,7 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
   const summaryParams: SummaryParams =
     unit === "year" ? { unit: "year", year } : unit === "all" ? { unit: "all" } : { unit: "month", year, month };
 
-  const summary = useSummary(summaryParams);
   const { status, advice, errorMessage, fetchAdvice } = useAiAdvice();
-
-  const context = buildContext(summary);
 
   return (
     <div data-testid="ai-advice">
@@ -79,8 +64,8 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
       )}
 
       <button
-        onClick={() => fetchAdvice(context)}
-        disabled={status === "loading" || summary.status === "loading"}
+        onClick={() => fetchAdvice(summaryParams)}
+        disabled={status === "loading"}
         className="btn btn-primary mt-2"
       >
         {status === "loading" && <span className="loading loading-spinner loading-sm" />}

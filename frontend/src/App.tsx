@@ -123,53 +123,51 @@ export function App() {
         onChange={(e) => setMenuOpen(e.target.checked)}
       />
       <div className="drawer-content min-h-screen">
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
-          <header className="glass-surface mb-6 flex items-center gap-3 rounded-box px-3 py-2">
+        <header className="glass-surface sticky top-0 z-30 flex items-center gap-3 px-4 py-2">
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-label="メニューを開く"
+            className="btn btn-ghost btn-circle btn-sm lg:hidden"
+          >
+            ☰
+          </button>
+
+          <div className="ml-auto flex items-center gap-2">
+            <select
+              aria-label="テーマ"
+              value={theme}
+              onChange={(e) => setTheme(e.target.value as Theme)}
+              className="select select-bordered select-sm"
+            >
+              <optgroup label="ライトテーマ">
+                {THEMES.filter((t) => t.mode === "light").map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="ダークテーマ">
+                {THEMES.filter((t) => t.mode === "dark").map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
             <button
               type="button"
-              onClick={() => setMenuOpen(true)}
-              aria-label="メニューを開く"
-              className="btn btn-ghost btn-circle btn-sm lg:hidden"
+              onClick={toggleHideAmounts}
+              aria-label={hideAmounts ? "金額を表示する" : "金額を隠す"}
+              aria-pressed={hideAmounts}
+              className="btn btn-ghost btn-circle"
             >
-              ☰
+              {hideAmounts ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
-            <img src={logoUrl} alt="" className="h-7 w-7 rounded" />
-            <h1 className="text-2xl font-bold sm:text-3xl">flowrite</h1>
+          </div>
+        </header>
 
-            <div className="ml-auto flex items-center gap-2">
-              <select
-                aria-label="テーマ"
-                value={theme}
-                onChange={(e) => setTheme(e.target.value as Theme)}
-                className="select select-bordered select-sm"
-              >
-                <optgroup label="ライトテーマ">
-                  {THEMES.filter((t) => t.mode === "light").map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.label}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="ダークテーマ">
-                  {THEMES.filter((t) => t.mode === "dark").map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.label}
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
-              <button
-                type="button"
-                onClick={toggleHideAmounts}
-                aria-label={hideAmounts ? "金額を表示する" : "金額を隠す"}
-                aria-pressed={hideAmounts}
-                className="btn btn-ghost btn-circle"
-              >
-                {hideAmounts ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-          </header>
-
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
           {screen === "settings" ? (
             <SettingsScreen
               theme={theme}
@@ -194,34 +192,35 @@ export function App() {
             <div className="flex flex-col gap-6">
               <section className="card bg-base-100" data-testid="period-selector">
                 <div className="card-body p-4 sm:p-6">
-                  <h2 className={SECTION_HEADING_CLASS}>期間</h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-lg font-semibold">期間</h2>
+                    <select
+                      aria-label="期間の単位"
+                      value={unit}
+                      onChange={(e) => setUnit(e.target.value as SummaryUnit)}
+                      className="select select-bordered select-sm"
+                    >
+                      {DASHBOARD_UNITS.map((u) => (
+                        <option key={u} value={u}>
+                          {UNIT_LABELS[u]}
+                        </option>
+                      ))}
+                    </select>
 
-                  <div role="tablist" className="tabs tabs-boxed mb-4 w-fit">
-                    {DASHBOARD_UNITS.map((u) => (
-                      <button
-                        key={u}
-                        type="button"
-                        role="tab"
-                        className={`tab ${unit === u ? "tab-active" : ""}`}
-                        onClick={() => setUnit(u)}
-                      >
-                        {UNIT_LABELS[u]}
-                      </button>
-                    ))}
+                    {unit === "month" && (
+                      <MonthSelector
+                        year={year}
+                        month={month}
+                        onChange={(newYear, newMonth) => {
+                          setYear(newYear);
+                          setMonth(newMonth);
+                        }}
+                        compact
+                      />
+                    )}
+                    {unit === "year" && <YearSelector year={summaryYear} onChange={setSummaryYear} compact />}
+                    {unit === "week" && <WeekSelector weekStart={weekStart} onChange={setWeekStart} compact />}
                   </div>
-
-                  {unit === "month" && (
-                    <MonthSelector
-                      year={year}
-                      month={month}
-                      onChange={(newYear, newMonth) => {
-                        setYear(newYear);
-                        setMonth(newMonth);
-                      }}
-                    />
-                  )}
-                  {unit === "year" && <YearSelector year={summaryYear} onChange={setSummaryYear} />}
-                  {unit === "week" && <WeekSelector weekStart={weekStart} onChange={setWeekStart} />}
                 </div>
               </section>
 
@@ -240,6 +239,12 @@ export function App() {
       <div className="drawer-side z-50">
         <label htmlFor="app-drawer" aria-label="メニューを閉じる" className="drawer-overlay"></label>
         <ul className="menu min-h-full w-64 gap-1 bg-base-100 p-4 text-base-content lg:border-r-0">
+          <li className="mb-2">
+            <div className="flex items-center gap-2 px-2 py-1">
+              <img src={logoUrl} alt="" className="h-7 w-7 rounded" />
+              <h1 className="text-xl font-bold">flowrite</h1>
+            </div>
+          </li>
           <li>
             <button type="button" onClick={() => navigate("dashboard")}>
               ホーム

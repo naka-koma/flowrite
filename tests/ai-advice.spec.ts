@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { periodSelector } from "./helpers";
+import { periodSelector, selectPeriodUnit } from "./helpers";
 
 test("ボタンを押すとアドバイスが表示される", async ({ page }) => {
   await page.goto("/");
@@ -10,28 +10,29 @@ test("ボタンを押すとアドバイスが表示される", async ({ page }) 
 });
 
 test("エラー時にエラーメッセージが表示される", async ({ page }) => {
-  await page.addInitScript(() => {
-    (window as unknown as { __MOCK_SCENARIO__?: { trendEmpty?: boolean } }).__MOCK_SCENARIO__ = {
-      trendEmpty: true,
-    };
-  });
   await page.goto("/");
 
-  // AIアドバイス専用のピッカーで最古の月を選択し、contextを空にする
+  // AIアドバイス専用のピッカーで最古の月（データなし扱い）を選択する
   const select = page.getByLabel("AIアドバイス対象年月");
   const oldestValue = await select.locator("option").last().getAttribute("value");
   await select.selectOption(oldestValue!);
 
   await page.getByRole("button", { name: "AIアドバイスを取得" }).click();
 
-  await expect(page.getByText("エラー: context field is required")).toBeVisible();
+  await expect(page.getByText("エラー: 指定した期間のデータがありません")).toBeVisible();
+});
+
+test("アドバイス取得ボタンはデータ取得を待たずに押せる", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.getByRole("button", { name: "AIアドバイスを取得" })).toBeEnabled();
 });
 
 test("AIアドバイスの期間はホーム画面のサマリーとは独立して選択できる", async ({ page }) => {
   await page.goto("/");
 
   // ダッシュボードの期間選択を年タブに切り替えても、AIアドバイス側は月のまま独立している
-  await periodSelector(page).getByRole("tab", { name: "年" }).click();
+  await selectPeriodUnit(page, "year");
   await expect(page.getByLabel("AIアドバイス対象年月")).toBeVisible();
 
   await page.getByTestId("ai-advice").getByRole("tab", { name: "年" }).click();
