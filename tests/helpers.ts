@@ -1,4 +1,10 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+
+// ホーム画面の「期間」カード（AIアドバイス内の独立ピッカーと同じラベルを使うため、
+// タブ・セレクタの問い合わせはこのスコープ内で行う）
+export function periodSelector(page: Page): Locator {
+  return page.getByTestId("period-selector");
+}
 
 // 広い画面幅ではサイドバーが常時表示され、ハンバーガーボタンは表示されない。
 // 画面幅に関わらず設定画面へ遷移できるようにする

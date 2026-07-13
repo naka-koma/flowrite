@@ -31,6 +31,20 @@ test.describe("モバイル幅", () => {
     await expect(page.getByRole("heading", { name: "設定", exact: true })).not.toBeVisible();
   });
 
+  test("ハンバーガーメニューが透過されず不透明な背景で表示される", async ({ page }) => {
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "メニューを開く" }).click();
+
+    const menu = page.getByRole("button", { name: "設定" }).locator("xpath=ancestor::ul");
+    const backdropFilter = await menu.evaluate((el) => getComputedStyle(el).backdropFilter);
+    const backgroundColor = await menu.evaluate((el) => getComputedStyle(el).backgroundColor);
+
+    expect(backdropFilter).toBe("none");
+    // 不透明なrgb()形式であること（rgba(...,アルファ<1)ではないこと）を確認する
+    expect(backgroundColor.startsWith("rgb(")).toBe(true);
+  });
+
   test("メニュー外をクリックするとメニューが閉じる", async ({ page }) => {
     await page.goto("/");
 

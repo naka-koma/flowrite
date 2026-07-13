@@ -1,6 +1,10 @@
 function resolveSummaryPeriod_(params) {
   const unit = params.unit || "month";
 
+  if (unit === "all") {
+    return { unit, label: "全期間" };
+  }
+
   if (unit === "week") {
     if (!params.weekStart) {
       return { error: "weekStart is required" };
@@ -148,7 +152,8 @@ function handleSummary(params) {
       }
     }
 
-    if (date < start || date >= end) continue;
+    // unit=allの場合はstart/endが存在しないため日付フィルタをかけない（全期間集計）
+    if (start && (date < start || date >= end)) continue;
 
     const formattedDate = Utilities.formatDate(date, Session.getScriptTimeZone(), "yyyy/MM/dd");
 

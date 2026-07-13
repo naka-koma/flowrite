@@ -43,6 +43,25 @@ function shiftMonth(year: number, month: number, delta: number): { year: number;
 }
 
 function mockHandleSummary(params: SummaryParams) {
+  if (params.unit === "all") {
+    return {
+      unit: "all" as const,
+      label: "全期間",
+      totalExpense: 9000000,
+      totalIncome: 18000000,
+      categories: [
+        { name: "食費", total: 2400000, transactions: [] },
+        { name: "交通費", total: 1200000, transactions: [] },
+        { name: "住居", total: 4800000, transactions: [] },
+        { name: "娯楽", total: 600000, transactions: [] },
+      ],
+      incomeCategories: [
+        { name: "給与", total: 17000000, transactions: [] },
+        { name: "賞与", total: 1000000, transactions: [] },
+      ],
+    };
+  }
+
   if (params.unit === "year") {
     return {
       unit: "year" as const,

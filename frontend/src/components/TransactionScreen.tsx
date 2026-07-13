@@ -120,6 +120,7 @@ export function TransactionScreen({ hideAmounts, onBack }: TransactionScreenProp
         <p className="text-sm text-base-content/70">
           {totalCount}件中 {totalCount === 0 ? 0 : (page - 1) * pageSize + 1}〜
           {Math.min(page * pageSize, totalCount)}件を表示
+          {list.status === "loading" && <span className="loading loading-spinner loading-xs ml-2" />}
         </p>
         <div className="flex gap-2">
           <button

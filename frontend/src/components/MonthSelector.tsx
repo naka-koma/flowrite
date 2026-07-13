@@ -2,6 +2,9 @@ interface MonthSelectorProps {
   year: number;
   month: number;
   onChange: (year: number, month: number) => void;
+  selectLabel?: string;
+  prevLabel?: string;
+  nextLabel?: string;
 }
 
 const MONTH_RANGE = 24;
@@ -23,7 +26,14 @@ function shiftMonth(year: number, month: number, delta: number): { year: number;
   return { year: date.getFullYear(), month: date.getMonth() + 1 };
 }
 
-export function MonthSelector({ year, month, onChange }: MonthSelectorProps) {
+export function MonthSelector({
+  year,
+  month,
+  onChange,
+  selectLabel = "対象年月",
+  prevLabel = "前の月",
+  nextLabel = "次の月",
+}: MonthSelectorProps) {
   const options = buildOptions();
   const hasCurrent = options.some((o) => o.year === year && o.month === month);
   const allOptions = hasCurrent ? options : [{ year, month }, ...options];
@@ -43,13 +53,13 @@ export function MonthSelector({ year, month, onChange }: MonthSelectorProps) {
       <button
         type="button"
         onClick={() => goToOffset(-1)}
-        aria-label="前の月"
+        aria-label={prevLabel}
         className="btn btn-square btn-sm"
       >
         ‹
       </button>
       <select
-        aria-label="対象年月"
+        aria-label={selectLabel}
         value={`${year}-${month}`}
         onChange={(e) => handleChange(e.target.value)}
         className="select select-bordered w-full max-w-xs"
@@ -63,7 +73,7 @@ export function MonthSelector({ year, month, onChange }: MonthSelectorProps) {
       <button
         type="button"
         onClick={() => goToOffset(1)}
-        aria-label="次の月"
+        aria-label={nextLabel}
         className="btn btn-square btn-sm"
       >
         ›

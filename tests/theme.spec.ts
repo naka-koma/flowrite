@@ -43,3 +43,11 @@ test("6つのテーマバリエーションがライト/ダークにグループ
   await expect(darkGroup.getByLabel("インディゴ・ミステリー")).toBeVisible();
   await expect(darkGroup.getByLabel("シャドウ・サン")).toBeVisible();
 });
+
+test("ヘッダーのプルダウンからテーマを切り替えられる", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByLabel("テーマ").selectOption("indigo-mystery");
+
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "indigo-mystery");
+});
