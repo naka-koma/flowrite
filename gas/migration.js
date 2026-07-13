@@ -34,6 +34,27 @@ const MIGRATIONS = [
       return { updated: updated };
     },
   },
+  {
+    id: "002_add_updated_at",
+    description: "raw_dataにupdatedAt列（L列）を追加し、既存行はimportedAtの値で初期化する",
+    run: function () {
+      const sheet = getRawDataSheet();
+      const lastRow = sheet.getLastRow();
+
+      const headerRange = sheet.getRange(1, 12, 1, 1);
+      if (headerRange.getValue() !== "updatedAt") {
+        headerRange.setValue("updatedAt");
+      }
+
+      if (lastRow <= 1) {
+        return { updated: 0 };
+      }
+
+      const importedAt = sheet.getRange(2, 11, lastRow - 1, 1).getValues();
+      sheet.getRange(2, 12, lastRow - 1, 1).setValues(importedAt);
+      return { updated: lastRow - 1 };
+    },
+  },
 ];
 
 function getAppliedMigrationIds_() {

@@ -1,4 +1,5 @@
 import type {
+  AddCategoryParams,
   Settings,
   SummaryParams,
   SummaryUnit,
@@ -6,6 +7,7 @@ import type {
   TransactionRow,
   TrendParams,
   TrendPoint,
+  UpdateCategoryParams,
 } from "../types/api";
 
 interface ScriptRun {
@@ -328,12 +330,13 @@ const MOCK_TRANSACTION_CATEGORY_ENTRIES: [string, string[]][] = [
   ["その他", ["雑費"]],
   ["給与", ["給与"]],
 ];
-const MOCK_TRANSACTION_CATEGORIES: Record<string, string[]> = Object.fromEntries(
-  MOCK_TRANSACTION_CATEGORY_ENTRIES,
+// カテゴリマスタはhandleAddCategoryで追加されるため、モジュール内メモリでミュータブルに保持する
+const mockCategoriesMaster: Record<string, string[]> = Object.fromEntries(
+  MOCK_TRANSACTION_CATEGORY_ENTRIES.map(([category, subcategories]) => [category, [...subcategories]]),
 );
 
-// カテゴリ編集はページリロードをまたがなくてよいため、モジュール内メモリで十分
-const mockCategoryOverrides = new Map<string, { category: string; subcategory: string }>();
+// カテゴリ・メモの編集はページリロードをまたがなくてよいため、モジュール内メモリで十分
+const mockCategoryOverrides = new Map<string, { category: string; subcategory: string; memo: string }>();
 
 function buildMockTransactions(year: number, month: number): TransactionRow[] {
   const count = 55; // ページネーション（1ページ50件）を跨ぐ件数にする
@@ -374,7 +377,9 @@ function mockHandleTransactionList(params: TransactionListParams) {
 
   const transactions = buildMockTransactions(year, month).map((t) => {
     const override = mockCategoryOverrides.get(t.id);
-    return override ? { ...t, category: override.category, subcategory: override.subcategory } : t;
+    return override
+      ? { ...t, category: override.category, subcategory: override.subcategory, memo: override.memo }
+      : t;
   });
 
   const totalCount = transactions.length;
@@ -385,17 +390,39 @@ function mockHandleTransactionList(params: TransactionListParams) {
     totalCount,
     page,
     pageSize,
-    categoryOptions: Object.keys(MOCK_TRANSACTION_CATEGORIES),
-    subcategoryOptionsByCategory: MOCK_TRANSACTION_CATEGORIES,
+    categoryOptions: Object.keys(mockCategoriesMaster),
+    subcategoryOptionsByCategory: mockCategoriesMaster,
   };
 }
 
-function mockHandleUpdateCategory(body: { id: string; category: string; subcategory: string }) {
+function mockHandleUpdateCategory(body: UpdateCategoryParams) {
   if (!body.id) {
     return { success: false, error: "id is required" };
   }
 
-  mockCategoryOverrides.set(body.id, { category: body.category, subcategory: body.subcategory });
+  mockCategoryOverrides.set(body.id, { category: body.category, subcategory: body.subcategory, memo: body.memo });
+  return { success: true };
+}
+
+function mockHandleGetCategories() {
+  return { categories: mockCategoriesMaster };
+}
+
+function mockHandleAddCategory(body: AddCategoryParams) {
+  const category = body.category?.trim();
+  const subcategory = body.subcategory?.trim();
+
+  if (!category || !subcategory) {
+    return { success: false, error: "category and subcategory are required" };
+  }
+
+  if (!mockCategoriesMaster[category]) {
+    mockCategoriesMaster[category] = [];
+  }
+  if (!mockCategoriesMaster[category].includes(subcategory)) {
+    mockCategoriesMaster[category].push(subcategory);
+  }
+
   return { success: true };
 }
 
@@ -418,7 +445,11 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
     case "handleTransactionList":
       return mockHandleTransactionList(args[0] as TransactionListParams);
     case "handleUpdateCategory":
-      return mockHandleUpdateCategory(args[0] as { id: string; category: string; subcategory: string });
+      return mockHandleUpdateCategory(args[0] as UpdateCategoryParams);
+    case "handleGetCategories":
+      return mockHandleGetCategories();
+    case "handleAddCategory":
+      return mockHandleAddCategory(args[0] as AddCategoryParams);
     default:
       throw new Error(`Unknown function: ${functionName}`);
   }
