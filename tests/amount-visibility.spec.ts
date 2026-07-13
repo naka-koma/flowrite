@@ -15,7 +15,7 @@ test("トグルで金額をマスク表示に切り替えられる", async ({ pa
   await expect(page.getByText("合計支出: 150,000")).toBeVisible();
 });
 
-test("金額の非表示設定は再読み込み後も保持される", async ({ page }) => {
+test("金額の非表示設定は再読み込みすると引き継がれない（スクショ共有用の一時的な設定のため）", async ({ page }) => {
   await page.goto("/");
 
   await page.getByRole("button", { name: "金額を隠す" }).click();
@@ -23,8 +23,8 @@ test("金額の非表示設定は再読み込み後も保持される", async ({
 
   await page.reload();
 
-  await expect(page.getByText("合計支出: ***")).toBeVisible();
-  await expect(page.getByRole("button", { name: "金額を表示する" })).toBeVisible();
+  await expect(page.getByText("合計支出: 150,000")).toBeVisible();
+  await expect(page.getByRole("button", { name: "金額を隠す" })).toBeVisible();
 });
 
 test("非表示時は取引明細やAIアドバイスの金額もマスクされる", async ({ page }) => {

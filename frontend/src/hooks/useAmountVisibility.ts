@@ -1,17 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-const STORAGE_KEY = "flowrite-hide-amounts";
-
-function readStoredHidden(): boolean {
-  return localStorage.getItem(STORAGE_KEY) === "true";
-}
-
+// スクリーンショット共有時に一時的に使うだけなので、リロードで表示に戻ってよい（永続化しない）
 export function useAmountVisibility() {
-  const [hideAmounts, setHideAmounts] = useState<boolean>(readStoredHidden);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, String(hideAmounts));
-  }, [hideAmounts]);
+  const [hideAmounts, setHideAmounts] = useState(false);
 
   return { hideAmounts, toggleHideAmounts: () => setHideAmounts((h) => !h) };
 }

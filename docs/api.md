@@ -224,6 +224,53 @@ AIアドバイスのプロンプト・使用モデル設定を更新する。
 
 ---
 
+## `handleGetPreferences()`
+
+テーマ・ホーム画面レイアウト・トレンド表示件数を`PropertiesService.getUserProperties()`（実行しているGoogleアカウント単位）から取得する。引数なし。
+
+**戻り値**
+```js
+{
+  "theme": "mint-clarity",
+  "dashboardLayout": "[{\"id\":\"upload\",\"visible\":true}, ...]",
+  "trendVisibleCount": "12"
+}
+```
+
+**注意**
+- 各値は文字列で保存・返却される（`dashboardLayout`はJSON文字列）。フロントエンド側でパース・バリデーションを行う
+- 未設定のキーは空文字を返す。フロントエンド側でデフォルト値にフォールバックする
+- ブラウザのlocalStorageと異なり、Safari WebApp化した場合のITP等の影響を受けない
+
+---
+
+## `handleUpdatePreference(body)`
+
+指定したキーの値をUserPropertiesに保存する。
+
+**引数**
+```js
+{
+  "key": "theme",
+  "value": "indigo-mystery"
+}
+```
+
+| プロパティ | 型 | 説明 |
+|---|---|---|
+| key | `"theme" \| "dashboardLayout" \| "trendVisibleCount"` | 保存先キー |
+| value | string | 保存する値 |
+
+**戻り値**
+```js
+{ "success": true }
+```
+
+**注意**
+- `key` が許可されたキー以外の場合は `{ "success": false, "error": "invalid key" }` を返す
+
+---
+
 ## `handleTransactionList(params)`
 
 指定した年月の取引一覧をページ単位で返す。あわせてカテゴリ編集用のプルダウン選択肢も返す。

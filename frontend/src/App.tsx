@@ -11,12 +11,13 @@ import { AiAdvice } from "./components/AiAdvice";
 import { SettingsScreen } from "./components/SettingsScreen";
 import { ReportScreen } from "./components/ReportScreen";
 import { TransactionScreen } from "./components/TransactionScreen";
+import { LoadingScreen } from "./components/LoadingScreen";
 import { useSummary } from "./hooks/useSummary";
 import { useTrend } from "./hooks/useTrend";
-import { THEMES, useTheme, type Theme } from "./hooks/useTheme";
+import { THEMES, type Theme } from "./hooks/useTheme";
 import { useAmountVisibility } from "./hooks/useAmountVisibility";
-import { useTrendDisplayCount } from "./hooks/useTrendDisplayCount";
-import { useDashboardLayout, type DashboardSectionId } from "./hooks/useDashboardLayout";
+import { usePreferences } from "./hooks/usePreferences";
+import type { DashboardSectionId } from "./hooks/useDashboardLayout";
 import { formatISODate, getMondayOfWeek } from "./lib/week";
 import { SECTION_HEADING_CLASS } from "./lib/ui";
 import type { SummaryParams, SummaryUnit } from "./types/api";
@@ -28,15 +29,18 @@ export function App() {
   const now = new Date();
   const [screen, setScreen] = useState<"dashboard" | "settings" | "report" | "transactions">("dashboard");
   const [menuOpen, setMenuOpen] = useState(false);
-  const { theme, setTheme } = useTheme();
-  const { hideAmounts, toggleHideAmounts } = useAmountVisibility();
-  const { visibleCount: trendVisibleCount, setVisibleCount: setTrendVisibleCount } = useTrendDisplayCount();
   const {
-    sections: dashboardSections,
-    toggleVisibility: toggleDashboardSection,
-    moveSection: moveDashboardSection,
-    resetLayout: resetDashboardLayout,
-  } = useDashboardLayout();
+    status: preferencesStatus,
+    theme,
+    setTheme,
+    dashboardSections,
+    toggleDashboardSection,
+    moveDashboardSection,
+    resetDashboardLayout,
+    trendVisibleCount,
+    setTrendVisibleCount,
+  } = usePreferences();
+  const { hideAmounts, toggleHideAmounts } = useAmountVisibility();
   const [unit, setUnit] = useState<SummaryUnit>("month");
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -52,6 +56,10 @@ export function App() {
 
   const summary = useSummary(summaryParams);
   const trend = useTrend(unit);
+
+  if (preferencesStatus === "loading") {
+    return <LoadingScreen />;
+  }
 
   function navigate(next: "dashboard" | "settings" | "report" | "transactions") {
     setScreen(next);
