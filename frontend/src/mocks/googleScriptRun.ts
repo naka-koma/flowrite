@@ -2,10 +2,14 @@ import type {
   AddAiAttributeParams,
   AddCategoryParams,
   AiAttribute,
+  Budget,
   CalendarDay,
   DeleteAiAttributeParams,
+  DeleteBudgetParams,
+  DeleteCategoryParams,
   MonthlyCalendarParams,
   PreferenceKey,
+  RenameCategoryParams,
   Settings,
   SummaryParams,
   SummaryUnit,
@@ -16,6 +20,7 @@ import type {
   UpdateAiAttributeParams,
   UpdateCategoryParams,
   UpdatePreferenceParams,
+  UpsertBudgetParams,
 } from "../types/api";
 
 interface ScriptRun {
@@ -588,6 +593,100 @@ function mockHandleAddCategory(body: AddCategoryParams) {
   return { success: true };
 }
 
+function mockHandleRenameCategory(body: RenameCategoryParams) {
+  const oldCategory = body.oldCategory?.trim();
+  const newCategory = body.newCategory?.trim();
+
+  if (!oldCategory || !newCategory) {
+    return { success: false, error: "oldCategory and newCategory are required" };
+  }
+  if (oldCategory === newCategory) {
+    return { success: true };
+  }
+
+  const subcategories = mockCategoriesMaster[oldCategory];
+  if (subcategories) {
+    delete mockCategoriesMaster[oldCategory];
+    mockCategoriesMaster[newCategory] = subcategories;
+  }
+
+  const budgets = loadMockBudgets();
+  const budget = budgets.find((b) => b.category === oldCategory);
+  if (budget) {
+    budget.category = newCategory;
+    saveMockBudgets(budgets);
+  }
+
+  return { success: true };
+}
+
+function mockHandleDeleteCategory(body: DeleteCategoryParams) {
+  const category = body.category?.trim();
+  if (!category) {
+    return { success: false, error: "category is required" };
+  }
+
+  delete mockCategoriesMaster[category];
+  saveMockBudgets(loadMockBudgets().filter((b) => b.category !== category));
+
+  return { success: true };
+}
+
+const MOCK_BUDGETS_STORAGE_KEY = "__mock_budgets__";
+
+// 実際のGASではbudgetsシートに永続化されるため、モックでも
+// ページリロードをまたいで再現できるよう sessionStorage に保存する
+function loadMockBudgets(): Budget[] {
+  const raw = sessionStorage.getItem(MOCK_BUDGETS_STORAGE_KEY);
+  if (raw) {
+    try {
+      return JSON.parse(raw) as Budget[];
+    } catch {
+      // 壊れたデータは無視してデフォルトにフォールバック
+    }
+  }
+  return [];
+}
+
+function saveMockBudgets(budgets: Budget[]) {
+  sessionStorage.setItem(MOCK_BUDGETS_STORAGE_KEY, JSON.stringify(budgets));
+}
+
+function mockHandleGetBudgets() {
+  return { budgets: loadMockBudgets() };
+}
+
+function mockHandleUpsertBudget(body: UpsertBudgetParams) {
+  const category = body.category?.trim();
+  const monthlyBudget = Number(body.monthlyBudget);
+
+  if (!category) {
+    return { success: false, error: "category is required" };
+  }
+  if (!Number.isFinite(monthlyBudget) || monthlyBudget < 0) {
+    return { success: false, error: "monthlyBudget must be a non-negative number" };
+  }
+  if (!mockCategoriesMaster[category]) {
+    return { success: false, error: "category does not exist" };
+  }
+
+  const budgets = loadMockBudgets();
+  const existing = budgets.find((b) => b.category === category);
+  if (existing) {
+    existing.monthlyBudget = monthlyBudget;
+  } else {
+    budgets.push({ category, monthlyBudget });
+  }
+  saveMockBudgets(budgets);
+
+  return { success: true, budget: { category, monthlyBudget } };
+}
+
+function mockHandleDeleteBudget(body: DeleteBudgetParams) {
+  saveMockBudgets(loadMockBudgets().filter((b) => b.category !== body.category));
+  return { success: true };
+}
+
 function callMockFunction(functionName: string, args: unknown[]): unknown {
   switch (functionName) {
     case "handleUpload":
@@ -626,6 +725,16 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleGetCategories();
     case "handleAddCategory":
       return mockHandleAddCategory(args[0] as AddCategoryParams);
+    case "handleRenameCategory":
+      return mockHandleRenameCategory(args[0] as RenameCategoryParams);
+    case "handleDeleteCategory":
+      return mockHandleDeleteCategory(args[0] as DeleteCategoryParams);
+    case "handleGetBudgets":
+      return mockHandleGetBudgets();
+    case "handleUpsertBudget":
+      return mockHandleUpsertBudget(args[0] as UpsertBudgetParams);
+    case "handleDeleteBudget":
+      return mockHandleDeleteBudget(args[0] as DeleteBudgetParams);
     default:
       throw new Error(`Unknown function: ${functionName}`);
   }

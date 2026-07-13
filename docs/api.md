@@ -526,6 +526,149 @@ AIアドバイスのプロンプト・使用モデル設定を更新する。
 
 ---
 
+## `handleRenameCategory(body)`
+
+大項目をリネームする。該当する大項目を持つ`categories`シートの全ての行のcategoryを一括更新し、対応する`budgets`シートの予算行も追従して更新する。
+
+**引数**
+```js
+{
+  "oldCategory": "<変更前の大項目>",
+  "newCategory": "<変更後の大項目>"
+}
+```
+
+**戻り値**
+```js
+{ "success": true }
+```
+
+**注意**
+- `oldCategory` / `newCategory` が空文字の場合は `{ "success": false, "error": "oldCategory and newCategory are required" }` を返す
+- `oldCategory` と `newCategory` が同じ場合は何もせず `{ "success": true }` を返す
+- **`raw_data`（過去の取引データ）は更新しない**。リネーム後、過去の取引は旧カテゴリー名のまま残る
+
+---
+
+## `handleDeleteCategory(body)`
+
+大項目を削除する。該当する大項目を持つ`categories`シートの全ての行を削除し、対応する`budgets`シートの予算行も削除する。
+
+**引数**
+```js
+{
+  "category": "<大項目>"
+}
+```
+
+**戻り値**
+```js
+{ "success": true }
+```
+
+**注意**
+- `category` が空文字の場合は `{ "success": false, "error": "category is required" }` を返す
+- **`raw_data`（過去の取引データ）は更新しない**。削除後も過去の取引はそのカテゴリー名のまま残る
+
+---
+
+## `handleGetBudgets()`
+
+`budgets`シートに登録されている大項目別の月間予算一覧を返す。引数なし。
+
+**戻り値**
+```js
+{
+  "budgets": [
+    { "category": "食費", "monthlyBudget": 30000 },
+    { "category": "交通費", "monthlyBudget": 10000 }
+  ]
+}
+```
+
+---
+
+## `handleUpsertBudget(body)`
+
+大項目に対する月間予算を追加・更新する。同じ大項目の予算が既に存在する場合は上書きする。
+
+**引数**
+```js
+{
+  "category": "<大項目>",
+  "monthlyBudget": 30000
+}
+```
+
+**戻り値**
+```js
+{
+  "success": true,
+  "budget": { "category": "食費", "monthlyBudget": 30000 }
+}
+```
+
+**注意**
+- `category` が空文字の場合は `{ "success": false, "error": "category is required" }` を返す
+- `monthlyBudget` が非負の数値でない場合は `{ "success": false, "error": "monthlyBudget must be a non-negative number" }` を返す
+- `category` が`categories`シートに存在しない場合は `{ "success": false, "error": "category does not exist" }` を返す（既存カテゴリーからのみ予算を設定できる）
+
+---
+
+## `handleDeleteBudget(body)`
+
+大項目に対する月間予算を削除する。
+
+**引数**
+```js
+{
+  "category": "<大項目>"
+}
+```
+
+**戻り値**
+```js
+{ "success": true }
+```
+
+**注意**
+- `category` が空文字の場合は `{ "success": false, "error": "category is required" }` を返す
+- 該当する予算行がない場合も `{ "success": true }` を返す
+
+---
+
+## `handleGetBudgetVariance(params)`
+
+指定した月の大項目別実績（`handleSummary`）と予算（`budgets`シート）を突き合わせ、乖離額（実績-予算）を計算する。予算が未設定の大項目は結果に含まない。
+
+**引数**
+
+| プロパティ | 型 | 必須 | 説明 |
+|---|---|---|---|
+| unit | `"month"` | - | 集計単位。`"month"`以外を指定するとエラーになる（予算は月間の値のため） |
+| year | number | 必須 | 年 |
+| month | number | 必須 | 月 |
+
+**戻り値**
+```js
+{
+  "unit": "month",
+  "year": 2025,
+  "month": 12,
+  "label": "2025年12月",
+  "entries": [
+    { "category": "食費", "budget": 30000, "actual": 35000, "variance": 5000 },
+    { "category": "交通費", "budget": 10000, "actual": 8000, "variance": -2000 }
+  ]
+}
+```
+
+**注意**
+- `unit`が`"month"`以外の場合は `{ "error": "unit must be 'month'" }` を返す
+- `variance`が正の値は予算超過、負の値は予算未達を表す
+
+---
+
 ## `handleRunMigrations()`
 
 未適用のスプレッドシートマイグレーション（`gas/migration.js` の `MIGRATIONS` 配列）を順に実行する。引数なし。

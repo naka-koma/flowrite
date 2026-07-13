@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
-import type { AddCategoryParams, AddCategoryResponse, CategoryMaster, GetCategoriesResponse } from "../types/api";
+import type {
+  AddCategoryParams,
+  AddCategoryResponse,
+  CategoryMaster,
+  DeleteCategoryParams,
+  DeleteCategoryResponse,
+  GetCategoriesResponse,
+  RenameCategoryParams,
+  RenameCategoryResponse,
+} from "../types/api";
 import { runScript } from "../lib/googleScriptRun";
 
 type LoadStatus = "loading" | "success" | "error";
@@ -72,5 +81,49 @@ export function useCategories() {
     }
   };
 
-  return { ...loadState, addState, addCategory };
+  // リネーム・削除は大項目単位で構造が変わる（キーの追加・削除）ため、
+  // 楽観的更新ではなく再取得で反映する
+  const renameCategory = async (params: RenameCategoryParams) => {
+    setAddState({ status: "loading", errorMessage: null });
+
+    try {
+      const data = await runScript<RenameCategoryResponse>("handleRenameCategory", params);
+
+      if (!data.success) {
+        setAddState({ status: "error", errorMessage: data.error ?? "カテゴリ名の変更に失敗しました" });
+        return false;
+      }
+
+      setAddState({ status: "success", errorMessage: null });
+      setReloadKey((k) => k + 1);
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "カテゴリ名の変更に失敗しました";
+      setAddState({ status: "error", errorMessage: message });
+      return false;
+    }
+  };
+
+  const deleteCategory = async (params: DeleteCategoryParams) => {
+    setAddState({ status: "loading", errorMessage: null });
+
+    try {
+      const data = await runScript<DeleteCategoryResponse>("handleDeleteCategory", params);
+
+      if (!data.success) {
+        setAddState({ status: "error", errorMessage: data.error ?? "カテゴリの削除に失敗しました" });
+        return false;
+      }
+
+      setAddState({ status: "success", errorMessage: null });
+      setReloadKey((k) => k + 1);
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "カテゴリの削除に失敗しました";
+      setAddState({ status: "error", errorMessage: message });
+      return false;
+    }
+  };
+
+  return { ...loadState, addState, addCategory, renameCategory, deleteCategory };
 }
