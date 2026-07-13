@@ -1,6 +1,9 @@
 interface YearSelectorProps {
   year: number;
   onChange: (year: number) => void;
+  selectLabel?: string;
+  prevLabel?: string;
+  nextLabel?: string;
 }
 
 const YEAR_RANGE = 5;
@@ -16,7 +19,13 @@ function buildOptions(): number[] {
   return options;
 }
 
-export function YearSelector({ year, onChange }: YearSelectorProps) {
+export function YearSelector({
+  year,
+  onChange,
+  selectLabel = "対象年",
+  prevLabel = "前の年",
+  nextLabel = "次の年",
+}: YearSelectorProps) {
   const options = buildOptions();
   const allOptions = options.includes(year) ? options : [year, ...options];
 
@@ -25,13 +34,13 @@ export function YearSelector({ year, onChange }: YearSelectorProps) {
       <button
         type="button"
         onClick={() => onChange(year - 1)}
-        aria-label="前の年"
+        aria-label={prevLabel}
         className="btn btn-square btn-sm"
       >
         ‹
       </button>
       <select
-        aria-label="対象年"
+        aria-label={selectLabel}
         value={year}
         onChange={(e) => onChange(Number(e.target.value))}
         className="select select-bordered w-full max-w-xs"
@@ -45,7 +54,7 @@ export function YearSelector({ year, onChange }: YearSelectorProps) {
       <button
         type="button"
         onClick={() => onChange(year + 1)}
-        aria-label="次の年"
+        aria-label={nextLabel}
         className="btn btn-square btn-sm"
       >
         ›

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { periodSelector } from "./helpers";
 
 test("年月を選択するとカテゴリー別支出一覧が表示される", async ({ page }) => {
   await page.goto("/");
@@ -12,7 +13,7 @@ test("年月を選択するとカテゴリー別支出一覧が表示される",
 test("データなし時に適切なメッセージが表示される", async ({ page }) => {
   await page.goto("/");
 
-  const select = page.getByLabel("対象年月");
+  const select = periodSelector(page).getByLabel("対象年月");
   const oldestValue = await select.locator("option").last().getAttribute("value");
   await select.selectOption(oldestValue!);
 
@@ -56,9 +57,9 @@ test("カテゴリーを選択すると取引明細が表示される", async ({
 test("年タブに切り替えると年単位の集計が表示される", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("tab", { name: "年" }).click();
+  await periodSelector(page).getByRole("tab", { name: "年" }).click();
 
-  await expect(page.getByLabel("対象年")).toBeVisible();
+  await expect(periodSelector(page).getByLabel("対象年")).toBeVisible();
   await expect(page.getByText("合計支出: 1,800,000")).toBeVisible();
   await expect(page.getByRole("cell", { name: "住居" })).toBeVisible();
 });
@@ -66,20 +67,20 @@ test("年タブに切り替えると年単位の集計が表示される", async
 test("週タブに切り替えると週単位の集計が表示される", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("tab", { name: "週" }).click();
+  await periodSelector(page).getByRole("tab", { name: "週" }).click();
 
-  await expect(page.getByLabel("対象週")).toBeVisible();
+  await expect(periodSelector(page).getByLabel("対象週")).toBeVisible();
   await expect(page.getByText("合計支出: 35,000")).toBeVisible();
 });
 
 test("集計単位を切り替えても既存の月単位表示に戻れる", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("tab", { name: "年" }).click();
+  await periodSelector(page).getByRole("tab", { name: "年" }).click();
   await expect(page.getByText("合計支出: 1,800,000")).toBeVisible();
 
-  await page.getByRole("tab", { name: "月" }).click();
-  await expect(page.getByLabel("対象年月")).toBeVisible();
+  await periodSelector(page).getByRole("tab", { name: "月" }).click();
+  await expect(periodSelector(page).getByLabel("対象年月")).toBeVisible();
   await expect(page.getByText("合計支出: 150,000")).toBeVisible();
 });
 
@@ -91,37 +92,37 @@ test("前月/次月ボタンで月を切り替えられる", async ({ page }) =>
   const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const label = (d: Date) => `${d.getFullYear()}年${d.getMonth() + 1}月`;
 
-  await page.getByRole("button", { name: "前の月" }).click();
+  await periodSelector(page).getByRole("button", { name: "前の月" }).click();
   await expect(page.getByTestId("period-label")).toHaveText(label(prevMonth));
 
-  await page.getByRole("button", { name: "次の月" }).click();
-  await page.getByRole("button", { name: "次の月" }).click();
+  await periodSelector(page).getByRole("button", { name: "次の月" }).click();
+  await periodSelector(page).getByRole("button", { name: "次の月" }).click();
   await expect(page.getByTestId("period-label")).toHaveText(label(nextMonth));
 });
 
 test("前年/次年ボタンで年を切り替えられる", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("tab", { name: "年" }).click();
+  await periodSelector(page).getByRole("tab", { name: "年" }).click();
 
   const now = new Date();
 
-  await page.getByRole("button", { name: "前の年" }).click();
+  await periodSelector(page).getByRole("button", { name: "前の年" }).click();
   await expect(page.getByTestId("period-label")).toHaveText(`${now.getFullYear() - 1}年`);
 
-  await page.getByRole("button", { name: "次の年" }).click();
-  await page.getByRole("button", { name: "次の年" }).click();
+  await periodSelector(page).getByRole("button", { name: "次の年" }).click();
+  await periodSelector(page).getByRole("button", { name: "次の年" }).click();
   await expect(page.getByTestId("period-label")).toHaveText(`${now.getFullYear() + 1}年`);
 });
 
 test("前週/次週ボタンで週を切り替えられる", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("tab", { name: "週" }).click();
+  await periodSelector(page).getByRole("tab", { name: "週" }).click();
 
   const initialLabel = await page.getByTestId("period-label").textContent();
 
-  await page.getByRole("button", { name: "前の週" }).click();
+  await periodSelector(page).getByRole("button", { name: "前の週" }).click();
   await expect(page.getByTestId("period-label")).not.toHaveText(initialLabel ?? "");
 
-  await page.getByRole("button", { name: "次の週" }).click();
+  await periodSelector(page).getByRole("button", { name: "次の週" }).click();
   await expect(page.getByTestId("period-label")).toHaveText(initialLabel ?? "");
 });

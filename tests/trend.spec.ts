@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openSettings } from "./helpers";
+import { openSettings, periodSelector } from "./helpers";
 
 test("トレンドチャートが表示される", async ({ page }) => {
   await page.goto("/");
@@ -23,7 +23,7 @@ test("データなし時に適切なメッセージが表示される", async ({
 test("年タブに切り替えるとトレンドも年単位の粒度になる", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("tab", { name: "年" }).click();
+  await periodSelector(page).getByRole("tab", { name: "年" }).click();
 
   await expect(page.locator(".recharts-line").first()).toBeVisible();
   await expect(page.locator(".recharts-xAxis").getByText("2024年", { exact: true })).toBeVisible();
@@ -32,7 +32,7 @@ test("年タブに切り替えるとトレンドも年単位の粒度になる",
 test("週タブに切り替えるとトレンドも週単位の粒度になる", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("tab", { name: "週" }).click();
+  await periodSelector(page).getByRole("tab", { name: "週" }).click();
 
   await expect(page.locator(".recharts-line").first()).toBeVisible();
   await expect(page.getByText("06/16", { exact: true })).toBeVisible();

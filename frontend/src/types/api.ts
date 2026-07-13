@@ -25,12 +25,13 @@ export interface CategoryTotal {
   transactions: Transaction[];
 }
 
-export type SummaryUnit = "month" | "year" | "week";
+export type SummaryUnit = "month" | "year" | "week" | "all";
 
 export type SummaryParams =
   | { unit: "month"; year: number; month: number }
   | { unit: "year"; year: number }
-  | { unit: "week"; weekStart: string };
+  | { unit: "week"; weekStart: string }
+  | { unit: "all" };
 
 export interface PeriodComparisonEntry {
   label: string;
@@ -49,7 +50,7 @@ export interface PeriodComparison {
 
 export interface SummaryResponse {
   unit: SummaryUnit;
-  year: number;
+  year?: number;
   month?: number;
   label: string;
   totalExpense: number;

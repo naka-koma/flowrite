@@ -46,7 +46,9 @@ export function useTransactionList({ year, month, pageSize, page }: UseTransacti
 
   useEffect(() => {
     let cancelled = false;
-    setState(INITIAL_STATE);
+    // 前回分のtransactions/totalCountなどは保持したままstatusのみloadingにし、
+    // ページ・期間切り替え中も一覧やページネーションコントロールが消えないようにする
+    setState((s) => ({ ...s, status: "loading" }));
 
     const fetchSize = isAllMode ? ALL_MODE_CHUNK_SIZE : pageSize;
     const fetchPage = isAllMode ? 1 : page;
@@ -61,7 +63,7 @@ export function useTransactionList({ year, month, pageSize, page }: UseTransacti
         if (cancelled) return;
 
         if (data.error) {
-          setState({ ...INITIAL_STATE, status: "error", errorMessage: data.error });
+          setState((s) => ({ ...s, status: "error", errorMessage: data.error ?? null }));
           return;
         }
 
@@ -79,7 +81,7 @@ export function useTransactionList({ year, month, pageSize, page }: UseTransacti
       .catch((error: unknown) => {
         if (cancelled) return;
         const message = error instanceof Error ? error.message : "取引一覧の取得に失敗しました";
-        setState({ ...INITIAL_STATE, status: "error", errorMessage: message });
+        setState((s) => ({ ...s, status: "error", errorMessage: message }));
       });
 
     return () => {

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openSettings } from "./helpers";
+import { openSettings, periodSelector } from "./helpers";
 
 test("セクションを非表示にするとホームから消え、再表示すると復活する", async ({ page }) => {
   await page.goto("/");
@@ -28,7 +28,19 @@ test("上に移動ボタンでホームの表示順が変わる", async ({ page 
   await page.getByRole("button", { name: "ホーム" }).click();
 
   const headings = page.locator("h2");
-  await expect(headings).toHaveText(["CSVアップロード", "サマリー", "AIアドバイス", "トレンド"]);
+  await expect(headings).toHaveText(["期間", "CSVアップロード", "サマリー", "AIアドバイス", "トレンド"]);
+});
+
+test("サマリーを非表示にしても期間選択は表示され続ける", async ({ page }) => {
+  await page.goto("/");
+  await openSettings(page);
+
+  await page.getByRole("checkbox", { name: "サマリーを表示" }).uncheck();
+  await page.getByRole("button", { name: "ホーム" }).click();
+
+  await expect(page.getByRole("heading", { name: "サマリー" })).not.toBeVisible();
+  await expect(page.getByRole("heading", { name: "期間" })).toBeVisible();
+  await expect(periodSelector(page).getByLabel("対象年月")).toBeVisible();
 });
 
 test("設定は再読み込み後も保持される", async ({ page }) => {

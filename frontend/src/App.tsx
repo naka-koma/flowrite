@@ -13,45 +13,16 @@ import { ReportScreen } from "./components/ReportScreen";
 import { TransactionScreen } from "./components/TransactionScreen";
 import { useSummary } from "./hooks/useSummary";
 import { useTrend } from "./hooks/useTrend";
-import { useTheme } from "./hooks/useTheme";
+import { THEMES, useTheme, type Theme } from "./hooks/useTheme";
 import { useAmountVisibility } from "./hooks/useAmountVisibility";
 import { useTrendDisplayCount } from "./hooks/useTrendDisplayCount";
 import { useDashboardLayout, type DashboardSectionId } from "./hooks/useDashboardLayout";
 import { formatISODate, getMondayOfWeek } from "./lib/week";
-import { formatYen } from "./lib/money";
 import { SECTION_HEADING_CLASS } from "./lib/ui";
 import type { SummaryParams, SummaryUnit } from "./types/api";
 
-function buildAiContext(
-  summary: ReturnType<typeof useSummary>,
-  trend: ReturnType<typeof useTrend>,
-): string {
-  const parts: string[] = [];
-
-  const hasSummaryData =
-    summary.data &&
-    (summary.data.categories.length > 0 || summary.data.totalExpense > 0 || summary.data.totalIncome > 0);
-
-  if (hasSummaryData && summary.data) {
-    const categoryText = summary.data.categories
-      .map((c) => `${c.name}: ${formatYen(c.total)}`)
-      .join("、");
-    parts.push(
-      `${summary.data.label}: 支出${formatYen(summary.data.totalExpense)}、収入${formatYen(summary.data.totalIncome)}${categoryText ? `（内訳: ${categoryText}）` : ""}`,
-    );
-  }
-
-  if (trend.data && trend.data.points.length > 0) {
-    const pointsText = trend.data.points
-      .map((p) => `${p.label} 支出${formatYen(p.totalExpense)}・収入${formatYen(p.totalIncome)}`)
-      .join("、");
-    parts.push(`推移: ${pointsText}`);
-  }
-
-  return parts.join("\n");
-}
-
-const UNIT_LABELS: Record<SummaryUnit, string> = { month: "月", year: "年", week: "週" };
+const DASHBOARD_UNITS: SummaryUnit[] = ["month", "year", "week"];
+const UNIT_LABELS: Record<SummaryUnit, string> = { month: "月", year: "年", week: "週", all: "全期間" };
 
 export function App() {
   const now = new Date();
@@ -102,34 +73,6 @@ export function App() {
           <section key={id} className="card bg-base-100">
             <div className="card-body p-4 sm:p-6">
               <h2 className={SECTION_HEADING_CLASS}>サマリー</h2>
-
-              <div role="tablist" className="tabs tabs-boxed mb-4 w-fit">
-                {(Object.keys(UNIT_LABELS) as SummaryUnit[]).map((u) => (
-                  <button
-                    key={u}
-                    type="button"
-                    role="tab"
-                    className={`tab ${unit === u ? "tab-active" : ""}`}
-                    onClick={() => setUnit(u)}
-                  >
-                    {UNIT_LABELS[u]}
-                  </button>
-                ))}
-              </div>
-
-              {unit === "month" && (
-                <MonthSelector
-                  year={year}
-                  month={month}
-                  onChange={(newYear, newMonth) => {
-                    setYear(newYear);
-                    setMonth(newMonth);
-                  }}
-                />
-              )}
-              {unit === "year" && <YearSelector year={summaryYear} onChange={setSummaryYear} />}
-              {unit === "week" && <WeekSelector weekStart={weekStart} onChange={setWeekStart} />}
-
               <SummaryTable
                 data={summary.data}
                 errorMessage={summary.errorMessage}
@@ -159,7 +102,7 @@ export function App() {
           <section key={id} className="card bg-base-100">
             <div className="card-body p-4 sm:p-6">
               <h2 className={SECTION_HEADING_CLASS}>AIアドバイス</h2>
-              <AiAdvice context={buildAiContext(summary, trend)} hideAmounts={hideAmounts} />
+              <AiAdvice hideAmounts={hideAmounts} />
             </div>
           </section>
         );
@@ -181,28 +124,50 @@ export function App() {
       />
       <div className="drawer-content min-h-screen">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
-          <header className="mb-6 flex items-center gap-3">
-            <div className="glass-surface flex items-center gap-2 rounded-box px-3 py-2">
-              <button
-                type="button"
-                onClick={() => setMenuOpen(true)}
-                aria-label="メニューを開く"
-                className="btn btn-ghost btn-circle btn-sm lg:hidden"
-              >
-                ☰
-              </button>
-              <img src={logoUrl} alt="" className="h-7 w-7 rounded" />
-              <h1 className="text-2xl font-bold sm:text-3xl">flowrite</h1>
-            </div>
+          <header className="glass-surface mb-6 flex items-center gap-3 rounded-box px-3 py-2">
             <button
               type="button"
-              onClick={toggleHideAmounts}
-              aria-label={hideAmounts ? "金額を表示する" : "金額を隠す"}
-              aria-pressed={hideAmounts}
-              className="btn btn-ghost btn-circle ml-auto"
+              onClick={() => setMenuOpen(true)}
+              aria-label="メニューを開く"
+              className="btn btn-ghost btn-circle btn-sm lg:hidden"
             >
-              {hideAmounts ? <EyeOff size={20} /> : <Eye size={20} />}
+              ☰
             </button>
+            <img src={logoUrl} alt="" className="h-7 w-7 rounded" />
+            <h1 className="text-2xl font-bold sm:text-3xl">flowrite</h1>
+
+            <div className="ml-auto flex items-center gap-2">
+              <select
+                aria-label="テーマ"
+                value={theme}
+                onChange={(e) => setTheme(e.target.value as Theme)}
+                className="select select-bordered select-sm"
+              >
+                <optgroup label="ライトテーマ">
+                  {THEMES.filter((t) => t.mode === "light").map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="ダークテーマ">
+                  {THEMES.filter((t) => t.mode === "dark").map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+              <button
+                type="button"
+                onClick={toggleHideAmounts}
+                aria-label={hideAmounts ? "金額を表示する" : "金額を隠す"}
+                aria-pressed={hideAmounts}
+                className="btn btn-ghost btn-circle"
+              >
+                {hideAmounts ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </header>
 
           {screen === "settings" ? (
@@ -227,6 +192,39 @@ export function App() {
             <TransactionScreen hideAmounts={hideAmounts} onBack={() => navigate("dashboard")} />
           ) : (
             <div className="flex flex-col gap-6">
+              <section className="card bg-base-100" data-testid="period-selector">
+                <div className="card-body p-4 sm:p-6">
+                  <h2 className={SECTION_HEADING_CLASS}>期間</h2>
+
+                  <div role="tablist" className="tabs tabs-boxed mb-4 w-fit">
+                    {DASHBOARD_UNITS.map((u) => (
+                      <button
+                        key={u}
+                        type="button"
+                        role="tab"
+                        className={`tab ${unit === u ? "tab-active" : ""}`}
+                        onClick={() => setUnit(u)}
+                      >
+                        {UNIT_LABELS[u]}
+                      </button>
+                    ))}
+                  </div>
+
+                  {unit === "month" && (
+                    <MonthSelector
+                      year={year}
+                      month={month}
+                      onChange={(newYear, newMonth) => {
+                        setYear(newYear);
+                        setMonth(newMonth);
+                      }}
+                    />
+                  )}
+                  {unit === "year" && <YearSelector year={summaryYear} onChange={setSummaryYear} />}
+                  {unit === "week" && <WeekSelector weekStart={weekStart} onChange={setWeekStart} />}
+                </div>
+              </section>
+
               {visibleDashboardSections.length === 0 ? (
                 <p className="text-base-content/70">
                   表示するセクションがありません。設定画面の「ホーム画面」から表示するセクションを選んでください。
@@ -241,7 +239,7 @@ export function App() {
 
       <div className="drawer-side z-50">
         <label htmlFor="app-drawer" aria-label="メニューを閉じる" className="drawer-overlay"></label>
-        <ul className="menu glass-surface min-h-full w-64 gap-1 p-4 text-base-content lg:border-r-0">
+        <ul className="menu min-h-full w-64 gap-1 bg-base-100 p-4 text-base-content lg:border-r-0">
           <li>
             <button type="button" onClick={() => navigate("dashboard")}>
               ホーム
