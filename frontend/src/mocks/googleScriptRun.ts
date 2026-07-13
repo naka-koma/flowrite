@@ -1,5 +1,7 @@
 import type {
   AddCategoryParams,
+  CalendarDay,
+  MonthlyCalendarParams,
   PreferenceKey,
   Settings,
   SummaryParams,
@@ -204,6 +206,44 @@ function mockHandleSummary(params: SummaryParams) {
         balanceDiff: 150000 - 130000,
       },
     },
+  };
+}
+
+function mockHandleMonthlyCalendar(params: MonthlyCalendarParams) {
+  const { year, month } = params;
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  let totalExpense = 0;
+  let totalIncome = 0;
+
+  const days: CalendarDay[] = Array.from({ length: daysInMonth }, (_, i) => {
+    const day = i + 1;
+    const date = new Date(year, month - 1, day);
+    const hasData = day % 5 === 0;
+    const dayExpense = hasData ? 1000 + day * 100 : 0;
+    const dayIncome = day === 25 ? 280000 : 0;
+
+    totalExpense += dayExpense;
+    totalIncome += dayIncome;
+
+    return {
+      date: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+      day,
+      dayOfWeek: date.getDay(),
+      totalExpense: dayExpense,
+      totalIncome: dayIncome,
+      balance: dayIncome - dayExpense,
+    };
+  });
+
+  return {
+    year,
+    month,
+    label: `${year}年${month}月`,
+    totalExpense,
+    totalIncome,
+    balance: totalIncome - totalExpense,
+    days,
   };
 }
 
@@ -479,6 +519,8 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleSummary(args[0] as SummaryParams);
     case "handleTrend":
       return mockHandleTrend(args[0] as TrendParams);
+    case "handleMonthlyCalendar":
+      return mockHandleMonthlyCalendar(args[0] as MonthlyCalendarParams);
     case "handleAiAdvice":
       return mockHandleAiAdvice(args[0] as SummaryParams);
     case "handleRunMigrations":

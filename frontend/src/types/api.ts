@@ -81,6 +81,31 @@ export interface AiAdviceResponse {
   error?: string;
 }
 
+export interface CalendarDay {
+  date: string;
+  day: number;
+  dayOfWeek: number;
+  totalExpense: number;
+  totalIncome: number;
+  balance: number;
+}
+
+export interface MonthlyCalendarParams {
+  year: number;
+  month: number;
+}
+
+export interface MonthlyCalendarResponse {
+  year: number;
+  month: number;
+  label: string;
+  totalExpense: number;
+  totalIncome: number;
+  balance: number;
+  days: CalendarDay[];
+  error?: string;
+}
+
 export interface MigrationResult {
   id: string;
   description: string;

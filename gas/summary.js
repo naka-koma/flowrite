@@ -193,6 +193,80 @@ function handleSummary(params) {
   return result;
 }
 
+function handleMonthlyCalendar(params) {
+  const year = Number(params.year);
+  const month = Number(params.month);
+  if (!year || !month) {
+    return { error: "year and month are required" };
+  }
+
+  const start = new Date(year, month - 1, 1);
+  const end = new Date(year, month, 1);
+  const label = `${year}年${month}月`;
+
+  const dayMap = {};
+  for (let d = 1; d <= new Date(year, month, 0).getDate(); d++) {
+    dayMap[d] = { totalExpense: 0, totalIncome: 0 };
+  }
+
+  const sheet = getRawDataSheet();
+  const lastRow = sheet.getLastRow();
+  let totalExpense = 0;
+  let totalIncome = 0;
+
+  if (lastRow > 1) {
+    const data = sheet.getRange(2, 1, lastRow - 1, 11).getValues();
+
+    for (const row of data) {
+      const isTarget = row[9];
+      const isTransfer = row[8];
+      if (isTarget !== 1 || isTransfer === 1) continue;
+
+      const date = new Date(row[1]);
+      if (date < start || date >= end) continue;
+
+      const amount = row[3];
+      const day = date.getDate();
+
+      if (amount < 0) {
+        const absAmount = Math.abs(amount);
+        dayMap[day].totalExpense += absAmount;
+        totalExpense += absAmount;
+      } else {
+        dayMap[day].totalIncome += amount;
+        totalIncome += amount;
+      }
+    }
+  }
+
+  const tz = Session.getScriptTimeZone();
+  const days = Object.keys(dayMap)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .map((day) => {
+      const date = new Date(year, month - 1, day);
+      const dayTotals = dayMap[day];
+      return {
+        date: Utilities.formatDate(date, tz, "yyyy-MM-dd"),
+        day,
+        dayOfWeek: date.getDay(),
+        totalExpense: dayTotals.totalExpense,
+        totalIncome: dayTotals.totalIncome,
+        balance: dayTotals.totalIncome - dayTotals.totalExpense,
+      };
+    });
+
+  return {
+    year,
+    month,
+    label,
+    totalExpense,
+    totalIncome,
+    balance: totalIncome - totalExpense,
+    days,
+  };
+}
+
 function getMondayOfWeek_(date) {
   const day = (date.getDay() + 6) % 7; // 月曜=0 ... 日曜=6
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() - day);
