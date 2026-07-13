@@ -6,6 +6,11 @@ export function periodSelector(page: Page): Locator {
   return page.getByTestId("period-selector");
 }
 
+// ホーム画面の「期間」カードの単位（月/年/週）を切り替える
+export async function selectPeriodUnit(page: Page, unit: "month" | "year" | "week"): Promise<void> {
+  await periodSelector(page).getByLabel("期間の単位").selectOption(unit);
+}
+
 // 広い画面幅ではサイドバーが常時表示され、ハンバーガーボタンは表示されない。
 // 画面幅に関わらず設定画面へ遷移できるようにする
 export async function openSettings(page: Page): Promise<void> {

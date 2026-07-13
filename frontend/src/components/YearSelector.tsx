@@ -4,6 +4,7 @@ interface YearSelectorProps {
   selectLabel?: string;
   prevLabel?: string;
   nextLabel?: string;
+  compact?: boolean;
 }
 
 const YEAR_RANGE = 5;
@@ -25,17 +26,18 @@ export function YearSelector({
   selectLabel = "対象年",
   prevLabel = "前の年",
   nextLabel = "次の年",
+  compact = false,
 }: YearSelectorProps) {
   const options = buildOptions();
   const allOptions = options.includes(year) ? options : [year, ...options];
 
   return (
-    <div className="mb-4 flex items-center gap-2">
+    <div className={`flex items-center gap-2 ${compact ? "" : "mb-4"}`}>
       <button
         type="button"
         onClick={() => onChange(year - 1)}
         aria-label={prevLabel}
-        className="btn btn-square btn-sm"
+        className={`btn btn-square ${compact ? "btn-xs" : "btn-sm"}`}
       >
         ‹
       </button>
@@ -43,7 +45,7 @@ export function YearSelector({
         aria-label={selectLabel}
         value={year}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="select select-bordered w-full max-w-xs"
+        className={`select select-bordered ${compact ? "select-sm w-auto" : "w-full max-w-xs"}`}
       >
         {allOptions.map((option) => (
           <option key={option} value={option}>
@@ -55,7 +57,7 @@ export function YearSelector({
         type="button"
         onClick={() => onChange(year + 1)}
         aria-label={nextLabel}
-        className="btn btn-square btn-sm"
+        className={`btn btn-square ${compact ? "btn-xs" : "btn-sm"}`}
       >
         ›
       </button>

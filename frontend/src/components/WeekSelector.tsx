@@ -3,6 +3,7 @@ import { dateToWeekInputValue, formatISODate, parseISODate, weekInputValueToMond
 interface WeekSelectorProps {
   weekStart: string;
   onChange: (weekStart: string) => void;
+  compact?: boolean;
 }
 
 function shiftWeek(weekStart: string, deltaWeeks: number): string {
@@ -11,7 +12,7 @@ function shiftWeek(weekStart: string, deltaWeeks: number): string {
   return formatISODate(shifted);
 }
 
-export function WeekSelector({ weekStart, onChange }: WeekSelectorProps) {
+export function WeekSelector({ weekStart, onChange, compact = false }: WeekSelectorProps) {
   const inputValue = dateToWeekInputValue(parseISODate(weekStart));
 
   const handleChange = (value: string) => {
@@ -21,12 +22,12 @@ export function WeekSelector({ weekStart, onChange }: WeekSelectorProps) {
   };
 
   return (
-    <div className="mb-4 flex items-center gap-2">
+    <div className={`flex items-center gap-2 ${compact ? "" : "mb-4"}`}>
       <button
         type="button"
         onClick={() => onChange(shiftWeek(weekStart, -1))}
         aria-label="前の週"
-        className="btn btn-square btn-sm"
+        className={`btn btn-square ${compact ? "btn-xs" : "btn-sm"}`}
       >
         ‹
       </button>
@@ -35,13 +36,13 @@ export function WeekSelector({ weekStart, onChange }: WeekSelectorProps) {
         aria-label="対象週"
         value={inputValue}
         onChange={(e) => handleChange(e.target.value)}
-        className="input input-bordered w-full max-w-xs"
+        className={`input input-bordered ${compact ? "input-sm w-auto" : "w-full max-w-xs"}`}
       />
       <button
         type="button"
         onClick={() => onChange(shiftWeek(weekStart, 1))}
         aria-label="次の週"
-        className="btn btn-square btn-sm"
+        className={`btn btn-square ${compact ? "btn-xs" : "btn-sm"}`}
       >
         ›
       </button>

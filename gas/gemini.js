@@ -26,10 +26,31 @@ function callGeminiApi(model, apiKey, prompt) {
   return { code: response.getResponseCode(), body: response.getContentText() };
 }
 
+function formatYen_(amount) {
+  return `${amount.toLocaleString("ja-JP")}円`;
+}
+
+// handleSummaryの結果からAIへ渡すコンテキスト文を組み立てる。
+// データが無い期間の場合は空文字を返す
+function buildAiContext_(summary) {
+  const hasData = summary.categories.length > 0 || summary.totalExpense > 0 || summary.totalIncome > 0;
+  if (!hasData) {
+    return "";
+  }
+
+  const categoryText = summary.categories.map((c) => `${c.name}: ${formatYen_(c.total)}`).join("、");
+  return `${summary.label}: 支出${formatYen_(summary.totalExpense)}、収入${formatYen_(summary.totalIncome)}${categoryText ? `（内訳: ${categoryText}）` : ""}`;
+}
+
 function handleAiAdvice(body) {
-  const context = body.context;
+  const summary = handleSummary({ unit: body.unit, year: body.year, month: body.month });
+  if (summary.error) {
+    return { success: false, error: summary.error };
+  }
+
+  const context = buildAiContext_(summary);
   if (!context) {
-    return { success: false, error: "context field is required" };
+    return { success: false, error: "指定した期間のデータがありません" };
   }
 
   const apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
