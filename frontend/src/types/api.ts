@@ -137,9 +137,27 @@ export interface UpdateCategoryParams {
   id: string;
   category: string;
   subcategory: string;
+  memo: string;
 }
 
 export interface UpdateCategoryResponse {
+  success: boolean;
+  error?: string;
+}
+
+export type CategoryMaster = Record<string, string[]>;
+
+export interface GetCategoriesResponse {
+  categories: CategoryMaster;
+  error?: string;
+}
+
+export interface AddCategoryParams {
+  category: string;
+  subcategory: string;
+}
+
+export interface AddCategoryResponse {
   success: boolean;
   error?: string;
 }

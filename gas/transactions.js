@@ -1,28 +1,3 @@
-function buildCategoryOptions_(data) {
-  const categoryOptions = [];
-  const seenCategories = new Set();
-  const subcategoryOptionsByCategory = {};
-
-  for (const row of data) {
-    const category = row[5];
-    const subcategory = row[6];
-
-    if (!seenCategories.has(category)) {
-      seenCategories.add(category);
-      categoryOptions.push(category);
-    }
-
-    if (!subcategoryOptionsByCategory[category]) {
-      subcategoryOptionsByCategory[category] = [];
-    }
-    if (!subcategoryOptionsByCategory[category].includes(subcategory)) {
-      subcategoryOptionsByCategory[category].push(subcategory);
-    }
-  }
-
-  return { categoryOptions, subcategoryOptionsByCategory };
-}
-
 function handleTransactionList(params) {
   const year = Number(params.year);
   const month = Number(params.month);
@@ -37,6 +12,10 @@ function handleTransactionList(params) {
   const end = new Date(year, month, 1);
   const tz = Session.getScriptTimeZone();
 
+  const { categories } = handleGetCategories();
+  const categoryOptions = Object.keys(categories);
+  const subcategoryOptionsByCategory = categories;
+
   const sheet = getRawDataSheet();
   const lastRow = sheet.getLastRow();
 
@@ -46,13 +25,12 @@ function handleTransactionList(params) {
       totalCount: 0,
       page,
       pageSize,
-      categoryOptions: [],
-      subcategoryOptionsByCategory: {},
+      categoryOptions,
+      subcategoryOptionsByCategory,
     };
   }
 
-  const data = sheet.getRange(2, 1, lastRow - 1, 11).getValues();
-  const { categoryOptions, subcategoryOptionsByCategory } = buildCategoryOptions_(data);
+  const data = sheet.getRange(2, 1, lastRow - 1, 12).getValues();
 
   const matched = [];
   for (const row of data) {
@@ -84,6 +62,7 @@ function handleUpdateCategory(body) {
   const id = body.id;
   const category = body.category;
   const subcategory = body.subcategory;
+  const memo = body.memo;
 
   if (!id) {
     return { success: false, error: "id is required" };
@@ -102,7 +81,9 @@ function handleUpdateCategory(body) {
     return { success: false, error: "transaction not found" };
   }
 
-  sheet.getRange(rowIndex + 2, 6, 1, 2).setValues([[category, subcategory]]);
+  const now = new Date().toISOString();
+  sheet.getRange(rowIndex + 2, 6, 1, 3).setValues([[category, subcategory, memo]]);
+  sheet.getRange(rowIndex + 2, 12, 1, 1).setValue(now);
 
   return { success: true };
 }

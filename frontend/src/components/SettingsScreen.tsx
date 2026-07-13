@@ -5,6 +5,7 @@ import { SettingsForm } from "./SettingsForm";
 import { AdminSection } from "./AdminSection";
 import { TrendDisplayCountSetting } from "./TrendDisplayCountSetting";
 import { DashboardLayoutSettings } from "./DashboardLayoutSettings";
+import { CategorySettings } from "./CategorySettings";
 
 interface SettingsScreenProps {
   theme: Theme;
@@ -61,6 +62,13 @@ export function SettingsScreen({
             onMoveSection={onMoveDashboardSection}
             onReset={onResetDashboardLayout}
           />
+        </div>
+      </section>
+
+      <section className="card bg-base-100">
+        <div className="card-body p-4 sm:p-6">
+          <h2 className="mb-3 text-lg font-semibold">カテゴリ</h2>
+          <CategorySettings />
         </div>
       </section>
 
