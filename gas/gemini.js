@@ -42,6 +42,22 @@ function buildAiContext_(summary) {
   return `${summary.label}: 支出${formatYen_(summary.totalExpense)}、収入${formatYen_(summary.totalIncome)}${categoryText ? `（内訳: ${categoryText}）` : ""}`;
 }
 
+// 登録されているユーザー属性情報を「# ユーザーの属性・前提条件」セクションとして組み立てる。
+// 未登録の場合は空文字を返す
+function buildAiAttributesSection_() {
+  const { attributes } = handleGetAiAttributes();
+  if (attributes.length === 0) {
+    return "";
+  }
+
+  const lines = attributes.map((a) => `- ${a.key}: ${a.value}`).join("\n");
+  return (
+    "# ユーザーの属性・前提条件\n" +
+    "あなたは一般的な平均値と比較するだけでなく、以下のライフスタイルや価値観を持つ人物にとって「本当に最適なバランスか」という視点でデータを分析する必要があります。\n" +
+    lines
+  );
+}
+
 function handleAiAdvice(body) {
   try {
     const summary = handleSummary({ unit: body.unit, year: body.year, month: body.month });
@@ -59,9 +75,9 @@ function handleAiAdvice(body) {
       return { success: false, error: "GEMINI_API_KEY is not set in script properties" };
     }
 
-    const notes = getAiNotes();
-    const notesSection = notes ? `\n\n現在の取り組み・既に対応済みの事項（同じ提案は避けること）:\n${notes}` : "";
-    const prompt = `${getAiPrompt()}\n\n${context}${notesSection}`;
+    const attributesSection = buildAiAttributesSection_();
+    const sections = [attributesSection, getAiPrompt(), `# 分析対象データ\n${context}`].filter((s) => s);
+    const prompt = sections.join("\n\n");
 
     for (const model of getGeminiModelsToTry()) {
       const { code, body: responseBody } = callGeminiApi(model, apiKey, prompt);

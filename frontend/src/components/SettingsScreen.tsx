@@ -6,6 +6,7 @@ import { AdminSection } from "./AdminSection";
 import { TrendDisplayCountSetting } from "./TrendDisplayCountSetting";
 import { DashboardLayoutSettings } from "./DashboardLayoutSettings";
 import { CategorySettings } from "./CategorySettings";
+import { AiAttributesSettings } from "./AiAttributesSettings";
 
 interface SettingsScreenProps {
   theme: Theme;
@@ -69,6 +70,13 @@ export function SettingsScreen({
         <div className="card-body p-4 sm:p-6">
           <h2 className="mb-3 text-lg font-semibold">カテゴリ</h2>
           <CategorySettings />
+        </div>
+      </section>
+
+      <section className="card bg-base-100">
+        <div className="card-body p-4 sm:p-6">
+          <h2 className="mb-3 text-lg font-semibold">AI属性情報</h2>
+          <AiAttributesSettings />
         </div>
       </section>
 

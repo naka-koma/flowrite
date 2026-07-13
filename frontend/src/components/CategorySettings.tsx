@@ -39,7 +39,7 @@ export function CategorySettings() {
   const categoryNames = Object.keys(categories);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4" data-testid="category-settings">
       {categoryNames.length === 0 ? (
         <p className="text-base-content/70">登録されているカテゴリはありません</p>
       ) : (
