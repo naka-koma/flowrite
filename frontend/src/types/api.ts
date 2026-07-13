@@ -124,11 +124,39 @@ export interface RunMigrationsResponse {
 export interface Settings {
   prompt: string;
   model: string;
-  notes: string;
   error?: string;
 }
 
 export interface UpdateSettingsResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface AiAttribute {
+  key: string;
+  value: string;
+}
+
+export interface GetAiAttributesResponse {
+  attributes: AiAttribute[];
+  error?: string;
+}
+
+export interface UpsertAiAttributeParams {
+  key: string;
+  value: string;
+}
+
+export interface UpsertAiAttributeResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface DeleteAiAttributeParams {
+  key: string;
+}
+
+export interface DeleteAiAttributeResponse {
   success: boolean;
   error?: string;
 }

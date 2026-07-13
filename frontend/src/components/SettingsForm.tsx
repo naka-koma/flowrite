@@ -5,13 +5,11 @@ export function SettingsForm() {
   const { status, settings, errorMessage, saveState, saveSettings } = useSettings();
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState("");
-  const [notes, setNotes] = useState("");
 
   useEffect(() => {
     if (settings) {
       setPrompt(settings.prompt);
       setModel(settings.model);
-      setNotes(settings.notes);
     }
   }, [settings]);
 
@@ -34,7 +32,7 @@ export function SettingsForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    saveSettings({ prompt, model, notes });
+    saveSettings({ prompt, model });
   };
 
   return (
@@ -59,18 +57,6 @@ export function SettingsForm() {
           onChange={(e) => setModel(e.target.value)}
           placeholder="例: gemini-3.5-flash"
           className="input input-bordered"
-        />
-      </label>
-
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium">現在の取り組み・解決済みの事項</span>
-        <textarea
-          aria-label="現在の取り組み・解決済みの事項"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={4}
-          placeholder="例: 外食を減らす取り組みは既に開始している"
-          className="textarea textarea-bordered"
         />
       </label>
 

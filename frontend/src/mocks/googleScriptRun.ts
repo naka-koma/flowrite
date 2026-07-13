@@ -1,6 +1,8 @@
 import type {
   AddCategoryParams,
+  AiAttribute,
   CalendarDay,
+  DeleteAiAttributeParams,
   MonthlyCalendarParams,
   PreferenceKey,
   Settings,
@@ -12,6 +14,7 @@ import type {
   TrendPoint,
   UpdateCategoryParams,
   UpdatePreferenceParams,
+  UpsertAiAttributeParams,
 } from "../types/api";
 
 interface ScriptRun {
@@ -365,20 +368,67 @@ function loadMockSettings(): Settings {
       // 壊れたデータは無視してデフォルトにフォールバック
     }
   }
-  return { prompt: DEFAULT_MOCK_PROMPT, model: "", notes: "" };
+  return { prompt: DEFAULT_MOCK_PROMPT, model: "" };
 }
 
 function mockHandleGetSettings() {
   return loadMockSettings();
 }
 
-function mockHandleUpdateSettings(body: { prompt?: string; model?: string; notes?: string }) {
+function mockHandleUpdateSettings(body: { prompt?: string; model?: string }) {
   const settings: Settings = {
     prompt: body.prompt?.trim() || DEFAULT_MOCK_PROMPT,
     model: body.model?.trim() ?? "",
-    notes: body.notes?.trim() ?? "",
   };
   sessionStorage.setItem(MOCK_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  return { success: true };
+}
+
+const MOCK_AI_ATTRIBUTES_STORAGE_KEY = "__mock_ai_attributes__";
+
+// 実際のGASではai_attributesシートに永続化されるため、モックでも
+// ページリロードをまたいで再現できるよう sessionStorage に保存する
+function loadMockAiAttributes(): AiAttribute[] {
+  const raw = sessionStorage.getItem(MOCK_AI_ATTRIBUTES_STORAGE_KEY);
+  if (raw) {
+    try {
+      return JSON.parse(raw) as AiAttribute[];
+    } catch {
+      // 壊れたデータは無視してデフォルトにフォールバック
+    }
+  }
+  return [];
+}
+
+function saveMockAiAttributes(attributes: AiAttribute[]) {
+  sessionStorage.setItem(MOCK_AI_ATTRIBUTES_STORAGE_KEY, JSON.stringify(attributes));
+}
+
+function mockHandleGetAiAttributes() {
+  return { attributes: loadMockAiAttributes() };
+}
+
+function mockHandleUpsertAiAttribute(body: UpsertAiAttributeParams) {
+  const key = body.key?.trim();
+  const value = body.value?.trim();
+  if (!key || !value) {
+    return { success: false, error: "key and value are required" };
+  }
+
+  const attributes = loadMockAiAttributes();
+  const existing = attributes.find((a) => a.key === key);
+  if (existing) {
+    existing.value = value;
+  } else {
+    attributes.push({ key, value });
+  }
+  saveMockAiAttributes(attributes);
+  return { success: true };
+}
+
+function mockHandleDeleteAiAttribute(body: DeleteAiAttributeParams) {
+  const attributes = loadMockAiAttributes().filter((a) => a.key !== body.key);
+  saveMockAiAttributes(attributes);
   return { success: true };
 }
 
@@ -539,7 +589,13 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
     case "handleGetSettings":
       return mockHandleGetSettings();
     case "handleUpdateSettings":
-      return mockHandleUpdateSettings(args[0] as { prompt?: string; model?: string; notes?: string });
+      return mockHandleUpdateSettings(args[0] as { prompt?: string; model?: string });
+    case "handleGetAiAttributes":
+      return mockHandleGetAiAttributes();
+    case "handleUpsertAiAttribute":
+      return mockHandleUpsertAiAttribute(args[0] as UpsertAiAttributeParams);
+    case "handleDeleteAiAttribute":
+      return mockHandleDeleteAiAttribute(args[0] as DeleteAiAttributeParams);
     case "handleGetPreferences":
       return mockHandleGetPreferences();
     case "handleUpdatePreference":
