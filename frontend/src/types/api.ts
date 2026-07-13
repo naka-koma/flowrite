@@ -249,3 +249,73 @@ export interface AddCategoryResponse {
   success: boolean;
   error?: string;
 }
+
+export interface RenameCategoryParams {
+  oldCategory: string;
+  newCategory: string;
+}
+
+export interface RenameCategoryResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface DeleteCategoryParams {
+  category: string;
+}
+
+export interface DeleteCategoryResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface Budget {
+  category: string;
+  monthlyBudget: number;
+}
+
+export interface GetBudgetsResponse {
+  budgets: Budget[];
+  error?: string;
+}
+
+export interface UpsertBudgetParams {
+  category: string;
+  monthlyBudget: number;
+}
+
+export interface UpsertBudgetResponse {
+  success: boolean;
+  budget?: Budget;
+  error?: string;
+}
+
+export interface DeleteBudgetParams {
+  category: string;
+}
+
+export interface DeleteBudgetResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface BudgetVarianceEntry {
+  category: string;
+  budget: number;
+  actual: number;
+  variance: number;
+}
+
+export interface GetBudgetVarianceParams {
+  year: number;
+  month: number;
+}
+
+export interface GetBudgetVarianceResponse {
+  unit?: SummaryUnit;
+  year?: number;
+  month?: number;
+  label?: string;
+  entries: BudgetVarianceEntry[];
+  error?: string;
+}

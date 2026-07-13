@@ -338,3 +338,30 @@ function handleTrend(params) {
 
   return { unit, points };
 }
+
+// 大項目別の月間予算と実績を突き合わせ、乖離額（実績-予算）を計算する。
+// 予算は月間の値として設定されているため、unit=month以外はサポートしない
+function handleGetBudgetVariance(params) {
+  const unit = (params && params.unit) || "month";
+  if (unit !== "month") {
+    return { error: "unit must be 'month'" };
+  }
+
+  const summary = handleSummary(params);
+  if (summary.error) {
+    return { error: summary.error };
+  }
+
+  const { budgets } = handleGetBudgets();
+  const actualByCategory = {};
+  summary.categories.forEach((c) => {
+    actualByCategory[c.name] = c.total;
+  });
+
+  const entries = budgets.map(({ category, monthlyBudget }) => {
+    const actual = actualByCategory[category] || 0;
+    return { category, budget: monthlyBudget, actual, variance: actual - monthlyBudget };
+  });
+
+  return { unit, year: summary.year, month: summary.month, label: summary.label, entries };
+}
