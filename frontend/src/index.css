@@ -244,3 +244,42 @@ body {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
+
+/* AIアドバイスのMarkdownレンダリング結果の見た目調整（daisyUIにtypographyプラグインが無いため最小限のスタイルを当てる） */
+.ai-advice-markdown h1,
+.ai-advice-markdown h2,
+.ai-advice-markdown h3 {
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.ai-advice-markdown h1 {
+  font-size: 1.25rem;
+}
+.ai-advice-markdown h2 {
+  font-size: 1.125rem;
+}
+.ai-advice-markdown h3 {
+  font-size: 1rem;
+}
+.ai-advice-markdown p {
+  margin-bottom: 0.5rem;
+}
+.ai-advice-markdown ul,
+.ai-advice-markdown ol {
+  margin: 0.5rem 0 0.5rem 1.25rem;
+}
+.ai-advice-markdown ul {
+  list-style-type: disc;
+}
+.ai-advice-markdown ol {
+  list-style-type: decimal;
+}
+.ai-advice-markdown strong {
+  font-weight: 600;
+}
+.ai-advice-markdown code {
+  background-color: var(--color-base-200);
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.35rem;
+}

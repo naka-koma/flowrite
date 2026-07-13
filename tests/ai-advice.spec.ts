@@ -9,6 +9,17 @@ test("ボタンを押すとアドバイスが表示される", async ({ page }) 
   await expect(page.getByText("外食を減らし")).toBeVisible();
 });
 
+test("アドバイスの見出し・箇条書き・強調がMarkdownとしてレンダリングされる", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "AIアドバイスを取得" }).click();
+
+  await expect(page.getByRole("heading", { name: "今月のアドバイス" })).toBeVisible();
+  await expect(page.getByText("10%増加")).toBeVisible();
+  await expect(page.locator("strong", { hasText: "10%増加" })).toBeVisible();
+  await expect(page.locator("li", { hasText: "外食を減らし、自炊を心がける" })).toBeVisible();
+});
+
 test("エラー時にエラーメッセージが表示される", async ({ page }) => {
   await page.goto("/");
 
