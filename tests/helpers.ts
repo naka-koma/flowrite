@@ -40,3 +40,13 @@ export async function openTransactionList(page: Page): Promise<void> {
   }
   await page.getByRole("button", { name: "取引一覧" }).click();
 }
+
+// 広い画面幅ではサイドバーが常時表示され、ハンバーガーボタンは表示されない。
+// 画面幅に関わらずカレンダー画面へ遷移できるようにする
+export async function openCalendar(page: Page): Promise<void> {
+  const menuButton = page.getByRole("button", { name: "メニューを開く" });
+  if (await menuButton.isVisible()) {
+    await menuButton.click();
+  }
+  await page.getByRole("button", { name: "カレンダー" }).click();
+}
