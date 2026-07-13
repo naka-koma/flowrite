@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useAiAttributes } from "../hooks/useAiAttributes";
 
 export function AiAttributesSettings() {
-  const { status, attributes, errorMessage, mutateState, upsertAttribute, deleteAttribute } = useAiAttributes();
+  const { status, attributes, errorMessage, mutateState, addAttribute, updateAttribute, deleteAttribute } =
+    useAiAttributes();
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -12,10 +14,19 @@ export function AiAttributesSettings() {
     const trimmedValue = value.trim();
     if (!trimmedKey || !trimmedValue) return;
 
-    const saved = await upsertAttribute({ key: trimmedKey, value: trimmedValue });
-    if (saved) {
+    const added = await addAttribute({ key: trimmedKey, value: trimmedValue });
+    if (added) {
       setKey("");
       setValue("");
+    }
+  };
+
+  const handleDeleteClick = (id: string) => {
+    if (confirmingId === id) {
+      setConfirmingId(null);
+      deleteAttribute({ id });
+    } else {
+      setConfirmingId(id);
     }
   };
 
@@ -43,19 +54,53 @@ export function AiAttributesSettings() {
       ) : (
         <ul className="flex flex-col gap-2">
           {attributes.map((attribute) => (
-            <li key={attribute.key} className="flex items-center justify-between gap-2">
-              <span>
-                <span className="font-medium">{attribute.key}</span>
-                <span className="text-base-content/70">: {attribute.value}</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => deleteAttribute({ key: attribute.key })}
-                disabled={mutateState.status === "loading"}
-                className="btn btn-ghost btn-xs"
-              >
-                削除
-              </button>
+            <li key={attribute.id} className="flex items-center gap-2">
+              <input
+                key={`${attribute.id}-key-${attribute.key}`}
+                aria-label={`${attribute.key}の項目名`}
+                defaultValue={attribute.key}
+                onBlur={(e) => {
+                  const newKey = e.target.value.trim();
+                  if (newKey && newKey !== attribute.key) {
+                    updateAttribute({ id: attribute.id, key: newKey, value: attribute.value });
+                  }
+                }}
+                className="input input-bordered input-sm w-32"
+              />
+              <input
+                key={`${attribute.id}-value-${attribute.value}`}
+                aria-label={`${attribute.key}の内容`}
+                defaultValue={attribute.value}
+                onBlur={(e) => {
+                  const newValue = e.target.value.trim();
+                  if (newValue && newValue !== attribute.value) {
+                    updateAttribute({ id: attribute.id, key: attribute.key, value: newValue });
+                  }
+                }}
+                className="input input-bordered input-sm flex-1"
+              />
+              {confirmingId === attribute.id ? (
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteClick(attribute.id)}
+                    className="btn btn-error btn-xs"
+                  >
+                    本当に削除
+                  </button>
+                  <button type="button" onClick={() => setConfirmingId(null)} className="btn btn-xs">
+                    キャンセル
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteClick(attribute.id)}
+                  className="btn btn-error btn-outline btn-xs"
+                >
+                  削除
+                </button>
+              )}
             </li>
           ))}
         </ul>

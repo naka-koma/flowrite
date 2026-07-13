@@ -75,7 +75,7 @@ export function SettingsScreen({
 
       <section className="card bg-base-100">
         <div className="card-body p-4 sm:p-6">
-          <h2 className="mb-3 text-lg font-semibold">AI属性情報</h2>
+          <h2 className="mb-3 text-lg font-semibold">ユーザー属性情報</h2>
           <AiAttributesSettings />
         </div>
       </section>

@@ -133,6 +133,7 @@ export interface UpdateSettingsResponse {
 }
 
 export interface AiAttribute {
+  id: string;
   key: string;
   value: string;
 }
@@ -142,18 +143,30 @@ export interface GetAiAttributesResponse {
   error?: string;
 }
 
-export interface UpsertAiAttributeParams {
+export interface AddAiAttributeParams {
   key: string;
   value: string;
 }
 
-export interface UpsertAiAttributeResponse {
+export interface AddAiAttributeResponse {
+  success: boolean;
+  attribute?: AiAttribute;
+  error?: string;
+}
+
+export interface UpdateAiAttributeParams {
+  id: string;
+  key: string;
+  value: string;
+}
+
+export interface UpdateAiAttributeResponse {
   success: boolean;
   error?: string;
 }
 
 export interface DeleteAiAttributeParams {
-  key: string;
+  id: string;
 }
 
 export interface DeleteAiAttributeResponse {

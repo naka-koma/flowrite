@@ -55,6 +55,34 @@ const MIGRATIONS = [
       return { updated: lastRow - 1 };
     },
   },
+  {
+    id: "003_add_ai_attributes_id",
+    description: "ai_attributesシートにid列を追加し、列順をid, key, valueに揃える（既存行にはUUIDを割り当てる）",
+    run: function () {
+      const sheet = getAiAttributesSheet();
+      const lastRow = sheet.getLastRow();
+
+      const header = sheet.getRange(1, 1, 1, 3).getValues()[0];
+      if (header[0] === "id" && header[1] === "key" && header[2] === "value") {
+        return { updated: 0 };
+      }
+
+      if (lastRow <= 1) {
+        sheet.getRange(1, 1, 1, 3).setValues([["id", "key", "value"]]);
+        return { updated: 0 };
+      }
+
+      // 既存は key(A), value(B) の並びのため、id を先頭に挿入した新しい並びで書き直す
+      const existing = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+      const rows = existing.map(function (row) {
+        return [Utilities.getUuid(), row[0], row[1]];
+      });
+
+      sheet.getRange(1, 1, 1, 3).setValues([["id", "key", "value"]]);
+      sheet.getRange(2, 1, rows.length, 3).setValues(rows);
+      return { updated: rows.length };
+    },
+  },
 ];
 
 function getAppliedMigrationIds_() {

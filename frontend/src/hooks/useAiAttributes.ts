@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import type {
+  AddAiAttributeParams,
+  AddAiAttributeResponse,
   AiAttribute,
   DeleteAiAttributeParams,
   DeleteAiAttributeResponse,
   GetAiAttributesResponse,
-  UpsertAiAttributeParams,
-  UpsertAiAttributeResponse,
+  UpdateAiAttributeParams,
+  UpdateAiAttributeResponse,
 } from "../types/api";
 import { runScript } from "../lib/googleScriptRun";
 
@@ -30,11 +32,9 @@ export function useAiAttributes() {
     errorMessage: null,
   });
   const [mutateState, setMutateState] = useState<MutateState>({ status: "idle", errorMessage: null });
-  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    setLoadState((s) => ({ ...s, status: "loading" }));
 
     runScript<GetAiAttributesResponse>("handleGetAiAttributes")
       .then((data) => {
@@ -56,49 +56,86 @@ export function useAiAttributes() {
     return () => {
       cancelled = true;
     };
-  }, [reloadKey]);
+  }, []);
 
-  const upsertAttribute = async (params: UpsertAiAttributeParams) => {
+  // 追加はサーバーで採番されたidを含む属性が返るため、成功したらローカル配列に1件追加するだけでよい
+  const addAttribute = async (params: AddAiAttributeParams) => {
     setMutateState({ status: "loading", errorMessage: null });
 
     try {
-      const data = await runScript<UpsertAiAttributeResponse>("handleUpsertAiAttribute", params);
+      const data = await runScript<AddAiAttributeResponse>("handleAddAiAttribute", params);
 
-      if (!data.success) {
-        setMutateState({ status: "error", errorMessage: data.error ?? "属性情報の保存に失敗しました" });
+      if (!data.success || !data.attribute) {
+        setMutateState({ status: "error", errorMessage: data.error ?? "属性情報の追加に失敗しました" });
         return false;
       }
 
+      const newAttribute = data.attribute;
+      setLoadState((s) => ({ ...s, attributes: [...s.attributes, newAttribute] }));
       setMutateState({ status: "success", errorMessage: null });
-      setReloadKey((k) => k + 1);
       return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "属性情報の保存に失敗しました";
+      const message = error instanceof Error ? error.message : "属性情報の追加に失敗しました";
       setMutateState({ status: "error", errorMessage: message });
       return false;
     }
   };
 
+  // 更新はローカルを即座に反映し、失敗時のみ元の値に戻す（一覧全体の再取得は行わない）
+  const updateAttribute = async (params: UpdateAiAttributeParams) => {
+    const previous = loadState.attributes.find((a) => a.id === params.id);
+
+    setLoadState((s) => ({
+      ...s,
+      attributes: s.attributes.map((a) => (a.id === params.id ? { ...a, key: params.key, value: params.value } : a)),
+    }));
+
+    try {
+      const data = await runScript<UpdateAiAttributeResponse>("handleUpdateAiAttribute", params);
+
+      if (!data.success) {
+        if (previous) {
+          setLoadState((s) => ({ ...s, attributes: s.attributes.map((a) => (a.id === params.id ? previous : a)) }));
+        }
+        setMutateState({ status: "error", errorMessage: data.error ?? "属性情報の更新に失敗しました" });
+        return false;
+      }
+
+      setMutateState({ status: "success", errorMessage: null });
+      return true;
+    } catch (error) {
+      if (previous) {
+        setLoadState((s) => ({ ...s, attributes: s.attributes.map((a) => (a.id === params.id ? previous : a)) }));
+      }
+      const message = error instanceof Error ? error.message : "属性情報の更新に失敗しました";
+      setMutateState({ status: "error", errorMessage: message });
+      return false;
+    }
+  };
+
+  // 削除もローカルを即座に反映し、失敗時のみ元に戻す
   const deleteAttribute = async (params: DeleteAiAttributeParams) => {
-    setMutateState({ status: "loading", errorMessage: null });
+    const previous = loadState.attributes;
+    setLoadState((s) => ({ ...s, attributes: s.attributes.filter((a) => a.id !== params.id) }));
 
     try {
       const data = await runScript<DeleteAiAttributeResponse>("handleDeleteAiAttribute", params);
 
       if (!data.success) {
+        setLoadState((s) => ({ ...s, attributes: previous }));
         setMutateState({ status: "error", errorMessage: data.error ?? "属性情報の削除に失敗しました" });
         return false;
       }
 
       setMutateState({ status: "success", errorMessage: null });
-      setReloadKey((k) => k + 1);
       return true;
     } catch (error) {
+      setLoadState((s) => ({ ...s, attributes: previous }));
       const message = error instanceof Error ? error.message : "属性情報の削除に失敗しました";
       setMutateState({ status: "error", errorMessage: message });
       return false;
     }
   };
 
-  return { ...loadState, mutateState, upsertAttribute, deleteAttribute };
+  return { ...loadState, mutateState, addAttribute, updateAttribute, deleteAttribute };
 }
