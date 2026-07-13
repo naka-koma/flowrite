@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
 import {
+  Bar,
   CartesianGrid,
+  ComposedChart,
   Legend,
   Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -22,6 +23,7 @@ interface TrendChartProps {
 
 const EXPENSE_COLOR = "#e34948";
 const INCOME_COLOR = "#2a78d6";
+const BALANCE_COLOR = "#4a3aa7";
 
 const PX_PER_POINT = 56;
 
@@ -62,21 +64,23 @@ export function TrendChart({ data, errorMessage, isLoading, hideAmounts, visible
     label: p.label,
     支出: p.totalExpense,
     収入: p.totalIncome,
+    収支: p.totalIncome - p.totalExpense,
   }));
 
   return (
     <div ref={scrollRef} data-testid="trend-scroll-container" className="overflow-x-auto">
       <div style={{ width: shouldScroll ? `${points.length * PX_PER_POINT}px` : "100%", height: 300 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData}>
+          <ComposedChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="label" />
             <YAxis hide={hideAmounts} />
             <Tooltip formatter={(value: number) => (hideAmounts ? "***円" : formatYen(value))} />
             <Legend />
-            <Line type="monotone" dataKey="支出" stroke={EXPENSE_COLOR} strokeWidth={2} />
-            <Line type="monotone" dataKey="収入" stroke={INCOME_COLOR} strokeWidth={2} />
-          </LineChart>
+            <Bar dataKey="支出" fill={EXPENSE_COLOR} />
+            <Bar dataKey="収入" fill={INCOME_COLOR} />
+            <Line type="monotone" dataKey="収支" stroke={BALANCE_COLOR} strokeWidth={2} />
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
     </div>
