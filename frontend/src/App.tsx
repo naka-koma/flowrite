@@ -15,6 +15,7 @@ import { useTrend } from "./hooks/useTrend";
 import { useTheme } from "./hooks/useTheme";
 import { useAmountVisibility } from "./hooks/useAmountVisibility";
 import { useTrendDisplayCount } from "./hooks/useTrendDisplayCount";
+import { useDashboardLayout, type DashboardSectionId } from "./hooks/useDashboardLayout";
 import { formatISODate, getMondayOfWeek } from "./lib/week";
 import { formatYen } from "./lib/money";
 import { SECTION_HEADING_CLASS } from "./lib/ui";
@@ -58,6 +59,12 @@ export function App() {
   const { theme, setTheme } = useTheme();
   const { hideAmounts, toggleHideAmounts } = useAmountVisibility();
   const { visibleCount: trendVisibleCount, setVisibleCount: setTrendVisibleCount } = useTrendDisplayCount();
+  const {
+    sections: dashboardSections,
+    toggleVisibility: toggleDashboardSection,
+    moveSection: moveDashboardSection,
+    resetLayout: resetDashboardLayout,
+  } = useDashboardLayout();
   const [unit, setUnit] = useState<SummaryUnit>("month");
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -78,6 +85,89 @@ export function App() {
     setScreen(next);
     setMenuOpen(false);
   }
+
+  function renderDashboardSection(id: DashboardSectionId) {
+    switch (id) {
+      case "upload":
+        return (
+          <section key={id} className="card bg-base-100">
+            <div className="card-body p-4 sm:p-6">
+              <UploadForm />
+            </div>
+          </section>
+        );
+      case "summary":
+        return (
+          <section key={id} className="card bg-base-100">
+            <div className="card-body p-4 sm:p-6">
+              <h2 className={SECTION_HEADING_CLASS}>サマリー</h2>
+
+              <div role="tablist" className="tabs tabs-boxed mb-4 w-fit">
+                {(Object.keys(UNIT_LABELS) as SummaryUnit[]).map((u) => (
+                  <button
+                    key={u}
+                    type="button"
+                    role="tab"
+                    className={`tab ${unit === u ? "tab-active" : ""}`}
+                    onClick={() => setUnit(u)}
+                  >
+                    {UNIT_LABELS[u]}
+                  </button>
+                ))}
+              </div>
+
+              {unit === "month" && (
+                <MonthSelector
+                  year={year}
+                  month={month}
+                  onChange={(newYear, newMonth) => {
+                    setYear(newYear);
+                    setMonth(newMonth);
+                  }}
+                />
+              )}
+              {unit === "year" && <YearSelector year={summaryYear} onChange={setSummaryYear} />}
+              {unit === "week" && <WeekSelector weekStart={weekStart} onChange={setWeekStart} />}
+
+              <SummaryTable
+                data={summary.data}
+                errorMessage={summary.errorMessage}
+                isLoading={summary.status === "loading"}
+                hideAmounts={hideAmounts}
+              />
+            </div>
+          </section>
+        );
+      case "trend":
+        return (
+          <section key={id} className="card bg-base-100">
+            <div className="card-body p-4 sm:p-6">
+              <h2 className={SECTION_HEADING_CLASS}>トレンド</h2>
+              <TrendChart
+                data={trend.data}
+                errorMessage={trend.errorMessage}
+                isLoading={trend.status === "loading"}
+                hideAmounts={hideAmounts}
+                visibleCount={trendVisibleCount}
+              />
+            </div>
+          </section>
+        );
+      case "aiAdvice":
+        return (
+          <section key={id} className="card bg-base-100">
+            <div className="card-body p-4 sm:p-6">
+              <h2 className={SECTION_HEADING_CLASS}>AIアドバイス</h2>
+              <AiAdvice context={buildAiContext(summary, trend)} hideAmounts={hideAmounts} />
+            </div>
+          </section>
+        );
+      default:
+        return null;
+    }
+  }
+
+  const visibleDashboardSections = dashboardSections.filter((s) => s.visible);
 
   return (
     <div className="drawer lg:drawer-open">
@@ -120,6 +210,10 @@ export function App() {
               onChangeTheme={setTheme}
               trendVisibleCount={trendVisibleCount}
               onChangeTrendVisibleCount={setTrendVisibleCount}
+              dashboardSections={dashboardSections}
+              onToggleDashboardSection={toggleDashboardSection}
+              onMoveDashboardSection={moveDashboardSection}
+              onResetDashboardLayout={resetDashboardLayout}
               onBack={() => navigate("dashboard")}
             />
           ) : screen === "report" ? (
@@ -130,71 +224,13 @@ export function App() {
             />
           ) : (
             <div className="flex flex-col gap-6">
-              <section className="card bg-base-100">
-                <div className="card-body p-4 sm:p-6">
-                  <UploadForm />
-                </div>
-              </section>
-
-              <section className="card bg-base-100">
-                <div className="card-body p-4 sm:p-6">
-                  <h2 className={SECTION_HEADING_CLASS}>サマリー</h2>
-
-                  <div role="tablist" className="tabs tabs-boxed mb-4 w-fit">
-                    {(Object.keys(UNIT_LABELS) as SummaryUnit[]).map((u) => (
-                      <button
-                        key={u}
-                        type="button"
-                        role="tab"
-                        className={`tab ${unit === u ? "tab-active" : ""}`}
-                        onClick={() => setUnit(u)}
-                      >
-                        {UNIT_LABELS[u]}
-                      </button>
-                    ))}
-                  </div>
-
-                  {unit === "month" && (
-                    <MonthSelector
-                      year={year}
-                      month={month}
-                      onChange={(newYear, newMonth) => {
-                        setYear(newYear);
-                        setMonth(newMonth);
-                      }}
-                    />
-                  )}
-                  {unit === "year" && <YearSelector year={summaryYear} onChange={setSummaryYear} />}
-                  {unit === "week" && <WeekSelector weekStart={weekStart} onChange={setWeekStart} />}
-
-                  <SummaryTable
-                    data={summary.data}
-                    errorMessage={summary.errorMessage}
-                    isLoading={summary.status === "loading"}
-                    hideAmounts={hideAmounts}
-                  />
-                </div>
-              </section>
-
-              <section className="card bg-base-100">
-                <div className="card-body p-4 sm:p-6">
-                  <h2 className={SECTION_HEADING_CLASS}>トレンド</h2>
-                  <TrendChart
-                    data={trend.data}
-                    errorMessage={trend.errorMessage}
-                    isLoading={trend.status === "loading"}
-                    hideAmounts={hideAmounts}
-                    visibleCount={trendVisibleCount}
-                  />
-                </div>
-              </section>
-
-              <section className="card bg-base-100">
-                <div className="card-body p-4 sm:p-6">
-                  <h2 className={SECTION_HEADING_CLASS}>AIアドバイス</h2>
-                  <AiAdvice context={buildAiContext(summary, trend)} hideAmounts={hideAmounts} />
-                </div>
-              </section>
+              {visibleDashboardSections.length === 0 ? (
+                <p className="text-base-content/70">
+                  表示するセクションがありません。設定画面の「ホーム画面」から表示するセクションを選んでください。
+                </p>
+              ) : (
+                visibleDashboardSections.map((section) => renderDashboardSection(section.id))
+              )}
             </div>
           )}
         </div>

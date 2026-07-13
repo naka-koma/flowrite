@@ -1,14 +1,20 @@
 import type { Theme } from "../hooks/useTheme";
+import type { DashboardSection, DashboardSectionId } from "../hooks/useDashboardLayout";
 import { ThemeSelector } from "./ThemeSelector";
 import { SettingsForm } from "./SettingsForm";
 import { AdminSection } from "./AdminSection";
 import { TrendDisplayCountSetting } from "./TrendDisplayCountSetting";
+import { DashboardLayoutSettings } from "./DashboardLayoutSettings";
 
 interface SettingsScreenProps {
   theme: Theme;
   onChangeTheme: (theme: Theme) => void;
   trendVisibleCount: number;
   onChangeTrendVisibleCount: (value: number) => void;
+  dashboardSections: DashboardSection[];
+  onToggleDashboardSection: (id: DashboardSectionId) => void;
+  onMoveDashboardSection: (id: DashboardSectionId, direction: "up" | "down") => void;
+  onResetDashboardLayout: () => void;
   onBack: () => void;
 }
 
@@ -17,6 +23,10 @@ export function SettingsScreen({
   onChangeTheme,
   trendVisibleCount,
   onChangeTrendVisibleCount,
+  dashboardSections,
+  onToggleDashboardSection,
+  onMoveDashboardSection,
+  onResetDashboardLayout,
   onBack,
 }: SettingsScreenProps) {
   return (
@@ -39,6 +49,18 @@ export function SettingsScreen({
         <div className="card-body p-4 sm:p-6">
           <h2 className="mb-3 text-lg font-semibold">表示設定</h2>
           <TrendDisplayCountSetting visibleCount={trendVisibleCount} onChange={onChangeTrendVisibleCount} />
+        </div>
+      </section>
+
+      <section className="card bg-base-100">
+        <div className="card-body p-4 sm:p-6">
+          <h2 className="mb-3 text-lg font-semibold">ホーム画面</h2>
+          <DashboardLayoutSettings
+            sections={dashboardSections}
+            onToggleVisibility={onToggleDashboardSection}
+            onMoveSection={onMoveDashboardSection}
+            onReset={onResetDashboardLayout}
+          />
         </div>
       </section>
 
