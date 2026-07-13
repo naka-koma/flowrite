@@ -10,6 +10,7 @@ import { TrendChart } from "./components/TrendChart";
 import { AiAdvice } from "./components/AiAdvice";
 import { SettingsScreen } from "./components/SettingsScreen";
 import { ReportScreen } from "./components/ReportScreen";
+import { TransactionScreen } from "./components/TransactionScreen";
 import { useSummary } from "./hooks/useSummary";
 import { useTrend } from "./hooks/useTrend";
 import { useTheme } from "./hooks/useTheme";
@@ -54,7 +55,7 @@ const UNIT_LABELS: Record<SummaryUnit, string> = { month: "月", year: "年", we
 
 export function App() {
   const now = new Date();
-  const [screen, setScreen] = useState<"dashboard" | "settings" | "report">("dashboard");
+  const [screen, setScreen] = useState<"dashboard" | "settings" | "report" | "transactions">("dashboard");
   const [menuOpen, setMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { hideAmounts, toggleHideAmounts } = useAmountVisibility();
@@ -81,7 +82,7 @@ export function App() {
   const summary = useSummary(summaryParams);
   const trend = useTrend(unit);
 
-  function navigate(next: "dashboard" | "settings" | "report") {
+  function navigate(next: "dashboard" | "settings" | "report" | "transactions") {
     setScreen(next);
     setMenuOpen(false);
   }
@@ -222,6 +223,8 @@ export function App() {
               trendVisibleCount={trendVisibleCount}
               onBack={() => navigate("dashboard")}
             />
+          ) : screen === "transactions" ? (
+            <TransactionScreen hideAmounts={hideAmounts} onBack={() => navigate("dashboard")} />
           ) : (
             <div className="flex flex-col gap-6">
               {visibleDashboardSections.length === 0 ? (
@@ -247,6 +250,11 @@ export function App() {
           <li>
             <button type="button" onClick={() => navigate("report")}>
               レポート
+            </button>
+          </li>
+          <li>
+            <button type="button" onClick={() => navigate("transactions")}>
+              取引一覧
             </button>
           </li>
           <li>

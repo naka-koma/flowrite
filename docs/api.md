@@ -206,6 +206,76 @@ AIアドバイスのプロンプト・使用モデル設定を更新する。
 
 ---
 
+## `handleTransactionList(params)`
+
+指定した年月の取引一覧をページ単位で返す。あわせてカテゴリ編集用のプルダウン選択肢も返す。
+
+**引数**
+
+| プロパティ | 型 | 必須 | 説明 |
+|---|---|---|---|
+| year | number | ○ | 年（例: 2025） |
+| month | number | ○ | 月（例: 12） |
+| page | number | - | ページ番号（1始まり）。省略時は1 |
+| pageSize | number | - | 1ページあたりの件数。省略時は50 |
+
+**戻り値**
+```js
+{
+  "transactions": [
+    {
+      "id": "abc123",
+      "date": "2025/12/01",
+      "content": "スーパー",
+      "amount": -3000,
+      "institution": "楽天カード",
+      "category": "食費",
+      "subcategory": "スーパー",
+      "memo": ""
+    }
+  ],
+  "totalCount": 42,
+  "page": 1,
+  "pageSize": 50,
+  "categoryOptions": ["食費", "交通費", "住居"],
+  "subcategoryOptionsByCategory": {
+    "食費": ["外食", "スーパー", "コンビニ"],
+    "交通費": ["電車", "バス"]
+  }
+}
+```
+
+**注意**
+- `transactions` は日付昇順、`amount` は符号付き（支出は負値、収入は正値）で返す。表示時の絶対値変換はフロントエンド側で行う
+- `categoryOptions` / `subcategoryOptionsByCategory` は固定マスタではなく、`raw_data` シートに蓄積された全期間のユニーク値から動的に生成する（指定した年月に限らない）
+- `raw_data` が空、または該当月にデータがない場合は `transactions: []`, `totalCount: 0` を返す
+
+---
+
+## `handleUpdateCategory(body)`
+
+取引1件の大項目・中項目を更新し、`raw_data` シートに反映する。
+
+**引数**
+```js
+{
+  "id": "<MoneyForwardのユニークID>",
+  "category": "<大項目>",
+  "subcategory": "<中項目>"
+}
+```
+
+**戻り値**
+```js
+{ "success": true }
+```
+
+**注意**
+- `id` は `raw_data` のA列（重複排除キー）と一致する行を探して更新する。一致する行がない場合は `{ "success": false, "error": "transaction not found" }` を返す
+- 更新対象は大項目・中項目のみ。日付・金額・内容などその他の列は変更しない
+
+---
+
 ## `handleRunMigrations()`
 
 未適用のスプレッドシートマイグレーション（`gas/migration.js` の `MIGRATIONS` 配列）を順に実行する。引数なし。
