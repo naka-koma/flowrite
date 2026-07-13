@@ -3,10 +3,11 @@ import { MonthSelector } from "./MonthSelector";
 import { TrendChart } from "./TrendChart";
 import { PeriodComparison } from "./PeriodComparison";
 import { CategoryBreakdown } from "./CategoryBreakdown";
+import { MonthlyCalendar } from "./MonthlyCalendar";
+import { CollapsibleSection } from "./CollapsibleSection";
 import { useSummary } from "../hooks/useSummary";
 import { useTrend } from "../hooks/useTrend";
 import { formatAmount } from "../lib/money";
-import { SECTION_HEADING_CLASS } from "../lib/ui";
 
 interface ReportScreenProps {
   hideAmounts: boolean;
@@ -89,40 +90,35 @@ export function ReportScreen({ hideAmounts, trendVisibleCount, onBack }: ReportS
         </div>
       </section>
 
-      <section className="card bg-base-100">
-        <div className="card-body p-4 sm:p-6">
-          <h2 className={SECTION_HEADING_CLASS}>全体推移</h2>
-          <TrendChart
-            data={trend.data}
-            errorMessage={trend.errorMessage}
-            isLoading={trend.status === "loading"}
-            hideAmounts={hideAmounts}
-            visibleCount={trendVisibleCount}
-          />
-        </div>
-      </section>
+      <CollapsibleSection title="全体推移">
+        <TrendChart
+          data={trend.data}
+          errorMessage={trend.errorMessage}
+          isLoading={trend.status === "loading"}
+          hideAmounts={hideAmounts}
+          visibleCount={trendVisibleCount}
+        />
+      </CollapsibleSection>
 
-      <section className="card bg-base-100">
-        <div className="card-body p-4 sm:p-6">
-          <CategoryBreakdown
-            title="収入内訳"
-            categories={summary.data?.incomeCategories ?? []}
-            hideAmounts={hideAmounts}
-            emptyMessage="この月の収入データはありません"
-          />
-        </div>
-      </section>
+      <CollapsibleSection title="カレンダー">
+        <MonthlyCalendar year={year} month={month} hideAmounts={hideAmounts} />
+      </CollapsibleSection>
 
-      <section className="card bg-base-100">
-        <div className="card-body p-4 sm:p-6">
-          <CategoryBreakdown
-            title="支出内訳"
-            categories={summary.data?.categories ?? []}
-            hideAmounts={hideAmounts}
-            emptyMessage="この月の支出データはありません"
-          />
-        </div>
-      </section>
+      <CollapsibleSection title="収入内訳">
+        <CategoryBreakdown
+          categories={summary.data?.incomeCategories ?? []}
+          hideAmounts={hideAmounts}
+          emptyMessage="この月の収入データはありません"
+        />
+      </CollapsibleSection>
+
+      <CollapsibleSection title="支出内訳">
+        <CategoryBreakdown
+          categories={summary.data?.categories ?? []}
+          hideAmounts={hideAmounts}
+          emptyMessage="この月の支出データはありません"
+        />
+      </CollapsibleSection>
     </div>
   );
 }

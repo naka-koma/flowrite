@@ -222,9 +222,18 @@ function mockHandleMonthlyCalendar(params: MonthlyCalendarParams) {
     const hasData = day % 5 === 0;
     const dayExpense = hasData ? 1000 + day * 100 : 0;
     const dayIncome = day === 25 ? 280000 : 0;
+    const formattedDate = `${year}/${String(month).padStart(2, "0")}/${String(day).padStart(2, "0")}`;
 
     totalExpense += dayExpense;
     totalIncome += dayIncome;
+
+    const transactions =
+      dayExpense > 0 || dayIncome > 0
+        ? [
+            ...(dayExpense > 0 ? [{ content: `店舗${day}`, date: formattedDate, amount: -dayExpense }] : []),
+            ...(dayIncome > 0 ? [{ content: "給与振込", date: formattedDate, amount: dayIncome }] : []),
+          ]
+        : [];
 
     return {
       date: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
@@ -233,6 +242,7 @@ function mockHandleMonthlyCalendar(params: MonthlyCalendarParams) {
       totalExpense: dayExpense,
       totalIncome: dayIncome,
       balance: dayIncome - dayExpense,
+      transactions,
     };
   });
 
