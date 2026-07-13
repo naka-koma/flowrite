@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { MonthSelector } from "./MonthSelector";
 import { YearSelector } from "./YearSelector";
 import { useAiAdvice } from "../hooks/useAiAdvice";
@@ -78,7 +79,9 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
         </p>
       )}
       {status === "success" && (
-        <p className="mt-3 whitespace-pre-wrap">{hideAmounts ? maskYenAmounts(advice ?? "") : advice}</p>
+        <div className="ai-advice-markdown mt-3">
+          <ReactMarkdown>{hideAmounts ? maskYenAmounts(advice ?? "") : (advice ?? "")}</ReactMarkdown>
+        </div>
       )}
     </div>
   );
