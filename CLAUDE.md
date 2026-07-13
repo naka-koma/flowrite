@@ -118,15 +118,25 @@ Issueに紐づく場合はIssue番号を含める: `feature/123-add-budget-chart
 2. **ブランチ作成:** mainから作業ブランチを切る (`git checkout -b feature/<number>-xxx main`)
 3. **実装・コミット:** 変更を実装し、適切な粒度でコミットする
 4. **push・PR作成:** `git push -u origin <branch>` してPRを作成する。PR本文に `Closes #<number>` を含める
-5. **PRを購読:** `subscribe_pr_activity` で作成したPRを購読し、マージ・コメント・CI結果を自動検知できるようにする
-6. **マージ検知後の自動対応:** 購読中のPRがマージされたイベントをwebhookで検知した場合に限り、ユーザーへの確認なしで以下を続けて実行する
+5. **PRを購読:** `subscribe_pr_activity` が利用可能な環境ではそれでPRを購読する。利用できない場合は `Monitor` ツールで以下のようなポーリングコマンドを起動し、マージ検知を代替する（`persistent: true`。セッションが継続している間のみ有効で、セッション終了後は検知できない点に注意）
+   ```bash
+   while true; do
+     state=$(gh pr view <番号> --json state --jq .state)
+     if [ "$state" = "MERGED" ]; then
+       echo "PR #<番号> merged"
+       break
+     fi
+     sleep 60
+   done
+   ```
+6. **マージ検知後の自動対応:** 購読中のPRのマージを検知した場合（webhookまたは上記Monitorの通知）に限り、ユーザーへの確認なしで以下を続けて実行する
    ```bash
    git checkout main
    git pull
    git branch -d <branch>
    ```
    その後、`build/`（フロントエンド）または `gas/` に変更が含まれる場合は `/deploy` スキルを実行して本番へデプロイする。デプロイ完了後、結果をユーザーに簡潔に報告する
-   - webhookが届かず、ユーザーから「マージしました」と手動で伝えられた場合は、従来通りクリーンアップ後にデプロイするかを確認する（自動デプロイの対象はwebhook検知時のみ）
+   - どちらの検知方法も使えず（またはセッションが終了しており）、ユーザーから「マージしました」と手動で伝えられた場合は、従来通りクリーンアップ後にデプロイするかを確認する（自動デプロイの対象は検知時のみ）
 
 #### B. Plan先行パターン（計画してからIssueを立てる）
 
