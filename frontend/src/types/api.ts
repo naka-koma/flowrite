@@ -106,6 +106,25 @@ export interface UpdateSettingsResponse {
   error?: string;
 }
 
+export interface PreferencesResponse {
+  theme: string;
+  dashboardLayout: string;
+  trendVisibleCount: string;
+  error?: string;
+}
+
+export type PreferenceKey = "theme" | "dashboardLayout" | "trendVisibleCount";
+
+export interface UpdatePreferenceParams {
+  key: PreferenceKey;
+  value: string;
+}
+
+export interface UpdatePreferenceResponse {
+  success: boolean;
+  error?: string;
+}
+
 export interface TransactionRow {
   id: string;
   date: string;

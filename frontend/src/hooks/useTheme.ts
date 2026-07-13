@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react";
-
 export type Theme = "mint-clarity" | "cool-violet" | "sunny-quartz" | "abyss-green" | "indigo-mystery" | "shadow-sun";
 
 export interface ThemeMeta {
@@ -18,25 +16,10 @@ export const THEMES: ThemeMeta[] = [
   { id: "shadow-sun", label: "シャドウ・サン", mode: "dark", swatch: ["#e8b94a", "#c98a3a", "#f4d37a"] },
 ];
 
-const STORAGE_KEY = "flowrite-theme";
+export const DEFAULT_THEME: Theme = "mint-clarity";
+
 const THEME_IDS = THEMES.map((t) => t.id);
 
-function isTheme(value: string | null): value is Theme {
-  return value !== null && (THEME_IDS as string[]).includes(value);
-}
-
-function readStoredTheme(): Theme {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  return isTheme(stored) ? stored : "mint-clarity";
-}
-
-export function useTheme() {
-  const [theme, setTheme] = useState<Theme>(readStoredTheme);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem(STORAGE_KEY, theme);
-  }, [theme]);
-
-  return { theme, setTheme };
+export function isTheme(value: string): value is Theme {
+  return (THEME_IDS as string[]).includes(value);
 }

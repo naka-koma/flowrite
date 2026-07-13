@@ -1,5 +1,6 @@
 import type {
   AddCategoryParams,
+  PreferenceKey,
   Settings,
   SummaryParams,
   SummaryUnit,
@@ -8,6 +9,7 @@ import type {
   TrendParams,
   TrendPoint,
   UpdateCategoryParams,
+  UpdatePreferenceParams,
 } from "../types/api";
 
 interface ScriptRun {
@@ -329,6 +331,27 @@ function mockHandleUpdateSettings(body: { prompt?: string; model?: string }) {
   return { success: true };
 }
 
+const MOCK_PREFERENCE_KEYS: PreferenceKey[] = ["theme", "dashboardLayout", "trendVisibleCount"];
+const MOCK_PREFERENCE_STORAGE_PREFIX = "__mock_preference_";
+
+// 実際のGASではUserPropertiesに永続化されるため、モックでも
+// ページリロードをまたいで再現できるよう sessionStorage に保存する
+function mockHandleGetPreferences() {
+  const preferences: Record<PreferenceKey, string> = { theme: "", dashboardLayout: "", trendVisibleCount: "" };
+  MOCK_PREFERENCE_KEYS.forEach((key) => {
+    preferences[key] = sessionStorage.getItem(`${MOCK_PREFERENCE_STORAGE_PREFIX}${key}`) ?? "";
+  });
+  return preferences;
+}
+
+function mockHandleUpdatePreference(body: UpdatePreferenceParams) {
+  if (!MOCK_PREFERENCE_KEYS.includes(body.key)) {
+    return { success: false, error: "invalid key" };
+  }
+  sessionStorage.setItem(`${MOCK_PREFERENCE_STORAGE_PREFIX}${body.key}`, String(body.value));
+  return { success: true };
+}
+
 function mockHandleAiAdvice(params: SummaryParams) {
   const summary = mockHandleSummary(params);
   const hasData = summary.categories.length > 0 || summary.totalExpense > 0 || summary.totalIncome > 0;
@@ -464,6 +487,10 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleGetSettings();
     case "handleUpdateSettings":
       return mockHandleUpdateSettings(args[0] as { prompt?: string; model?: string });
+    case "handleGetPreferences":
+      return mockHandleGetPreferences();
+    case "handleUpdatePreference":
+      return mockHandleUpdatePreference(args[0] as UpdatePreferenceParams);
     case "handleTransactionList":
       return mockHandleTransactionList(args[0] as TransactionListParams);
     case "handleUpdateCategory":
