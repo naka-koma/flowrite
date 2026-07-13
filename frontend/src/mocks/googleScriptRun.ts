@@ -365,17 +365,18 @@ function loadMockSettings(): Settings {
       // 壊れたデータは無視してデフォルトにフォールバック
     }
   }
-  return { prompt: DEFAULT_MOCK_PROMPT, model: "" };
+  return { prompt: DEFAULT_MOCK_PROMPT, model: "", notes: "" };
 }
 
 function mockHandleGetSettings() {
   return loadMockSettings();
 }
 
-function mockHandleUpdateSettings(body: { prompt?: string; model?: string }) {
+function mockHandleUpdateSettings(body: { prompt?: string; model?: string; notes?: string }) {
   const settings: Settings = {
     prompt: body.prompt?.trim() || DEFAULT_MOCK_PROMPT,
     model: body.model?.trim() ?? "",
+    notes: body.notes?.trim() ?? "",
   };
   sessionStorage.setItem(MOCK_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   return { success: true };
@@ -538,7 +539,7 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
     case "handleGetSettings":
       return mockHandleGetSettings();
     case "handleUpdateSettings":
-      return mockHandleUpdateSettings(args[0] as { prompt?: string; model?: string });
+      return mockHandleUpdateSettings(args[0] as { prompt?: string; model?: string; notes?: string });
     case "handleGetPreferences":
       return mockHandleGetPreferences();
     case "handleUpdatePreference":

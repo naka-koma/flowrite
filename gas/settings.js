@@ -57,8 +57,14 @@ function getAiModel() {
   return map.model || "";
 }
 
+// 現在の取り組み・既に対応済みの事項。未設定の場合は空文字（AIアドバイスのcontextには含めない）
+function getAiNotes() {
+  const map = getSettingsMap_();
+  return map.notes || "";
+}
+
 function handleGetSettings() {
-  return { prompt: getAiPrompt(), model: getAiModel() };
+  return { prompt: getAiPrompt(), model: getAiModel(), notes: getAiNotes() };
 }
 
 function handleUpdateSettings(settings) {
@@ -67,6 +73,9 @@ function handleUpdateSettings(settings) {
   }
   if (typeof settings.model === "string") {
     setSetting_("model", settings.model.trim());
+  }
+  if (typeof settings.notes === "string") {
+    setSetting_("notes", settings.notes.trim());
   }
   return { success: true };
 }

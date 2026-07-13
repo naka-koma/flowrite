@@ -59,7 +59,9 @@ function handleAiAdvice(body) {
       return { success: false, error: "GEMINI_API_KEY is not set in script properties" };
     }
 
-    const prompt = `${getAiPrompt()}\n\n${context}`;
+    const notes = getAiNotes();
+    const notesSection = notes ? `\n\n現在の取り組み・既に対応済みの事項（同じ提案は避けること）:\n${notes}` : "";
+    const prompt = `${getAiPrompt()}\n\n${context}${notesSection}`;
 
     for (const model of getGeminiModelsToTry()) {
       const { code, body: responseBody } = callGeminiApi(model, apiKey, prompt);

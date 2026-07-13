@@ -124,6 +124,7 @@ export interface RunMigrationsResponse {
 export interface Settings {
   prompt: string;
   model: string;
+  notes: string;
   error?: string;
 }
 
