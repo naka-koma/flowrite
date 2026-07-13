@@ -9,6 +9,7 @@ import { SummaryTable } from "./components/SummaryTable";
 import { TrendChart } from "./components/TrendChart";
 import { AiAdvice } from "./components/AiAdvice";
 import { SettingsScreen } from "./components/SettingsScreen";
+import { ReportScreen } from "./components/ReportScreen";
 import { useSummary } from "./hooks/useSummary";
 import { useTrend } from "./hooks/useTrend";
 import { useTheme } from "./hooks/useTheme";
@@ -52,7 +53,7 @@ const UNIT_LABELS: Record<SummaryUnit, string> = { month: "月", year: "年", we
 
 export function App() {
   const now = new Date();
-  const [screen, setScreen] = useState<"dashboard" | "settings">("dashboard");
+  const [screen, setScreen] = useState<"dashboard" | "settings" | "report">("dashboard");
   const [menuOpen, setMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { hideAmounts, toggleHideAmounts } = useAmountVisibility();
@@ -73,7 +74,7 @@ export function App() {
   const summary = useSummary(summaryParams);
   const trend = useTrend(unit);
 
-  function navigate(next: "dashboard" | "settings") {
+  function navigate(next: "dashboard" | "settings" | "report") {
     setScreen(next);
     setMenuOpen(false);
   }
@@ -119,6 +120,12 @@ export function App() {
               onChangeTheme={setTheme}
               trendVisibleCount={trendVisibleCount}
               onChangeTrendVisibleCount={setTrendVisibleCount}
+              onBack={() => navigate("dashboard")}
+            />
+          ) : screen === "report" ? (
+            <ReportScreen
+              hideAmounts={hideAmounts}
+              trendVisibleCount={trendVisibleCount}
               onBack={() => navigate("dashboard")}
             />
           ) : (
@@ -199,6 +206,11 @@ export function App() {
           <li>
             <button type="button" onClick={() => navigate("dashboard")}>
               ホーム
+            </button>
+          </li>
+          <li>
+            <button type="button" onClick={() => navigate("report")}>
+              レポート
             </button>
           </li>
           <li>

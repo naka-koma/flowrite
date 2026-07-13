@@ -26,6 +26,11 @@ function mockHandleUpload(body: { csv: string }) {
   return { success: true, inserted: 12, skipped: 3 };
 }
 
+function shiftMonth(year: number, month: number, delta: number): { year: number; month: number } {
+  const date = new Date(year, month - 1 + delta, 1);
+  return { year: date.getFullYear(), month: date.getMonth() + 1 };
+}
+
 function mockHandleSummary(params: SummaryParams) {
   if (params.unit === "year") {
     return {
@@ -39,6 +44,10 @@ function mockHandleSummary(params: SummaryParams) {
         { name: "交通費", total: 240000, transactions: [] },
         { name: "住居", total: 960000, transactions: [] },
         { name: "娯楽", total: 120000, transactions: [] },
+      ],
+      incomeCategories: [
+        { name: "給与", total: 3400000, transactions: [] },
+        { name: "賞与", total: 200000, transactions: [] },
       ],
     };
   }
@@ -58,6 +67,7 @@ function mockHandleSummary(params: SummaryParams) {
         },
         { name: "娯楽", total: 15000, transactions: [] },
       ],
+      incomeCategories: [],
     };
   }
 
@@ -69,6 +79,9 @@ function mockHandleSummary(params: SummaryParams) {
   const oldest = new Date(now.getFullYear(), now.getMonth() - 23, 1);
   const isOldestMonth = year === oldest.getFullYear() && month === oldest.getMonth() + 1;
 
+  const previousMonth = shiftMonth(year, month, -1);
+  const previousYear = { year: year - 1, month };
+
   if (isOldestMonth) {
     return {
       unit: "month" as const,
@@ -78,6 +91,27 @@ function mockHandleSummary(params: SummaryParams) {
       totalExpense: 0,
       totalIncome: 0,
       categories: [],
+      incomeCategories: [],
+      comparison: {
+        previousMonth: {
+          label: `${previousMonth.year}年${previousMonth.month}月`,
+          totalExpense: 0,
+          totalIncome: 0,
+          balance: 0,
+          expenseDiff: 0,
+          incomeDiff: 0,
+          balanceDiff: 0,
+        },
+        previousYear: {
+          label: `${previousYear.year}年${previousYear.month}月`,
+          totalExpense: 0,
+          totalIncome: 0,
+          balance: 0,
+          expenseDiff: 0,
+          incomeDiff: 0,
+          balanceDiff: 0,
+        },
+      },
     };
   }
 
@@ -108,6 +142,36 @@ function mockHandleSummary(params: SummaryParams) {
       { name: "光熱費", total: 12000, transactions: [] },
       { name: "その他", total: 63000, transactions: [] },
     ],
+    incomeCategories: [
+      {
+        name: "給与",
+        total: 280000,
+        transactions: [
+          { content: "給与振込", date: `${year}/${String(month).padStart(2, "0")}/25`, amount: 280000 },
+        ],
+      },
+      { name: "一時所得", total: 20000, transactions: [] },
+    ],
+    comparison: {
+      previousMonth: {
+        label: `${previousMonth.year}年${previousMonth.month}月`,
+        totalExpense: 180000,
+        totalIncome: 290000,
+        balance: 110000,
+        expenseDiff: 150000 - 180000,
+        incomeDiff: 300000 - 290000,
+        balanceDiff: 150000 - 110000,
+      },
+      previousYear: {
+        label: `${previousYear.year}年${previousYear.month}月`,
+        totalExpense: 140000,
+        totalIncome: 270000,
+        balance: 130000,
+        expenseDiff: 150000 - 140000,
+        incomeDiff: 300000 - 270000,
+        balanceDiff: 150000 - 130000,
+      },
+    },
   };
 }
 

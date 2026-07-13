@@ -36,6 +36,67 @@ function resolveSummaryPeriod_(params) {
   return { unit: "month", year, month, start, end, label: `${year}年${month}月` };
 }
 
+function shiftMonth_(year, month, delta) {
+  const date = new Date(year, month - 1 + delta, 1);
+  return { year: date.getFullYear(), month: date.getMonth() + 1 };
+}
+
+function monthRange_(year, month) {
+  return { start: new Date(year, month - 1, 1), end: new Date(year, month, 1) };
+}
+
+// unit=month時のみ、前月・前年同月の集計範囲を組み立てる（メイン集計と同じループ内で振り分けるため）
+function buildComparisonRanges_(year, month) {
+  const previousMonth = shiftMonth_(year, month, -1);
+  const previousYear = { year: year - 1, month };
+
+  return {
+    previousMonth: {
+      ...monthRange_(previousMonth.year, previousMonth.month),
+      label: `${previousMonth.year}年${previousMonth.month}月`,
+      totalExpense: 0,
+      totalIncome: 0,
+    },
+    previousYear: {
+      ...monthRange_(previousYear.year, previousYear.month),
+      label: `${previousYear.year}年${previousYear.month}月`,
+      totalExpense: 0,
+      totalIncome: 0,
+    },
+  };
+}
+
+function buildComparison_(totalExpense, totalIncome, ranges) {
+  const balance = totalIncome - totalExpense;
+  const comparison = {};
+
+  for (const key of Object.keys(ranges)) {
+    const r = ranges[key];
+    const rBalance = r.totalIncome - r.totalExpense;
+    comparison[key] = {
+      label: r.label,
+      totalExpense: r.totalExpense,
+      totalIncome: r.totalIncome,
+      balance: rBalance,
+      expenseDiff: totalExpense - r.totalExpense,
+      incomeDiff: totalIncome - r.totalIncome,
+      balanceDiff: balance - rBalance,
+    };
+  }
+
+  return comparison;
+}
+
+function toCategoryList_(categoryMap) {
+  return Object.entries(categoryMap)
+    .map(([name, value]) => ({
+      name,
+      total: value.total,
+      transactions: value.transactions.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)),
+    }))
+    .sort((a, b) => b.total - a.total);
+}
+
 function handleSummary(params) {
   const period = resolveSummaryPeriod_(params);
   if (period.error) {
@@ -43,14 +104,22 @@ function handleSummary(params) {
   }
   const { unit, year, month, start, end, label } = period;
 
+  // 前月・前年同月比較はunit=monthのみ対象（週・年には自然に対応しない概念のため）
+  const comparisonRanges = unit === "month" ? buildComparisonRanges_(year, month) : null;
+
   const sheet = getRawDataSheet();
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) {
-    return { unit, year, month, label, totalExpense: 0, totalIncome: 0, categories: [] };
+    const empty = { unit, year, month, label, totalExpense: 0, totalIncome: 0, categories: [], incomeCategories: [] };
+    if (comparisonRanges) {
+      empty.comparison = buildComparison_(0, 0, comparisonRanges);
+    }
+    return empty;
   }
 
   const data = sheet.getRange(2, 1, lastRow - 1, 11).getValues();
   const categoryMap = {};
+  const incomeCategoryMap = {};
   let totalExpense = 0;
   let totalIncome = 0;
 
@@ -60,11 +129,28 @@ function handleSummary(params) {
     if (isTarget !== 1 || isTransfer === 1) continue;
 
     const date = new Date(row[1]);
-    if (date < start || date >= end) continue;
-
     const amount = row[3];
     const category = row[5];
     const content = row[2];
+
+    // 前月・前年同月の合計は、メインの期間フィルタとは別枠で同じ行ループ内に振り分けて集計する
+    // （raw_dataの読み込み・ループを比較期間ごとに繰り返さないため）
+    if (comparisonRanges) {
+      for (const key of Object.keys(comparisonRanges)) {
+        const range = comparisonRanges[key];
+        if (date >= range.start && date < range.end) {
+          if (amount < 0) {
+            range.totalExpense += Math.abs(amount);
+          } else {
+            range.totalIncome += amount;
+          }
+        }
+      }
+    }
+
+    if (date < start || date >= end) continue;
+
+    const formattedDate = Utilities.formatDate(date, Session.getScriptTimeZone(), "yyyy/MM/dd");
 
     if (amount < 0) {
       const absAmount = Math.abs(amount);
@@ -73,22 +159,33 @@ function handleSummary(params) {
         categoryMap[category] = { total: 0, transactions: [] };
       }
       categoryMap[category].total += absAmount;
-      const formattedDate = Utilities.formatDate(date, Session.getScriptTimeZone(), "yyyy/MM/dd");
       categoryMap[category].transactions.push({ content, date: formattedDate, amount: absAmount });
     } else {
       totalIncome += amount;
+      if (!incomeCategoryMap[category]) {
+        incomeCategoryMap[category] = { total: 0, transactions: [] };
+      }
+      incomeCategoryMap[category].total += amount;
+      incomeCategoryMap[category].transactions.push({ content, date: formattedDate, amount });
     }
   }
 
-  const categories = Object.entries(categoryMap)
-    .map(([name, value]) => ({
-      name,
-      total: value.total,
-      transactions: value.transactions.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)),
-    }))
-    .sort((a, b) => b.total - a.total);
+  const result = {
+    unit,
+    year,
+    month,
+    label,
+    totalExpense,
+    totalIncome,
+    categories: toCategoryList_(categoryMap),
+    incomeCategories: toCategoryList_(incomeCategoryMap),
+  };
 
-  return { unit, year, month, label, totalExpense, totalIncome, categories };
+  if (comparisonRanges) {
+    result.comparison = buildComparison_(totalExpense, totalIncome, comparisonRanges);
+  }
+
+  return result;
 }
 
 function getMondayOfWeek_(date) {
