@@ -104,3 +104,42 @@ export interface UpdateSettingsResponse {
   success: boolean;
   error?: string;
 }
+
+export interface TransactionRow {
+  id: string;
+  date: string;
+  content: string;
+  amount: number;
+  institution: string;
+  category: string;
+  subcategory: string;
+  memo: string;
+}
+
+export interface TransactionListParams {
+  year: number;
+  month: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface TransactionListResponse {
+  transactions: TransactionRow[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  categoryOptions: string[];
+  subcategoryOptionsByCategory: Record<string, string[]>;
+  error?: string;
+}
+
+export interface UpdateCategoryParams {
+  id: string;
+  category: string;
+  subcategory: string;
+}
+
+export interface UpdateCategoryResponse {
+  success: boolean;
+  error?: string;
+}
