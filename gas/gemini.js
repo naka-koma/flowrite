@@ -43,44 +43,63 @@ function buildAiContext_(summary) {
 }
 
 function handleAiAdvice(body) {
-  const summary = handleSummary({ unit: body.unit, year: body.year, month: body.month });
-  if (summary.error) {
-    return { success: false, error: summary.error };
-  }
-
-  const context = buildAiContext_(summary);
-  if (!context) {
-    return { success: false, error: "指定した期間のデータがありません" };
-  }
-
-  const apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
-  if (!apiKey) {
-    return { success: false, error: "GEMINI_API_KEY is not set in script properties" };
-  }
-
-  const prompt = `${getAiPrompt()}\n\n${context}`;
-
-  for (const model of getGeminiModelsToTry()) {
-    const { code, body: responseBody } = callGeminiApi(model, apiKey, prompt);
-
-    if (code === 200) {
-      const json = JSON.parse(responseBody);
-      const advice = json.candidates[0].content.parts[0].text;
-
-      const logSheet = getAiLogSheet();
-      logSheet.appendRow([new Date().toISOString(), context, advice]);
-
-      Logger.log(`AI advice generated successfully (model: ${model})`);
-      return { success: true, advice };
+  try {
+    const summary = handleSummary({ unit: body.unit, year: body.year, month: body.month });
+    if (summary.error) {
+      return { success: false, error: summary.error };
     }
 
-    Logger.log(`Gemini API error (model: ${model}): ${responseBody}`);
-
-    if (!GEMINI_RETRYABLE_STATUS_CODES.includes(code)) {
-      // 一時的なエラー以外はフォールバックせず即座に返す
-      break;
+    const context = buildAiContext_(summary);
+    if (!context) {
+      return { success: false, error: "指定した期間のデータがありません" };
     }
-  }
 
-  return { success: false, error: "Gemini API request failed" };
+    const apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
+    if (!apiKey) {
+      return { success: false, error: "GEMINI_API_KEY is not set in script properties" };
+    }
+
+    const prompt = `${getAiPrompt()}\n\n${context}`;
+
+    for (const model of getGeminiModelsToTry()) {
+      const { code, body: responseBody } = callGeminiApi(model, apiKey, prompt);
+
+      if (code === 200) {
+        const json = JSON.parse(responseBody);
+        // safetyフィルタ等によりHTTP 200でもcandidatesが空/欠落する場合があるため、例外にせず明示的なエラーにする
+        const advice = json.candidates && json.candidates[0] && json.candidates[0].content
+          ? json.candidates[0].content.parts[0].text
+          : null;
+
+        if (!advice) {
+          const blockReason = json.promptFeedback && json.promptFeedback.blockReason;
+          Logger.log(`Gemini response has no candidates (model: ${model}): ${responseBody}`);
+          return {
+            success: false,
+            error: blockReason
+              ? `Geminiからの応答がブロックされました（理由: ${blockReason}）`
+              : "Geminiからの応答に有効な候補がありません",
+          };
+        }
+
+        const logSheet = getAiLogSheet();
+        logSheet.appendRow([new Date().toISOString(), context, advice]);
+
+        Logger.log(`AI advice generated successfully (model: ${model})`);
+        return { success: true, advice };
+      }
+
+      Logger.log(`Gemini API error (model: ${model}): ${responseBody}`);
+
+      if (!GEMINI_RETRYABLE_STATUS_CODES.includes(code)) {
+        // 一時的なエラー以外はフォールバックせず即座に返す
+        break;
+      }
+    }
+
+    return { success: false, error: "Gemini API request failed" };
+  } catch (e) {
+    Logger.log(`handleAiAdvice unexpected error: ${e.message}`);
+    return { success: false, error: e.message };
+  }
 }
