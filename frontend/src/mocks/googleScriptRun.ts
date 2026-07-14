@@ -8,6 +8,7 @@ import type {
   DeleteBudgetParams,
   DeleteCategoryParams,
   DeleteCategoryPairParams,
+  GetBudgetVarianceParams,
   MonthlyCalendarParams,
   PreferenceKey,
   RenameCategoryParams,
@@ -712,6 +713,22 @@ function mockHandleGetBudgets() {
   return { budgets: loadMockBudgets() };
 }
 
+function mockHandleGetBudgetVariance(params: GetBudgetVarianceParams) {
+  const summary = mockHandleSummary({ unit: "month", year: params.year, month: params.month });
+  const budgets = loadMockBudgets();
+  const actualByCategory: Record<string, number> = {};
+  summary.categories.forEach((c) => {
+    actualByCategory[c.name] = c.total;
+  });
+
+  const entries = budgets.map(({ category, monthlyBudget }) => {
+    const actual = actualByCategory[category] || 0;
+    return { category, budget: monthlyBudget, actual, variance: actual - monthlyBudget };
+  });
+
+  return { unit: "month" as const, year: params.year, month: params.month, label: summary.label, entries };
+}
+
 function mockHandleUpsertBudget(body: UpsertBudgetParams) {
   const category = body.category?.trim();
   const monthlyBudget = Number(body.monthlyBudget);
@@ -795,6 +812,8 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleDeleteCategoryPair(args[0] as DeleteCategoryPairParams);
     case "handleGetBudgets":
       return mockHandleGetBudgets();
+    case "handleGetBudgetVariance":
+      return mockHandleGetBudgetVariance(args[0] as GetBudgetVarianceParams);
     case "handleUpsertBudget":
       return mockHandleUpsertBudget(args[0] as UpsertBudgetParams);
     case "handleDeleteBudget":
