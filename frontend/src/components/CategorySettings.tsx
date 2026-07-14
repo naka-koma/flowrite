@@ -15,7 +15,7 @@ export function CategorySettings() {
     deleteCategory,
   } = useCategories();
   const [newCategory, setNewCategory] = useState("");
-  const [newSubcategory, setNewSubcategory] = useState("");
+  const [newSubcategoryByCategory, setNewSubcategoryByCategory] = useState<Record<string, string>>({});
   const [confirmingKey, setConfirmingKey] = useState<string | null>(null);
 
   const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
@@ -49,16 +49,25 @@ export function CategorySettings() {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAddCategorySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const category = newCategory.trim();
-    const subcategory = newSubcategory.trim();
-    if (!category || !subcategory) return;
+    if (!category) return;
+
+    const added = await addCategory({ category, subcategory: "未分類" });
+    if (added) {
+      setNewCategory("");
+    }
+  };
+
+  const handleAddSubcategorySubmit = async (category: string, e: React.FormEvent) => {
+    e.preventDefault();
+    const subcategory = (newSubcategoryByCategory[category] ?? "").trim();
+    if (!subcategory) return;
 
     const added = await addCategory({ category, subcategory });
     if (added) {
-      setNewCategory("");
-      setNewSubcategory("");
+      setNewSubcategoryByCategory((prev) => ({ ...prev, [category]: "" }));
     }
   };
 
@@ -246,6 +255,32 @@ export function CategorySettings() {
                         )}
                       </li>
                     ))}
+                    <li>
+                      <form
+                        onSubmit={(e) => handleAddSubcategorySubmit(category, e)}
+                        className="flex flex-wrap items-end gap-2"
+                      >
+                        <label className="flex flex-col gap-1">
+                          <span className="text-sm font-medium">中項目を追加</span>
+                          <input
+                            aria-label={`${category}に追加する中項目`}
+                            value={newSubcategoryByCategory[category] ?? ""}
+                            onChange={(e) =>
+                              setNewSubcategoryByCategory((prev) => ({ ...prev, [category]: e.target.value }))
+                            }
+                            className="input input-bordered input-sm"
+                          />
+                        </label>
+                        <button
+                          type="submit"
+                          disabled={mutateState.status === "loading"}
+                          className="btn btn-sm"
+                        >
+                          {mutateState.status === "loading" && <span className="loading loading-spinner loading-xs" />}
+                          追加
+                        </button>
+                      </form>
+                    </li>
                   </ul>
                 )}
               </li>
@@ -254,22 +289,13 @@ export function CategorySettings() {
         </ul>
       )}
 
-      <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
+      <form onSubmit={handleAddCategorySubmit} className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">大項目</span>
+          <span className="text-sm font-medium">大項目を追加</span>
           <input
             aria-label="新しい大項目"
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
-            className="input input-bordered input-sm"
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">中項目</span>
-          <input
-            aria-label="新しい中項目"
-            value={newSubcategory}
-            onChange={(e) => setNewSubcategory(e.target.value)}
             className="input input-bordered input-sm"
           />
         </label>
