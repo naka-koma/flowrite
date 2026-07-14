@@ -1,6 +1,13 @@
 const DEFAULT_AI_PROMPT =
   "あなたは家計管理のアドバイザーです。以下の支出データを分析し、具体的で実行可能なアドバイスを日本語で提供してください。";
 
+const DEFAULT_AGENDA_TOPICS = [
+  "今月のざっくり振り返り",
+  "使途不明金をあぶり出したい",
+  "固定費の歪みをチェックして",
+  "来月の予算作りの作戦会議",
+];
+
 function getSettingsSheet() {
   const ss = getSpreadsheet();
   let sheet = ss.getSheetByName("settings");
@@ -57,8 +64,25 @@ function getAiModel() {
   return map.model || "";
 }
 
+// 改行区切りでsettingsシートに保存する。未設定・空の場合はデフォルト4テーマを使う
+function getAgendaTopics() {
+  const map = getSettingsMap_();
+  if (!map.agendaTopics) {
+    return DEFAULT_AGENDA_TOPICS;
+  }
+  const topics = map.agendaTopics
+    .split("\n")
+    .map(function (t) {
+      return t.trim();
+    })
+    .filter(function (t) {
+      return t;
+    });
+  return topics.length > 0 ? topics : DEFAULT_AGENDA_TOPICS;
+}
+
 function handleGetSettings() {
-  return { prompt: getAiPrompt(), model: getAiModel() };
+  return { prompt: getAiPrompt(), model: getAiModel(), agendaTopics: getAgendaTopics().join("\n") };
 }
 
 function handleUpdateSettings(settings) {
@@ -67,6 +91,9 @@ function handleUpdateSettings(settings) {
   }
   if (typeof settings.model === "string") {
     setSetting_("model", settings.model.trim());
+  }
+  if (typeof settings.agendaTopics === "string") {
+    setSetting_("agendaTopics", settings.agendaTopics.trim());
   }
   return { success: true };
 }

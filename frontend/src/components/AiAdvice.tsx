@@ -1,8 +1,8 @@
 import { useState } from "react";
-import ReactMarkdown from "react-markdown";
 import { MonthSelector } from "./MonthSelector";
 import { YearSelector } from "./YearSelector";
-import { useAiAdvice } from "../hooks/useAiAdvice";
+import { useAiChat } from "../hooks/useAiChat";
+import { useSettings } from "../hooks/useSettings";
 import { maskYenAmounts } from "../lib/money";
 import type { SummaryParams } from "../types/api";
 
@@ -19,68 +19,160 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
   const [unit, setUnit] = useState<AiPeriodUnit>("month");
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+
+  const { status: settingsStatus, settings } = useSettings();
+  const chat = useAiChat();
 
   const summaryParams: SummaryParams =
     unit === "year" ? { unit: "year", year } : unit === "all" ? { unit: "all" } : { unit: "month", year, month };
 
-  const { status, advice, errorMessage, fetchAdvice } = useAiAdvice();
+  const agendaTopics = (settings?.agendaTopics ?? "")
+    .split("\n")
+    .map((t) => t.trim())
+    .filter(Boolean);
+
+  const maskText = (text: string) => (hideAmounts ? maskYenAmounts(text) : text);
+
+  const handleSelectTopic = (topic: string) => {
+    setSelectedTopic(topic);
+    chat.startChat(topic, summaryParams);
+  };
+
+  const handleReset = () => {
+    setSelectedTopic(null);
+    chat.reset();
+  };
+
+  if (!selectedTopic) {
+    return (
+      <div data-testid="ai-advice">
+        <div role="tablist" className="tabs tabs-boxed mb-4 w-fit">
+          {(Object.keys(UNIT_LABELS) as AiPeriodUnit[]).map((u) => (
+            <button
+              key={u}
+              type="button"
+              role="tab"
+              className={`tab ${unit === u ? "tab-active" : ""}`}
+              onClick={() => setUnit(u)}
+            >
+              {UNIT_LABELS[u]}
+            </button>
+          ))}
+        </div>
+
+        {unit === "month" && (
+          <MonthSelector
+            year={year}
+            month={month}
+            onChange={(newYear, newMonth) => {
+              setYear(newYear);
+              setMonth(newMonth);
+            }}
+            selectLabel="AIアドバイス対象年月"
+            prevLabel="AIアドバイス前の月"
+            nextLabel="AIアドバイス次の月"
+          />
+        )}
+        {unit === "year" && (
+          <YearSelector
+            year={year}
+            onChange={setYear}
+            selectLabel="AIアドバイス対象年"
+            prevLabel="AIアドバイス前の年"
+            nextLabel="AIアドバイス次の年"
+          />
+        )}
+
+        <p className="mb-2 mt-4 text-sm font-medium">相談したいテーマを選んでください</p>
+
+        {settingsStatus === "loading" ? (
+          <p className="flex items-center gap-2">
+            <span className="loading loading-spinner loading-sm" />
+            読み込み中...
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {agendaTopics.map((topic) => (
+              <button
+                key={topic}
+                type="button"
+                onClick={() => handleSelectTopic(topic)}
+                className="btn btn-outline btn-sm justify-start"
+              >
+                {topic}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div data-testid="ai-advice">
-      <div role="tablist" className="tabs tabs-boxed mb-4 w-fit">
-        {(Object.keys(UNIT_LABELS) as AiPeriodUnit[]).map((u) => (
-          <button
-            key={u}
-            type="button"
-            role="tab"
-            className={`tab ${unit === u ? "tab-active" : ""}`}
-            onClick={() => setUnit(u)}
-          >
-            {UNIT_LABELS[u]}
-          </button>
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm text-base-content/70">テーマ: {selectedTopic}</p>
+        <button type="button" onClick={handleReset} className="btn btn-ghost btn-xs">
+          テーマを選び直す
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        {chat.messages.map((message, index) => (
+          <div key={index} className={`chat ${message.role === "ai" ? "chat-start" : "chat-end"}`}>
+            <div className={`chat-bubble ${message.role === "ai" ? "" : "chat-bubble-primary"}`}>
+              {maskText(message.text)}
+            </div>
+          </div>
         ))}
       </div>
 
-      {unit === "month" && (
-        <MonthSelector
-          year={year}
-          month={month}
-          onChange={(newYear, newMonth) => {
-            setYear(newYear);
-            setMonth(newMonth);
-          }}
-          selectLabel="AIアドバイス対象年月"
-          prevLabel="AIアドバイス前の月"
-          nextLabel="AIアドバイス次の月"
-        />
-      )}
-      {unit === "year" && (
-        <YearSelector
-          year={year}
-          onChange={setYear}
-          selectLabel="AIアドバイス対象年"
-          prevLabel="AIアドバイス前の年"
-          nextLabel="AIアドバイス次の年"
-        />
-      )}
-
-      <button
-        onClick={() => fetchAdvice(summaryParams)}
-        disabled={status === "loading"}
-        className="btn btn-primary mt-2"
-      >
-        {status === "loading" && <span className="loading loading-spinner loading-sm" />}
-        AIアドバイスを取得
-      </button>
-      {status === "loading" && <p className="mt-2 text-sm text-base-content/70">読み込み中...</p>}
-      {status === "error" && (
-        <p role="alert" className="alert alert-error mt-3">
-          エラー: {errorMessage}
+      {chat.status === "loading" && (
+        <p className="mt-3 flex items-center gap-2 text-sm text-base-content/70">
+          <span className="loading loading-spinner loading-sm" />
+          読み込み中...
         </p>
       )}
-      {status === "success" && (
-        <div className="ai-advice-markdown mt-3">
-          <ReactMarkdown>{hideAmounts ? maskYenAmounts(advice ?? "") : (advice ?? "")}</ReactMarkdown>
+
+      {chat.status === "error" && (
+        <p role="alert" className="alert alert-error mt-3">
+          エラー: {chat.errorMessage}
+        </p>
+      )}
+
+      {chat.status === "success" && !chat.isFinal && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {chat.quickReplies.map((reply) => (
+            <button
+              key={reply}
+              type="button"
+              onClick={() => chat.sendReply(reply)}
+              className="btn btn-outline btn-sm"
+            >
+              {reply}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {chat.status === "success" && chat.isFinal && chat.todoActions.length > 0 && (
+        <div className="mt-3 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => chat.applyTodoActions()}
+            disabled={chat.applyState.status === "loading"}
+            className="btn btn-primary btn-sm w-fit"
+          >
+            {chat.applyState.status === "loading" && <span className="loading loading-spinner loading-xs" />}
+            この見直し案を予算ページに適用する
+          </button>
+          {chat.applyState.status === "success" && <p className="text-sm text-success">予算に反映しました</p>}
+          {chat.applyState.status === "error" && (
+            <p role="alert" className="alert alert-error">
+              エラー: {chat.applyState.errorMessage}
+            </p>
+          )}
         </div>
       )}
     </div>

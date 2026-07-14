@@ -18,7 +18,7 @@ export async function openSettings(page: Page): Promise<void> {
   if (await menuButton.isVisible()) {
     await menuButton.click();
   }
-  await page.getByRole("button", { name: "設定" }).click();
+  await page.getByRole("button", { name: "設定", exact: true }).click();
 }
 
 // 広い画面幅ではサイドバーが常時表示され、ハンバーガーボタンは表示されない。
@@ -28,7 +28,7 @@ export async function openReport(page: Page): Promise<void> {
   if (await menuButton.isVisible()) {
     await menuButton.click();
   }
-  await page.getByRole("button", { name: "レポート" }).click();
+  await page.getByRole("button", { name: "レポート", exact: true }).click();
 }
 
 // 広い画面幅ではサイドバーが常時表示され、ハンバーガーボタンは表示されない。
@@ -38,7 +38,7 @@ export async function openTransactionList(page: Page): Promise<void> {
   if (await menuButton.isVisible()) {
     await menuButton.click();
   }
-  await page.getByRole("button", { name: "取引一覧" }).click();
+  await page.getByRole("button", { name: "取引一覧", exact: true }).click();
 }
 
 // 広い画面幅ではサイドバーが常時表示され、ハンバーガーボタンは表示されない。
@@ -48,6 +48,6 @@ export async function openBudget(page: Page): Promise<void> {
   if (await menuButton.isVisible()) {
     await menuButton.click();
   }
-  await page.getByRole("button", { name: "予算" }).click();
+  await page.getByRole("button", { name: "予算", exact: true }).click();
 }
 

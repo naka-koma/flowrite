@@ -5,11 +5,13 @@ export function SettingsForm() {
   const { status, settings, errorMessage, saveState, saveSettings } = useSettings();
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState("");
+  const [agendaTopics, setAgendaTopics] = useState("");
 
   useEffect(() => {
     if (settings) {
       setPrompt(settings.prompt);
       setModel(settings.model);
+      setAgendaTopics(settings.agendaTopics);
     }
   }, [settings]);
 
@@ -32,7 +34,7 @@ export function SettingsForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    saveSettings({ prompt, model });
+    saveSettings({ prompt, model, agendaTopics });
   };
 
   return (
@@ -57,6 +59,17 @@ export function SettingsForm() {
           onChange={(e) => setModel(e.target.value)}
           placeholder="例: gemini-3.5-flash"
           className="input input-bordered"
+        />
+      </label>
+
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium">相談テーマ（1行につき1つ。対話型AIアドバイスのテーマ選択肢になります）</span>
+        <textarea
+          aria-label="相談テーマ"
+          value={agendaTopics}
+          onChange={(e) => setAgendaTopics(e.target.value)}
+          rows={4}
+          className="textarea textarea-bordered"
         />
       </label>
 

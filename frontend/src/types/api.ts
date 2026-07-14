@@ -75,9 +75,33 @@ export interface TrendResponse {
   error?: string;
 }
 
-export interface AiAdviceResponse {
+export interface ChatTurn {
+  role: "user" | "model";
+  text: string;
+}
+
+export interface TodoAction {
+  category: string;
+  new_budget: number;
+}
+
+export interface StartAiChatParams {
+  agendaTopic: string;
+  summaryParams: SummaryParams;
+}
+
+export interface ContinueAiChatParams {
+  history: ChatTurn[];
+  userReply: string;
+}
+
+export interface AiChatResponse {
   success: boolean;
-  advice: string;
+  ai_message: string;
+  quick_replies: string[];
+  is_final: boolean;
+  todo_actions: TodoAction[];
+  history: ChatTurn[];
   error?: string;
 }
 
@@ -124,6 +148,7 @@ export interface RunMigrationsResponse {
 export interface Settings {
   prompt: string;
   model: string;
+  agendaTopics: string;
   error?: string;
 }
 

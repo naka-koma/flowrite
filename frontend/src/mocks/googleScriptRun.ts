@@ -4,6 +4,8 @@ import type {
   AiAttribute,
   Budget,
   CalendarDay,
+  ChatTurn,
+  ContinueAiChatParams,
   DeleteAiAttributeParams,
   DeleteBudgetParams,
   DeleteCategoryParams,
@@ -13,8 +15,10 @@ import type {
   PreferenceKey,
   RenameCategoryParams,
   Settings,
+  StartAiChatParams,
   SummaryParams,
   SummaryUnit,
+  TodoAction,
   TransactionListParams,
   TransactionRow,
   TrendParams,
@@ -364,6 +368,12 @@ function mockHandleRunMigrations() {
 
 const DEFAULT_MOCK_PROMPT =
   "あなたは家計管理のアドバイザーです。以下の支出データを分析し、具体的で実行可能なアドバイスを日本語で提供してください。";
+const DEFAULT_MOCK_AGENDA_TOPICS = [
+  "今月のざっくり振り返り",
+  "使途不明金をあぶり出したい",
+  "固定費の歪みをチェックして",
+  "来月の予算作りの作戦会議",
+].join("\n");
 const MOCK_SETTINGS_STORAGE_KEY = "__mock_settings__";
 
 // 実際のGASでは設定はスプレッドシートに永続化されるため、モックでも
@@ -377,17 +387,18 @@ function loadMockSettings(): Settings {
       // 壊れたデータは無視してデフォルトにフォールバック
     }
   }
-  return { prompt: DEFAULT_MOCK_PROMPT, model: "" };
+  return { prompt: DEFAULT_MOCK_PROMPT, model: "", agendaTopics: DEFAULT_MOCK_AGENDA_TOPICS };
 }
 
 function mockHandleGetSettings() {
   return loadMockSettings();
 }
 
-function mockHandleUpdateSettings(body: { prompt?: string; model?: string }) {
+function mockHandleUpdateSettings(body: { prompt?: string; model?: string; agendaTopics?: string }) {
   const settings: Settings = {
     prompt: body.prompt?.trim() || DEFAULT_MOCK_PROMPT,
     model: body.model?.trim() ?? "",
+    agendaTopics: body.agendaTopics?.trim() || DEFAULT_MOCK_AGENDA_TOPICS,
   };
   sessionStorage.setItem(MOCK_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   return { success: true };
@@ -477,19 +488,56 @@ function mockHandleUpdatePreference(body: UpdatePreferenceParams) {
   return { success: true };
 }
 
-function mockHandleAiAdvice(params: SummaryParams) {
-  const summary = mockHandleSummary(params);
-  const hasData = summary.categories.length > 0 || summary.totalExpense > 0 || summary.totalIncome > 0;
+// 台本形式の対話モック。すでに完了したモデルターン数から次の応答を決定する
+function mockChatTurn(modelTurnCount: number) {
+  if (modelTurnCount === 0) {
+    return {
+      ai_message: "今月は先月より支出が増えていますね。何か思い当たることはありますか？",
+      quick_replies: ["外食が増えたかも", "特に思い当たらない"],
+      is_final: false,
+      todo_actions: [] as TodoAction[],
+    };
+  }
+  if (modelTurnCount === 1) {
+    return {
+      ai_message: "なるほど、外食が増えているんですね。来月はどうしたいですか？",
+      quick_replies: ["来月は減らしたい", "このままでいい"],
+      is_final: false,
+      todo_actions: [] as TodoAction[],
+    };
+  }
+  return {
+    ai_message: "では食費の予算を見直しましょう。来月は35,000円を目安にしてみましょう。",
+    quick_replies: [] as string[],
+    is_final: true,
+    todo_actions: [{ category: "食費", new_budget: 35000 }] as TodoAction[],
+  };
+}
 
+function mockHandleStartAiChat(body: StartAiChatParams) {
+  const summary = mockHandleSummary(body.summaryParams);
+  const hasData = summary.categories.length > 0 || summary.totalExpense > 0 || summary.totalIncome > 0;
   if (!hasData) {
     return { success: false, error: "指定した期間のデータがありません" };
   }
 
-  return {
-    success: true,
-    advice:
-      "## 今月のアドバイス\n\n今月の支出は先月より**10%増加**しています。特に食費が増加傾向にあります。\n\n- 外食を減らし、自炊を心がける\n- 月2万円程度の節約が見込めます",
-  };
+  const initialPrompt = `agenda:${body.agendaTopic}`;
+  const turn = mockChatTurn(0);
+  const history: ChatTurn[] = [
+    { role: "user", text: initialPrompt },
+    { role: "model", text: JSON.stringify(turn) },
+  ];
+  return { success: true, ...turn, history };
+}
+
+function mockHandleContinueAiChat(body: ContinueAiChatParams) {
+  const modelTurnCount = body.history.filter((h) => h.role === "model").length;
+  const turn = mockChatTurn(modelTurnCount);
+  const history: ChatTurn[] = body.history.concat([
+    { role: "user", text: body.userReply },
+    { role: "model", text: JSON.stringify(turn) },
+  ]);
+  return { success: true, ...turn, history };
 }
 
 const MOCK_TRANSACTION_CATEGORY_ENTRIES: [string, string[]][] = [
@@ -774,8 +822,10 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleTrend(args[0] as TrendParams);
     case "handleMonthlyCalendar":
       return mockHandleMonthlyCalendar(args[0] as MonthlyCalendarParams);
-    case "handleAiAdvice":
-      return mockHandleAiAdvice(args[0] as SummaryParams);
+    case "handleStartAiChat":
+      return mockHandleStartAiChat(args[0] as StartAiChatParams);
+    case "handleContinueAiChat":
+      return mockHandleContinueAiChat(args[0] as ContinueAiChatParams);
     case "handleRunMigrations":
       return mockHandleRunMigrations();
     case "handleGetSettings":
