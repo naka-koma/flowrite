@@ -15,7 +15,11 @@ function mergeExistingRow_(existing, csvRow) {
   return { category, subcategory, memo, changed };
 }
 
-function applyExistingRowUpdates_(sheet, data, rowMap, csvRows, now) {
+function applyExistingRowUpdates_(sheet, data, rowMap, csvRows, now, overwriteCategory) {
+  if (!overwriteCategory) {
+    return 0;
+  }
+
   let updatedCount = 0;
 
   for (const csvRow of csvRows) {
@@ -78,8 +82,9 @@ function handleUpload(body) {
   const newRows = rows.filter((row) => !rowMap.has(row.id));
   const skipped = rows.length - newRows.length;
   const now = new Date().toISOString();
+  const overwriteCategory = body.overwriteCategory !== false;
 
-  applyExistingRowUpdates_(sheet, data, rowMap, rows, now);
+  applyExistingRowUpdates_(sheet, data, rowMap, rows, now, overwriteCategory);
 
   if (newRows.length > 0) {
     appendRows(sheet, newRows.map((row) => ({ ...row, updatedAt: row.importedAt })));

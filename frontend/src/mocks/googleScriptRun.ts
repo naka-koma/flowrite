@@ -47,7 +47,7 @@ function getScenario(): MockScenario {
   return value ?? {};
 }
 
-function mockHandleUpload(body: { csv: string }) {
+function mockHandleUpload(body: { csv: string; overwriteCategory?: boolean }) {
   const csvText = atob(body.csv);
 
   if (csvText.includes("INVALID")) {
@@ -816,7 +816,7 @@ function mockHandleGetVersion() {
 function callMockFunction(functionName: string, args: unknown[]): unknown {
   switch (functionName) {
     case "handleUpload":
-      return mockHandleUpload(args[0] as { csv: string });
+      return mockHandleUpload(args[0] as { csv: string; overwriteCategory?: boolean });
     case "handleSummary":
       return mockHandleSummary(args[0] as SummaryParams);
     case "handleTrend":
