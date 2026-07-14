@@ -5,6 +5,8 @@ import { PeriodComparison } from "./PeriodComparison";
 import { CategoryBreakdown } from "./CategoryBreakdown";
 import { MonthlyCalendar } from "./MonthlyCalendar";
 import { CollapsibleSection } from "./CollapsibleSection";
+import { PageHeader } from "./PageHeader";
+import { SectionCard } from "./SectionCard";
 import { useSummary } from "../hooks/useSummary";
 import { useTrend } from "../hooks/useTrend";
 import { formatAmount } from "../lib/money";
@@ -27,15 +29,9 @@ export function ReportScreen({ hideAmounts, trendVisibleCount, onBack }: ReportS
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-2">
-        <button type="button" onClick={onBack} aria-label="ダッシュボードに戻る" className="btn btn-ghost btn-sm">
-          ‹ 戻る
-        </button>
-        <h1 className="text-xl font-bold">レポート</h1>
-      </div>
+      <PageHeader title="レポート" onBack={onBack} />
 
-      <section className="card bg-base-100">
-        <div className="card-body p-4 sm:p-6">
+      <SectionCard>
           <MonthSelector
             year={year}
             month={month}
@@ -87,8 +83,7 @@ export function ReportScreen({ hideAmounts, trendVisibleCount, onBack }: ReportS
               )}
             </>
           )}
-        </div>
-      </section>
+      </SectionCard>
 
       <CollapsibleSection title="全体推移">
         <TrendChart

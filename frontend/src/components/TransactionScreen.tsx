@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MonthSelector } from "./MonthSelector";
+import { PageHeader } from "./PageHeader";
+import { SectionCard } from "./SectionCard";
 import { useTransactionList, type TransactionPageSize } from "../hooks/useTransactionList";
 import { useUpdateCategory } from "../hooks/useUpdateCategory";
 import { useCategories } from "../hooks/useCategories";
@@ -146,15 +148,9 @@ export function TransactionScreen({ hideAmounts, onBack }: TransactionScreenProp
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-2">
-        <button type="button" onClick={onBack} aria-label="ダッシュボードに戻る" className="btn btn-ghost btn-sm">
-          ‹ 戻る
-        </button>
-        <h1 className="text-xl font-bold">取引一覧</h1>
-      </div>
+      <PageHeader title="取引一覧" onBack={onBack} />
 
-      <section className="card bg-base-100">
-        <div className="card-body p-4 sm:p-6">
+      <SectionCard>
           <div className="mb-4 flex flex-wrap items-center gap-4">
             <MonthSelector year={year} month={month} onChange={handlePeriodChange} />
             <label className="flex items-center gap-2 text-sm">
@@ -337,8 +333,7 @@ export function TransactionScreen({ hideAmounts, onBack }: TransactionScreenProp
               <div className="mt-4">{renderControls()}</div>
             </>
           )}
-        </div>
-      </section>
+      </SectionCard>
     </div>
   );
 }
