@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { readEnv, writeEnv, bumpVersion } from "./version.js";
 
 function run(cmd, root) {
   console.log(`> ${cmd}`);
@@ -11,32 +11,21 @@ function getOutput(cmd, root) {
   return execSync(cmd, { cwd: root, encoding: "utf8" }).trim();
 }
 
-function readEnv(envPath) {
-  if (!existsSync(envPath)) return {};
-  const entries = readFileSync(envPath, "utf8")
-    .split("\n")
-    .filter((line) => line.includes("=") && !line.startsWith("#"));
-  return Object.fromEntries(entries.map((line) => line.split("=", 2)));
-}
-
-function writeEnv(envPath, env) {
-  const content =
-    Object.entries(env)
-      .map(([k, v]) => `${k}=${v}`)
-      .join("\n") + "\n";
-  writeFileSync(envPath, content);
-}
-
 // ビルド → clasp push → デプロイ（既存デプロイの更新、なければ新規作成）を行う。
 // DEPLOYMENT_ID は .env → 環境変数 → 引数 の優先順で解決する。
 // 新規作成した場合・解決したIDが.envと異なる場合は .env に書き戻す。
 export function pushAndDeploy(root, { description = "deploy", deploymentId } = {}) {
   const envPath = resolve(root, ".env");
 
+  // ビルド前にバージョンを進めておく（build.jsがbuild/version.gsに埋め込む）
+  const env = readEnv(envPath);
+  const version = bumpVersion(env);
+  writeEnv(envPath, env);
+  console.log(`\nVersion: ${version}`);
+
   run("npm run build", root);
   run("npx clasp push --force", root);
 
-  const env = readEnv(envPath);
   let deployId = env.DEPLOYMENT_ID || process.env.DEPLOYMENT_ID || deploymentId;
 
   if (deployId) {

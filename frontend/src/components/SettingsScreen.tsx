@@ -7,6 +7,7 @@ import { TrendDisplayCountSetting } from "./TrendDisplayCountSetting";
 import { DashboardLayoutSettings } from "./DashboardLayoutSettings";
 import { CategorySettings } from "./CategorySettings";
 import { AiAttributesSettings } from "./AiAttributesSettings";
+import { VersionInfo } from "./VersionInfo";
 
 interface SettingsScreenProps {
   theme: Theme;
@@ -91,6 +92,13 @@ export function SettingsScreen({
         <div className="card-body p-4 sm:p-6">
           <h2 className="mb-3 text-lg font-semibold">管理</h2>
           <AdminSection />
+        </div>
+      </section>
+
+      <section className="card bg-base-100">
+        <div className="card-body p-4 sm:p-6">
+          <h2 className="mb-3 text-lg font-semibold">バージョン情報</h2>
+          <VersionInfo />
         </div>
       </section>
     </div>

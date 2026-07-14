@@ -1,7 +1,8 @@
 import { execSync } from "node:child_process";
-import { existsSync, rmSync, mkdirSync, readdirSync, copyFileSync } from "node:fs";
+import { existsSync, rmSync, mkdirSync, readdirSync, copyFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readEnv, readCurrentVersion } from "./lib/version.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
@@ -26,5 +27,14 @@ for (const file of files) {
   copyFileSync(resolve(gasDir, file), resolve(buildDir, destName));
   console.log(`  copied: gas/${file} -> build/${destName}`);
 }
+
+// 4. バージョン情報を埋め込んだGASファイルを生成する（gas/にはソースを置かず、build時にのみ生成する。
+//    連番はデプロイ時（scripts/lib/deploy-core.jsのbumpVersion）のみ進み、ビルドのみでは進まない）
+const version = readCurrentVersion(readEnv(resolve(root, ".env")));
+writeFileSync(
+  resolve(buildDir, "version.gs"),
+  `// 自動生成ファイル（scripts/build.jsが生成する。gas/に対応するソースはなく、手動編集しないこと）\nfunction handleGetVersion() {\n  return { version: "${version}" };\n}\n`,
+);
+console.log(`  generated: build/version.gs (${version})`);
 
 console.log("\nBuild complete. build/ is ready for clasp push.");
