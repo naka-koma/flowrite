@@ -743,6 +743,10 @@ function mockHandleDeleteBudget(body: DeleteBudgetParams) {
   return { success: true };
 }
 
+function mockHandleGetVersion() {
+  return { version: "v-dev (mock)" };
+}
+
 function callMockFunction(functionName: string, args: unknown[]): unknown {
   switch (functionName) {
     case "handleUpload":
@@ -795,6 +799,8 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleUpsertBudget(args[0] as UpsertBudgetParams);
     case "handleDeleteBudget":
       return mockHandleDeleteBudget(args[0] as DeleteBudgetParams);
+    case "handleGetVersion":
+      return mockHandleGetVersion();
     default:
       throw new Error(`Unknown function: ${functionName}`);
   }

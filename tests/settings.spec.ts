@@ -6,6 +6,10 @@ test.beforeEach(async ({ page }) => {
   await openSettings(page);
 });
 
+test("バージョン情報が表示される", async ({ page }) => {
+  await expect(page.getByText("v-dev (mock)")).toBeVisible();
+});
+
 test("デフォルトのプロンプトが表示される", async ({ page }) => {
   await expect(page.getByLabel("プロンプト")).toHaveValue(/家計管理のアドバイザー/);
   await expect(page.getByLabel("使用モデル")).toHaveValue("");

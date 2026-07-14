@@ -132,6 +132,11 @@ export interface UpdateSettingsResponse {
   error?: string;
 }
 
+export interface GetVersionResponse {
+  version: string;
+  error?: string;
+}
+
 export interface AiAttribute {
   id: string;
   key: string;
