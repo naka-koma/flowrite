@@ -121,7 +121,7 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
       <div className="flex flex-col gap-3">
         {chat.messages.map((message, index) => (
           <div key={index} className={`chat ${message.role === "ai" ? "chat-start" : "chat-end"}`}>
-            <div className={`chat-bubble ${message.role === "ai" ? "" : "chat-bubble-primary"}`}>
+            <div className={`chat-bubble whitespace-pre-wrap ${message.role === "ai" ? "" : "chat-bubble-primary"}`}>
               {maskText(message.text)}
             </div>
           </div>
