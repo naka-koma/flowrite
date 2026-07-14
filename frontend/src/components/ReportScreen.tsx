@@ -5,6 +5,7 @@ import { PeriodComparison } from "./PeriodComparison";
 import { CategoryBreakdown } from "./CategoryBreakdown";
 import { MonthlyCalendar } from "./MonthlyCalendar";
 import { CollapsibleSection } from "./CollapsibleSection";
+import { BudgetVarianceSection } from "./BudgetVarianceSection";
 import { PageHeader } from "./PageHeader";
 import { SectionCard } from "./SectionCard";
 import { useSummary } from "../hooks/useSummary";
@@ -97,6 +98,10 @@ export function ReportScreen({ hideAmounts, trendVisibleCount, onBack }: ReportS
 
       <CollapsibleSection title="カレンダー">
         <MonthlyCalendar year={year} month={month} hideAmounts={hideAmounts} />
+      </CollapsibleSection>
+
+      <CollapsibleSection title="予算対比">
+        <BudgetVarianceSection year={year} month={month} hideAmounts={hideAmounts} />
       </CollapsibleSection>
 
       <CollapsibleSection title="収入内訳">
