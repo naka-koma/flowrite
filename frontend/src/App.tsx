@@ -37,6 +37,7 @@ export function App() {
     dashboardSections,
     toggleDashboardSection,
     moveDashboardSection,
+    reorderDashboardSections,
     resetDashboardLayout,
     trendVisibleCount,
     setTrendVisibleCount,
@@ -186,6 +187,7 @@ export function App() {
               dashboardSections={dashboardSections}
               onToggleDashboardSection={toggleDashboardSection}
               onMoveDashboardSection={moveDashboardSection}
+              onReorderDashboardSections={reorderDashboardSections}
               onResetDashboardLayout={resetDashboardLayout}
               onBack={() => navigate("dashboard")}
             />

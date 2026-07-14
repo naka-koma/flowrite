@@ -19,6 +19,7 @@ interface SettingsScreenProps {
   dashboardSections: DashboardSection[];
   onToggleDashboardSection: (id: DashboardSectionId) => void;
   onMoveDashboardSection: (id: DashboardSectionId, direction: "up" | "down") => void;
+  onReorderDashboardSections: (activeId: DashboardSectionId, overId: DashboardSectionId) => void;
   onResetDashboardLayout: () => void;
   onBack: () => void;
 }
@@ -31,6 +32,7 @@ export function SettingsScreen({
   dashboardSections,
   onToggleDashboardSection,
   onMoveDashboardSection,
+  onReorderDashboardSections,
   onResetDashboardLayout,
   onBack,
 }: SettingsScreenProps) {
@@ -51,6 +53,7 @@ export function SettingsScreen({
           sections={dashboardSections}
           onToggleVisibility={onToggleDashboardSection}
           onMoveSection={onMoveDashboardSection}
+          onReorderSections={onReorderDashboardSections}
           onReset={onResetDashboardLayout}
         />
       </SectionCard>
