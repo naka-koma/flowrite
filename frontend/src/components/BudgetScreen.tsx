@@ -3,6 +3,12 @@ import { useBudgets } from "../hooks/useBudgets";
 import { useCategories } from "../hooks/useCategories";
 import { PageHeader } from "./PageHeader";
 import { SectionCard } from "./SectionCard";
+import { formatAmount } from "../lib/money";
+
+// カンマ・円などを取り除き数値に変換する（入力欄のカンマ区切り表示に対応するため）
+function parseAmountInput(value: string): number {
+  return Number(value.replace(/[^0-9]/g, ""));
+}
 
 const NEW_CATEGORY_VALUE = "__new__";
 
@@ -29,6 +35,7 @@ export function BudgetScreen({ onBack }: BudgetScreenProps) {
 
   const isNewCategorySelected = newCategory === NEW_CATEGORY_VALUE;
   const categoryToSubmit = isNewCategorySelected ? customCategory.trim() : newCategory;
+  const totalBudget = budgets.reduce((sum, b) => sum + b.monthlyBudget, 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,24 +85,28 @@ export function BudgetScreen({ onBack }: BudgetScreenProps) {
             {budgets.length === 0 ? (
               <p className="text-base-content/70">登録されている予算はありません</p>
             ) : (
-              <ul className="flex flex-col gap-2">
-                {budgets.map((budget) => (
-                  <li key={budget.category} className="flex items-center gap-2">
-                    <span className="w-32 font-medium">{budget.category}</span>
-                    <input
-                      key={`${budget.category}-${budget.monthlyBudget}`}
-                      type="number"
-                      min={0}
-                      aria-label={`${budget.category}の月間予算額`}
-                      defaultValue={budget.monthlyBudget}
-                      onBlur={(e) => {
-                        const amount = Number(e.target.value);
-                        if (Number.isFinite(amount) && amount >= 0 && amount !== budget.monthlyBudget) {
-                          upsertBudget({ category: budget.category, monthlyBudget: amount });
-                        }
-                      }}
-                      className="input input-bordered input-sm w-32"
-                    />
+              <>
+                <p className="text-sm font-medium">
+                  合計: <span className="text-base">{formatAmount(totalBudget)}円</span>
+                </p>
+                <ul className="flex flex-col gap-2">
+                  {budgets.map((budget) => (
+                    <li key={budget.category} className="flex items-center gap-2">
+                      <span className="w-32 font-medium">{budget.category}</span>
+                      <input
+                        key={`${budget.category}-${budget.monthlyBudget}`}
+                        type="text"
+                        inputMode="numeric"
+                        aria-label={`${budget.category}の月間予算額`}
+                        defaultValue={formatAmount(budget.monthlyBudget)}
+                        onBlur={(e) => {
+                          const amount = parseAmountInput(e.target.value);
+                          if (Number.isFinite(amount) && amount >= 0 && amount !== budget.monthlyBudget) {
+                            upsertBudget({ category: budget.category, monthlyBudget: amount });
+                          }
+                        }}
+                        className="input input-bordered input-sm w-32"
+                      />
                     {confirmingCategory === budget.category ? (
                       <div className="flex gap-1">
                         <button
@@ -119,8 +130,9 @@ export function BudgetScreen({ onBack }: BudgetScreenProps) {
                       </button>
                     )}
                   </li>
-                ))}
-              </ul>
+                  ))}
+                </ul>
+              </>
             )}
 
             <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
