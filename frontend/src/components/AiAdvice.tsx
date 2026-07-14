@@ -20,6 +20,8 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [showFreeTextInput, setShowFreeTextInput] = useState(false);
+  const [freeText, setFreeText] = useState("");
 
   const { status: settingsStatus, settings } = useSettings();
   const chat = useAiChat();
@@ -41,7 +43,22 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
 
   const handleReset = () => {
     setSelectedTopic(null);
+    setShowFreeTextInput(false);
+    setFreeText("");
     chat.reset();
+  };
+
+  const handleSendReply = (text: string) => {
+    setShowFreeTextInput(false);
+    setFreeText("");
+    chat.sendReply(text);
+  };
+
+  const handleSendFreeText = (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = freeText.trim();
+    if (!text) return;
+    handleSendReply(text);
   };
 
   if (!selectedTopic) {
@@ -142,17 +159,40 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
       )}
 
       {chat.status === "success" && !chat.isFinal && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {chat.quickReplies.map((reply) => (
-            <button
-              key={reply}
-              type="button"
-              onClick={() => chat.sendReply(reply)}
-              className="btn btn-outline btn-sm"
-            >
-              {reply}
-            </button>
-          ))}
+        <div className="mt-3 flex flex-col gap-2">
+          <div className="flex flex-wrap gap-2">
+            {chat.quickReplies.map((reply) => (
+              <button
+                key={reply}
+                type="button"
+                onClick={() => handleSendReply(reply)}
+                className="btn btn-outline btn-sm"
+              >
+                {reply}
+              </button>
+            ))}
+            {!showFreeTextInput && (
+              <button type="button" onClick={() => setShowFreeTextInput(true)} className="btn btn-ghost btn-sm">
+                その他を入力
+              </button>
+            )}
+          </div>
+
+          {showFreeTextInput && (
+            <form onSubmit={handleSendFreeText} className="flex gap-2">
+              <input
+                type="text"
+                aria-label="自由入力の返信"
+                value={freeText}
+                onChange={(e) => setFreeText(e.target.value)}
+                className="input input-bordered input-sm flex-1"
+                autoFocus
+              />
+              <button type="submit" disabled={!freeText.trim()} className="btn btn-primary btn-sm">
+                送信
+              </button>
+            </form>
+          )}
         </div>
       )}
 
