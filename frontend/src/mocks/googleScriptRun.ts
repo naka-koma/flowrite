@@ -787,8 +787,9 @@ function mockHandleUpsertBudget(body: UpsertBudgetParams) {
   if (!Number.isFinite(monthlyBudget) || monthlyBudget < 0) {
     return { success: false, error: "monthlyBudget must be a non-negative number" };
   }
+
   if (!mockCategoriesMaster[category]) {
-    return { success: false, error: "category does not exist" };
+    mockCategoriesMaster[category] = ["未分類"];
   }
 
   const budgets = loadMockBudgets();

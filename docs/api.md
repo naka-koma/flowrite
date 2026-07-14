@@ -695,7 +695,7 @@ AIアドバイスのプロンプト・使用モデル・相談テーマ設定を
 **注意**
 - `category` が空文字の場合は `{ "success": false, "error": "category is required" }` を返す
 - `monthlyBudget` が非負の数値でない場合は `{ "success": false, "error": "monthlyBudget must be a non-negative number" }` を返す
-- `category` が`categories`シートに存在しない場合は `{ "success": false, "error": "category does not exist" }` を返す（既存カテゴリーからのみ予算を設定できる）
+- `category` が`categories`シートに1件も存在しない場合、(category, "未分類")のペアを自動で`categories`シートに追加してから予算を登録する（既存カテゴリー以外でも予算を設定できる）
 
 ---
 

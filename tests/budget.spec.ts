@@ -19,6 +19,25 @@ test("大項目を選んで予算を追加できる", async ({ page }) => {
   await expect(budgetSettings.getByLabel("食費の月間予算額")).toHaveValue("30000");
 });
 
+test("推奨カテゴリーを選んで予算を追加できる（categoriesに未登録でも追加できる）", async ({ page }) => {
+  const budgetSettings = page.getByTestId("budget-settings");
+  await budgetSettings.getByLabel("予算を設定する大項目").selectOption({ label: "住居（推奨）" });
+  await budgetSettings.getByLabel("新しい月間予算額").fill("80000");
+  await budgetSettings.getByRole("button", { name: "追加" }).click();
+
+  await expect(budgetSettings.getByLabel("住居の月間予算額")).toHaveValue("80000");
+});
+
+test("「新規入力」でcategoriesに存在しない大項目名でも予算を追加できる", async ({ page }) => {
+  const budgetSettings = page.getByTestId("budget-settings");
+  await budgetSettings.getByLabel("予算を設定する大項目").selectOption("新規入力");
+  await budgetSettings.getByLabel("新しい大項目名").fill("特別費");
+  await budgetSettings.getByLabel("新しい月間予算額").fill("10000");
+  await budgetSettings.getByRole("button", { name: "追加" }).click();
+
+  await expect(budgetSettings.getByLabel("特別費の月間予算額")).toHaveValue("10000");
+});
+
 test("予算額をインライン編集で更新できる", async ({ page }) => {
   const budgetSettings = page.getByTestId("budget-settings");
   await budgetSettings.getByLabel("予算を設定する大項目").selectOption("食費");

@@ -1,11 +1,10 @@
-function getExistingCategoryNames_() {
-  const sheet = getCategoriesSheet();
+function categoryExists_(sheet, category) {
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) {
-    return new Set();
+    return false;
   }
   const values = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-  return new Set(values.map((row) => row[0]));
+  return values.some((row) => row[0] === category);
 }
 
 function handleGetBudgets() {
@@ -33,8 +32,11 @@ function handleUpsertBudget(body) {
   if (!Number.isFinite(monthlyBudget) || monthlyBudget < 0) {
     return { success: false, error: "monthlyBudget must be a non-negative number" };
   }
-  if (!getExistingCategoryNames_().has(category)) {
-    return { success: false, error: "category does not exist" };
+
+  // categoriesシートに未登録の大項目であれば、中項目を仮の値("未分類")で自動登録する
+  const categoriesSheet = getCategoriesSheet();
+  if (!categoryExists_(categoriesSheet, category)) {
+    appendCategoryPairs(categoriesSheet, [{ category, subcategory: "未分類" }]);
   }
 
   const sheet = getBudgetsSheet();
