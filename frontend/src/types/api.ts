@@ -269,6 +269,33 @@ export interface DeleteCategoryResponse {
   error?: string;
 }
 
+export interface CategoryPair {
+  category: string;
+  subcategory: string;
+}
+
+export interface UpdateCategoryPairParams {
+  oldCategory: string;
+  oldSubcategory: string;
+  newCategory: string;
+  newSubcategory: string;
+}
+
+export interface UpdateCategoryPairResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface DeleteCategoryPairParams {
+  category: string;
+  subcategory: string;
+}
+
+export interface DeleteCategoryPairResponse {
+  success: boolean;
+  error?: string;
+}
+
 export interface Budget {
   category: string;
   monthlyBudget: number;
