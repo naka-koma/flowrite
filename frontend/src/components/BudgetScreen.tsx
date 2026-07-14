@@ -59,28 +59,24 @@ export function BudgetScreen({ onBack }: BudgetScreenProps) {
     }
   };
 
-  if (status === "loading" || categoriesStatus === "loading") {
-    return (
-      <p className="flex items-center gap-2">
-        <span className="loading loading-spinner loading-sm" />
-        読み込み中...
-      </p>
-    );
-  }
-
-  if (status === "error" || categoriesStatus === "error") {
-    return (
-      <p role="alert" className="alert alert-error">
-        エラー: {errorMessage ?? categoriesErrorMessage}
-      </p>
-    );
-  }
+  const isLoading = status === "loading" || categoriesStatus === "loading";
+  const isError = status === "error" || categoriesStatus === "error";
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="予算" onBack={onBack} />
 
       <SectionCard title="大項目別の月間予算">
+        {isLoading ? (
+          <p className="flex items-center gap-2">
+            <span className="loading loading-spinner loading-sm" />
+            読み込み中...
+          </p>
+        ) : isError ? (
+          <p role="alert" className="alert alert-error">
+            エラー: {errorMessage ?? categoriesErrorMessage}
+          </p>
+        ) : (
           <div className="flex flex-col gap-4" data-testid="budget-settings">
             {budgets.length === 0 ? (
               <p className="text-base-content/70">登録されている予算はありません</p>
@@ -199,6 +195,7 @@ export function BudgetScreen({ onBack }: BudgetScreenProps) {
               </p>
             )}
           </div>
+        )}
       </SectionCard>
     </div>
   );
