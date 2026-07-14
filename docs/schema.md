@@ -40,8 +40,8 @@
 - 集計時は `isTarget=1` かつ `isTransfer=0` の行のみ対象とする
 
 ### CSV再取込時の挙動
-- 同一idの行がすでに存在する場合、category/subcategory/memoのうちCSV側の値が空でない項目のみ既存値を上書きする（空の場合は既存値を保持する）
-- 取引一覧画面からの手動編集（`handleUpdateCategory`）とCSV再取込のどちらでも`updatedAt`を更新する。手動編集した内容は、次回同一idのCSVが再取込された際に（CSV側の値が空でなければ）上書きされる
+- 同一idの行がすでに存在する場合、`handleUpload`の`overwriteCategory`（デフォルト`true`）がオンであれば、category/subcategory/memoのうちCSV側の値が空でない項目のみ既存値を上書きする（空の場合は既存値を保持する）。オフの場合は既存値を一切変更しない
+- 取引一覧画面からの手動編集（`handleUpdateCategory`）とCSV再取込のどちらでも`updatedAt`を更新する。手動編集した内容は、次回同一idのCSVが再取込された際に（`overwriteCategory`がオンかつCSV側の値が空でなければ）上書きされる
 
 ---
 

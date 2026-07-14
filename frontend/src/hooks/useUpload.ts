@@ -48,7 +48,7 @@ function readAsBase64(file: File): Promise<string> {
   });
 }
 
-async function uploadOne(file: File): Promise<FileUploadResult> {
+async function uploadOne(file: File, overwriteCategory: boolean): Promise<FileUploadResult> {
   try {
     const rowCount = await countDataRows(file);
     if (rowCount > MAX_CSV_ROWS) {
@@ -62,7 +62,7 @@ async function uploadOne(file: File): Promise<FileUploadResult> {
     }
 
     const csv = await readAsBase64(file);
-    const data = await runScript<UploadResponse>("handleUpload", { csv });
+    const data = await runScript<UploadResponse>("handleUpload", { csv, overwriteCategory });
 
     if (!data.success) {
       return {
@@ -84,7 +84,7 @@ async function uploadOne(file: File): Promise<FileUploadResult> {
 export function useUpload() {
   const [state, setState] = useState<UploadState>({ status: "idle", results: [] });
 
-  const upload = async (files: File[]) => {
+  const upload = async (files: File[], overwriteCategory: boolean) => {
     if (files.length === 0) {
       return;
     }
@@ -93,7 +93,7 @@ export function useUpload() {
     // 同時書き込みによる重複判定の競合を避けるため、順次アップロードする
     const results: FileUploadResult[] = [];
     for (const file of files) {
-      results.push(await uploadOne(file));
+      results.push(await uploadOne(file, overwriteCategory));
     }
 
     setState({ status: "success", results });

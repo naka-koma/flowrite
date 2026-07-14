@@ -5,13 +5,14 @@ import { SECTION_HEADING_CLASS } from "../lib/ui";
 
 export function UploadForm() {
   const [files, setFiles] = useState<File[]>([]);
+  const [overwriteCategory, setOverwriteCategory] = useState(true);
   const { status, results, upload } = useUpload();
 
   const handleSubmit = () => {
     if (files.length === 0) {
       return;
     }
-    upload(files);
+    upload(files, overwriteCategory);
   };
 
   return (
@@ -35,6 +36,16 @@ export function UploadForm() {
         </button>
         {status === "loading" && <span className="loading loading-spinner loading-sm" />}
       </div>
+      <label className="label mt-2 flex w-fit cursor-pointer items-center gap-2">
+        <input
+          type="checkbox"
+          aria-label="カテゴリ・メモをCSVの内容で上書きする"
+          checked={overwriteCategory}
+          onChange={(e) => setOverwriteCategory(e.target.checked)}
+          className="checkbox checkbox-sm"
+        />
+        <span className="text-sm">カテゴリ・メモをCSVの内容で上書きする</span>
+      </label>
       {status === "loading" && <p className="mt-2 text-sm text-base-content/70">アップロード中...</p>}
       <UploadResult results={results} />
     </div>
