@@ -24,13 +24,22 @@ test("▼をクリックすると大項目グループの開閉ができる", as
   await expect(categorySettings.getByLabel("食費/外食の中項目")).toBeVisible();
 });
 
-test("新しいペアを追加できる", async ({ page }) => {
+test("大項目を追加すると「未分類」の中項目を持つグループが作成される", async ({ page }) => {
   const categorySettings = page.getByTestId("category-settings");
   await categorySettings.getByLabel("新しい大項目").fill("特別費");
-  await categorySettings.getByLabel("新しい中項目").fill("旅行");
-  await categorySettings.getByRole("button", { name: "追加" }).click();
+  await categorySettings.getByLabel("新しい大項目").locator("xpath=ancestor::form[1]").getByRole("button", { name: "追加" }).click();
 
-  await expect(categorySettings.getByLabel("特別費/旅行の中項目")).toHaveValue("旅行");
+  await expect(categorySettings.getByLabel("特別費/未分類の中項目")).toHaveValue("未分類");
+});
+
+test("既存の大項目グループに中項目を追加できる", async ({ page }) => {
+  const categorySettings = page.getByTestId("category-settings");
+  const group = categorySettings.locator("li").filter({ has: page.getByLabel("食費を開閉") });
+
+  await group.getByLabel("食費に追加する中項目").fill("旅行");
+  await group.getByRole("button", { name: "追加" }).click();
+
+  await expect(categorySettings.getByLabel("食費/旅行の中項目")).toHaveValue("旅行");
 });
 
 test("中項目をインライン編集できる（他の行には影響しない）", async ({ page }) => {
