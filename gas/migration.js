@@ -83,6 +83,34 @@ const MIGRATIONS = [
       return { updated: rows.length };
     },
   },
+  {
+    id: "004_backfill_categories_from_raw_data",
+    description: "raw_dataシートの全行から(大項目, 中項目)ペアを抽出し、categoriesシートに未登録分を追加する",
+    run: function () {
+      const rawDataSheet = getRawDataSheet();
+      const lastRow = rawDataSheet.getLastRow();
+      if (lastRow <= 1) {
+        return { updated: 0 };
+      }
+
+      const rows = rawDataSheet.getRange(2, 6, lastRow - 1, 2).getValues(); // F:category, G:subcategory
+      const categoriesSheet = getCategoriesSheet();
+      const existingPairs = getExistingCategoryPairs(categoriesSheet);
+      const seen = new Set();
+      const newPairs = [];
+
+      for (const [category, subcategory] of rows) {
+        if (!category || !subcategory) continue;
+        const key = `${category} ${subcategory}`;
+        if (existingPairs.has(key) || seen.has(key)) continue;
+        seen.add(key);
+        newPairs.push({ category, subcategory });
+      }
+
+      appendCategoryPairs(categoriesSheet, newPairs);
+      return { updated: newPairs.length };
+    },
+  },
 ];
 
 function getAppliedMigrationIds_() {
