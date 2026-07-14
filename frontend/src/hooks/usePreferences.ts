@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { arrayMove } from "@dnd-kit/sortable";
 import type { PreferenceKey, PreferencesResponse, UpdatePreferenceResponse } from "../types/api";
 import { runScript } from "../lib/googleScriptRun";
 import { DEFAULT_THEME, isTheme, type Theme } from "./useTheme";
@@ -106,6 +107,19 @@ export function usePreferences() {
     });
   };
 
+  // D&D並び替え用。ドラッグしたセクション(activeId)を、ドロップ先のセクション(overId)の位置に移動する
+  const reorderDashboardSections = (activeId: DashboardSectionId, overId: DashboardSectionId) => {
+    setDashboardSections((prev) => {
+      const oldIndex = prev.findIndex((s) => s.id === activeId);
+      const newIndex = prev.findIndex((s) => s.id === overId);
+      if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return prev;
+
+      const next = arrayMove(prev, oldIndex, newIndex);
+      persist("dashboardLayout", JSON.stringify(next));
+      return next;
+    });
+  };
+
   const resetDashboardLayout = () => {
     setDashboardSections(DEFAULT_SECTIONS);
     persist("dashboardLayout", JSON.stringify(DEFAULT_SECTIONS));
@@ -124,6 +138,7 @@ export function usePreferences() {
     dashboardSections,
     toggleDashboardSection,
     moveDashboardSection,
+    reorderDashboardSections,
     resetDashboardLayout,
     trendVisibleCount,
     setTrendVisibleCount,
