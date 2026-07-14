@@ -1,7 +1,7 @@
 ---
 name: build-runner
 description: 型チェック（tsc --noEmit）とフロントエンドビルド（npm run build）を実行し、結果を報告するだけの実行専用エージェント。判断や実装は行わない。
-model: claude-haiku-4-5-20251001
+model: haiku
 tools:
   - Bash
 ---
