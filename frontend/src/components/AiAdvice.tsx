@@ -3,7 +3,7 @@ import { MonthSelector } from "./MonthSelector";
 import { YearSelector } from "./YearSelector";
 import { useAiChat } from "../hooks/useAiChat";
 import { useSettings } from "../hooks/useSettings";
-import { maskYenAmounts } from "../lib/money";
+import { formatAmount, maskYenAmounts } from "../lib/money";
 import type { SummaryParams } from "../types/api";
 
 type AiPeriodUnit = "month" | "year" | "all";
@@ -198,6 +198,17 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
 
       {chat.status === "success" && chat.isFinal && chat.todoActions.length > 0 && (
         <div className="mt-3 flex flex-col gap-2">
+          <div className="rounded-box border border-base-300 p-3">
+            <p className="mb-2 text-sm font-medium">見直し案</p>
+            <ul className="flex flex-col gap-1">
+              {chat.todoActions.map((action) => (
+                <li key={action.category} className="flex justify-between text-sm">
+                  <span>{action.category}</span>
+                  <span>{hideAmounts ? "***" : `${formatAmount(action.new_budget)}円`}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
           <button
             type="button"
             onClick={() => chat.applyTodoActions()}
