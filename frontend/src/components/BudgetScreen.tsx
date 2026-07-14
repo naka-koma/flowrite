@@ -4,6 +4,10 @@ import { useCategories } from "../hooks/useCategories";
 import { PageHeader } from "./PageHeader";
 import { SectionCard } from "./SectionCard";
 
+const NEW_CATEGORY_VALUE = "__new__";
+
+const RECOMMENDED_CATEGORIES = ["食費", "交通費", "住居", "水道光熱費", "通信費", "娯楽", "医療", "保険", "その他"];
+
 interface BudgetScreenProps {
   onBack: () => void;
 }
@@ -12,21 +16,29 @@ export function BudgetScreen({ onBack }: BudgetScreenProps) {
   const { status, budgets, errorMessage, mutateState, upsertBudget, deleteBudget } = useBudgets();
   const { status: categoriesStatus, categories, errorMessage: categoriesErrorMessage } = useCategories();
   const [newCategory, setNewCategory] = useState("");
+  const [customCategory, setCustomCategory] = useState("");
   const [newAmount, setNewAmount] = useState("");
   const [confirmingCategory, setConfirmingCategory] = useState<string | null>(null);
 
   const categoryNames = Object.keys(categories);
   const budgetedCategories = new Set(budgets.map((b) => b.category));
-  const unbudgetedCategoryNames = categoryNames.filter((name) => !budgetedCategories.has(name));
+  const unbudgetedExistingCategories = categoryNames.filter((name) => !budgetedCategories.has(name));
+  const recommendedCategories = RECOMMENDED_CATEGORIES.filter(
+    (name) => !categoryNames.includes(name) && !budgetedCategories.has(name),
+  );
+
+  const isNewCategorySelected = newCategory === NEW_CATEGORY_VALUE;
+  const categoryToSubmit = isNewCategorySelected ? customCategory.trim() : newCategory;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const amount = Number(newAmount);
-    if (!newCategory || !Number.isFinite(amount) || amount < 0) return;
+    if (!categoryToSubmit || !Number.isFinite(amount) || amount < 0) return;
 
-    const saved = await upsertBudget({ category: newCategory, monthlyBudget: amount });
+    const saved = await upsertBudget({ category: categoryToSubmit, monthlyBudget: amount });
     if (saved) {
       setNewCategory("");
+      setCustomCategory("");
       setNewAmount("");
     }
   };
@@ -111,47 +123,63 @@ export function BudgetScreen({ onBack }: BudgetScreenProps) {
               </ul>
             )}
 
-            {unbudgetedCategoryNames.length === 0 ? (
-              <p className="text-base-content/70 text-sm">すべてのカテゴリに予算が設定されています</p>
-            ) : (
-              <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
+            <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
+              <label className="flex flex-col gap-1">
+                <span className="text-sm font-medium">大項目</span>
+                <select
+                  aria-label="予算を設定する大項目"
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  className="select select-bordered select-sm"
+                >
+                  <option value="">選択してください</option>
+                  {unbudgetedExistingCategories.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                  {recommendedCategories.map((name) => (
+                    <option key={name} value={name}>
+                      {name}（推奨）
+                    </option>
+                  ))}
+                  <option value={NEW_CATEGORY_VALUE}>新規入力</option>
+                </select>
+              </label>
+
+              {isNewCategorySelected && (
                 <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">大項目</span>
-                  <select
-                    aria-label="予算を設定する大項目"
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    className="select select-bordered select-sm"
-                  >
-                    <option value="">選択してください</option>
-                    {unbudgetedCategoryNames.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">月間予算額</span>
+                  <span className="text-sm font-medium">新しい大項目名</span>
                   <input
-                    type="number"
-                    min={0}
-                    aria-label="新しい月間予算額"
-                    value={newAmount}
-                    onChange={(e) => setNewAmount(e.target.value)}
+                    type="text"
+                    aria-label="新しい大項目名"
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
                     className="input input-bordered input-sm"
                   />
                 </label>
-                <button
-                  type="submit"
-                  disabled={mutateState.status === "loading" || !newCategory}
-                  className="btn btn-primary btn-sm"
-                >
-                  {mutateState.status === "loading" && <span className="loading loading-spinner loading-xs" />}
-                  追加
-                </button>
-              </form>
-            )}
+              )}
+
+              <label className="flex flex-col gap-1">
+                <span className="text-sm font-medium">月間予算額</span>
+                <input
+                  type="number"
+                  min={0}
+                  aria-label="新しい月間予算額"
+                  value={newAmount}
+                  onChange={(e) => setNewAmount(e.target.value)}
+                  className="input input-bordered input-sm"
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={mutateState.status === "loading" || !categoryToSubmit}
+                className="btn btn-primary btn-sm"
+              >
+                {mutateState.status === "loading" && <span className="loading loading-spinner loading-xs" />}
+                追加
+              </button>
+            </form>
 
             {mutateState.status === "error" && (
               <p role="alert" className="alert alert-error">
