@@ -1,7 +1,7 @@
 ---
 name: explore
 description: コードベースの調査専用エージェント。ファイルの場所・構造・依存関係の把握、シンボルや文字列の検索、実装の確認などに使う。読み取り専用で変更は行わない。
-model: claude-haiku-4-5-20251001
+model: haiku
 tools:
   - Glob
   - Grep
