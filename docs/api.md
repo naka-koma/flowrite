@@ -526,6 +526,55 @@ AIアドバイスのプロンプト・使用モデル設定を更新する。
 
 ---
 
+## `handleUpdateCategoryPair(body)`
+
+(大項目, 中項目) のペア単位でリネームする。該当する1行のみを更新する（同じ大項目を持つ他の行には影響しない。大項目をまとめて変更したい場合は`handleRenameCategory`を使う）。
+
+**引数**
+```js
+{
+  "oldCategory": "<変更前の大項目>",
+  "oldSubcategory": "<変更前の中項目>",
+  "newCategory": "<変更後の大項目>",
+  "newSubcategory": "<変更後の中項目>"
+}
+```
+
+**戻り値**
+```js
+{ "success": true }
+```
+
+**注意**
+- いずれかの引数が空文字の場合はエラーを返す
+- 該当する(oldCategory, oldSubcategory)の行が見つからない場合は `{ "success": false, "error": "category pair not found" }` を返す
+- 変更後の(newCategory, newSubcategory)が既に別の行として存在する場合は `{ "success": false, "error": "category pair already exists" }` を返す
+
+---
+
+## `handleDeleteCategoryPair(body)`
+
+(大項目, 中項目) のペア単位で削除する。該当する1行のみを削除する（同じ大項目を持つ他の行には影響しない。大項目をまとめて削除したい場合は`handleDeleteCategory`を使う）。
+
+**引数**
+```js
+{
+  "category": "<大項目>",
+  "subcategory": "<中項目>"
+}
+```
+
+**戻り値**
+```js
+{ "success": true }
+```
+
+**注意**
+- `category` / `subcategory` が空文字の場合はエラーを返す
+- 該当する行がない場合も `{ "success": true }` を返す
+
+---
+
 ## `handleRenameCategory(body)`
 
 大項目をリネームする。該当する大項目を持つ`categories`シートの全ての行のcategoryを一括更新し、対応する`budgets`シートの予算行も追従して更新する。

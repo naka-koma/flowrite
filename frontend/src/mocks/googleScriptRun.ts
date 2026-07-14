@@ -7,6 +7,7 @@ import type {
   DeleteAiAttributeParams,
   DeleteBudgetParams,
   DeleteCategoryParams,
+  DeleteCategoryPairParams,
   MonthlyCalendarParams,
   PreferenceKey,
   RenameCategoryParams,
@@ -19,6 +20,7 @@ import type {
   TrendPoint,
   UpdateAiAttributeParams,
   UpdateCategoryParams,
+  UpdateCategoryPairParams,
   UpdatePreferenceParams,
   UpsertBudgetParams,
 } from "../types/api";
@@ -632,6 +634,60 @@ function mockHandleDeleteCategory(body: DeleteCategoryParams) {
   return { success: true };
 }
 
+function mockHandleUpdateCategoryPair(body: UpdateCategoryPairParams) {
+  const oldCategory = body.oldCategory?.trim();
+  const oldSubcategory = body.oldSubcategory?.trim();
+  const newCategory = body.newCategory?.trim();
+  const newSubcategory = body.newSubcategory?.trim();
+
+  if (!oldCategory || !oldSubcategory || !newCategory || !newSubcategory) {
+    return { success: false, error: "oldCategory, oldSubcategory, newCategory and newSubcategory are required" };
+  }
+  if (oldCategory === newCategory && oldSubcategory === newSubcategory) {
+    return { success: true };
+  }
+
+  const oldSubcategories = mockCategoriesMaster[oldCategory];
+  if (!oldSubcategories || !oldSubcategories.includes(oldSubcategory)) {
+    return { success: false, error: "category pair not found" };
+  }
+
+  const duplicateExists = (mockCategoriesMaster[newCategory] ?? []).includes(newSubcategory);
+  if (duplicateExists && !(oldCategory === newCategory && oldSubcategory === newSubcategory)) {
+    return { success: false, error: "category pair already exists" };
+  }
+
+  mockCategoriesMaster[oldCategory] = oldSubcategories.filter((s) => s !== oldSubcategory);
+  if (mockCategoriesMaster[oldCategory].length === 0) {
+    delete mockCategoriesMaster[oldCategory];
+  }
+
+  if (!mockCategoriesMaster[newCategory]) {
+    mockCategoriesMaster[newCategory] = [];
+  }
+  mockCategoriesMaster[newCategory].push(newSubcategory);
+
+  return { success: true };
+}
+
+function mockHandleDeleteCategoryPair(body: DeleteCategoryPairParams) {
+  const category = body.category?.trim();
+  const subcategory = body.subcategory?.trim();
+  if (!category || !subcategory) {
+    return { success: false, error: "category and subcategory are required" };
+  }
+
+  const subcategories = mockCategoriesMaster[category];
+  if (subcategories) {
+    mockCategoriesMaster[category] = subcategories.filter((s) => s !== subcategory);
+    if (mockCategoriesMaster[category].length === 0) {
+      delete mockCategoriesMaster[category];
+    }
+  }
+
+  return { success: true };
+}
+
 const MOCK_BUDGETS_STORAGE_KEY = "__mock_budgets__";
 
 // 実際のGASではbudgetsシートに永続化されるため、モックでも
@@ -729,6 +785,10 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleRenameCategory(args[0] as RenameCategoryParams);
     case "handleDeleteCategory":
       return mockHandleDeleteCategory(args[0] as DeleteCategoryParams);
+    case "handleUpdateCategoryPair":
+      return mockHandleUpdateCategoryPair(args[0] as UpdateCategoryPairParams);
+    case "handleDeleteCategoryPair":
+      return mockHandleDeleteCategoryPair(args[0] as DeleteCategoryPairParams);
     case "handleGetBudgets":
       return mockHandleGetBudgets();
     case "handleUpsertBudget":
