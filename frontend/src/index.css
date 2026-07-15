@@ -240,7 +240,8 @@ body {
 .input,
 .textarea,
 .select {
-  background-color: color-mix(in oklab, var(--color-base-100) 70%, transparent);
+  /* 操作系コンポーネントはガラス感を残しつつ視認性を優先し、カード等の装飾面より不透明度を高くする */
+  background-color: color-mix(in oklab, var(--color-base-100) 92%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
