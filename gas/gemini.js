@@ -44,13 +44,13 @@ function getGeminiModelsToTry() {
   return configuredModel ? [configuredModel] : GEMINI_MODEL_FALLBACK_ORDER;
 }
 
-function callGeminiChatApi_(model, apiKey, contents) {
+function callGeminiChatApi_(model, apiKey, contents, responseSchema) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const payload = {
     contents,
     generationConfig: {
       responseMimeType: "application/json",
-      responseSchema: CHAT_RESPONSE_SCHEMA,
+      responseSchema,
     },
   };
   const options = {
@@ -66,9 +66,9 @@ function callGeminiChatApi_(model, apiKey, contents) {
 
 // モデルのフォールバック・リトライを行いつつ1ターン分のGemini応答を取得し、
 // 構造化出力(JSON文字列)をパースして返す
-function runGeminiChat_(apiKey, contents) {
+function runGeminiChat_(apiKey, contents, responseSchema) {
   for (const model of getGeminiModelsToTry()) {
-    const { code, body: responseBody } = callGeminiChatApi_(model, apiKey, contents);
+    const { code, body: responseBody } = callGeminiChatApi_(model, apiKey, contents, responseSchema);
 
     if (code === 200) {
       const json = JSON.parse(responseBody);
@@ -193,7 +193,7 @@ function handleStartAiChat(body) {
     ].filter((s) => s);
     const initialPrompt = sections.join("\n\n");
 
-    const result = runGeminiChat_(apiKey, [{ role: "user", parts: [{ text: initialPrompt }] }]);
+    const result = runGeminiChat_(apiKey, [{ role: "user", parts: [{ text: initialPrompt }] }], CHAT_RESPONSE_SCHEMA);
     if (!result.success) {
       return { success: false, error: result.error };
     }
@@ -238,7 +238,7 @@ function handleContinueAiChat(body) {
     const nextHistory = history.concat([{ role: "user", text: userReply }]);
     const contents = nextHistory.map((turn) => ({ role: turn.role, parts: [{ text: turn.text }] }));
 
-    const result = runGeminiChat_(apiKey, contents);
+    const result = runGeminiChat_(apiKey, contents, CHAT_RESPONSE_SCHEMA);
     if (!result.success) {
       return { success: false, error: result.error };
     }
@@ -258,6 +258,198 @@ function handleContinueAiChat(body) {
     };
   } catch (e) {
     Logger.log(`handleContinueAiChat unexpected error: ${e.message}`);
+    return { success: false, error: e.message };
+  }
+}
+
+// AI分類提案1バッチ分のレスポンススキーマ
+const CATEGORY_SUGGESTION_RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    suggestions: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          id: { type: "STRING", description: "分類対象データのidをそのまま返す" },
+          category: { type: "STRING", description: "候補一覧の中から最も適切な大項目" },
+          subcategory: { type: "STRING", description: "候補一覧の中から最も適切な中項目" },
+          reason: { type: "STRING", description: "分類理由。20文字程度の短い説明" },
+        },
+        required: ["id", "category", "subcategory", "reason"],
+      },
+    },
+  },
+  required: ["suggestions"],
+};
+
+// 1バッチあたりGeminiに渡す取引件数
+const CATEGORY_SUGGESTION_BATCH_SIZE = 25;
+
+// 1回のhandleGetAiCategorySuggestions呼び出しで処理する対象件数の上限。
+// GASの実行時間制限（6分）に対する安全策として、分割実行はせず超過時はユーザーにスコープ絞り込みを促す
+const MAX_AI_CATEGORY_TARGET_ROWS = 150;
+
+function buildCategoryPairsText_(categories) {
+  const lines = [];
+  Object.keys(categories).forEach((category) => {
+    categories[category].forEach((subcategory) => {
+      lines.push(`${category}:${subcategory}`);
+    });
+  });
+  return lines.join("、");
+}
+
+function buildCategorySuggestionPrompt_(rows, categoryPairsText) {
+  const rowsText = rows
+    .map((r) => `${r.id} | ${r.date} | ${r.content} | ${formatYen_(r.amount)} | ${r.institution}`)
+    .join("\n");
+
+  return (
+    "あなたは家計簿アプリの取引分類アシスタントです。以下の取引データそれぞれに対し、" +
+    "「利用可能な大項目:中項目の一覧」の中から最も適切な組み合わせを1つ選んでください。\n" +
+    "一覧内に適切な組み合わせが見つからない場合に限り、新しい大項目・中項目を提案しても構いません。" +
+    "その場合はcategory/subcategoryに新しい名称を記入してください。ただし安易な新設は避け、" +
+    "既存の一覧に近いものがあればそちらを優先してください。\n\n" +
+    `# 利用可能な大項目:中項目の一覧\n${categoryPairsText}\n\n` +
+    `# 分類対象データ (id | 日付 | 内容 | 金額 | 金融機関)\n${rowsText}`
+  );
+}
+
+// 指定した年月の取引に対し、Geminiにカテゴリ分類を提案させる。
+// scope="uncategorized"なら大項目が空の行のみ、"all"ならロック済み以外の全行を対象にする
+function handleGetAiCategorySuggestions(body) {
+  try {
+    const year = Number(body && body.year);
+    const month = Number(body && body.month);
+    const scope = (body && body.scope) || "uncategorized";
+    const categoryFilter = Array.isArray(body && body.categoryFilter) ? body.categoryFilter : [];
+    const institutionKeyword = ((body && body.institutionKeyword) || "").trim();
+    const contentKeyword = ((body && body.contentKeyword) || "").trim();
+    const amountMin = Number(body && body.amountMin) || 0;
+    const amountMax = Number(body && body.amountMax) || 0;
+
+    if (!year || !month) {
+      return { success: false, error: "year and month are required" };
+    }
+    if (amountMin && amountMax && amountMin > amountMax) {
+      return { success: false, error: "amountMin must not be greater than amountMax" };
+    }
+
+    const apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
+    if (!apiKey) {
+      return { success: false, error: "GEMINI_API_KEY is not set in script properties" };
+    }
+
+    const sheet = getRawDataSheet();
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      return { success: true, suggestions: [], targetCount: 0 };
+    }
+
+    const data = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 1);
+    const tz = Session.getScriptTimeZone();
+
+    const targets = [];
+    for (const row of data) {
+      const date = new Date(row[1]);
+      if (date < start || date >= end) continue;
+      if (row[12] === true) continue; // categoryLocked済みは提案対象外
+
+      const category = row[5];
+      const subcategory = row[6];
+      if (scope === "uncategorized" && category !== "") continue;
+
+      if (categoryFilter.length > 0) {
+        const matchesCategory = categoryFilter.some(
+          (f) => f.category === category && f.subcategory === subcategory,
+        );
+        if (!matchesCategory) continue;
+      }
+      if (institutionKeyword && String(row[4]).indexOf(institutionKeyword) === -1) continue;
+      if (contentKeyword && String(row[2]).indexOf(contentKeyword) === -1) continue;
+      if (amountMin || amountMax) {
+        if (row[3] >= 0) continue; // 収入は絶対値フィルタ指定時は常に除外
+        const absAmount = Math.abs(row[3]);
+        if (amountMin && absAmount < amountMin) continue;
+        if (amountMax && absAmount > amountMax) continue;
+      }
+
+      targets.push({
+        id: row[0],
+        date: Utilities.formatDate(date, tz, "yyyy/MM/dd"),
+        content: row[2],
+        amount: row[3],
+        institution: row[4],
+        currentCategory: category,
+        currentSubcategory: subcategory,
+      });
+    }
+
+    if (targets.length === 0) {
+      return { success: true, suggestions: [], targetCount: 0 };
+    }
+
+    if (targets.length > MAX_AI_CATEGORY_TARGET_ROWS) {
+      return {
+        success: false,
+        error: `対象件数が多すぎます（${MAX_AI_CATEGORY_TARGET_ROWS}件が上限です）。「未分類のみ」を選ぶか、月を分けて実行してください`,
+      };
+    }
+
+    const { categories } = handleGetCategories();
+    const categoryPairsText = buildCategoryPairsText_(categories);
+    const existingPairKeys = new Set();
+    Object.keys(categories).forEach((category) => {
+      categories[category].forEach((subcategory) => {
+        existingPairKeys.add(`${category} ${subcategory}`);
+      });
+    });
+    const targetById = new Map(targets.map((t) => [t.id, t]));
+    const suggestions = [];
+    const logSheet = getAiLogSheet();
+
+    for (let i = 0; i < targets.length; i += CATEGORY_SUGGESTION_BATCH_SIZE) {
+      const batch = targets.slice(i, i + CATEGORY_SUGGESTION_BATCH_SIZE);
+      const prompt = buildCategorySuggestionPrompt_(batch, categoryPairsText);
+      const result = runGeminiChat_(
+        apiKey,
+        [{ role: "user", parts: [{ text: prompt }] }],
+        CATEGORY_SUGGESTION_RESPONSE_SCHEMA,
+      );
+
+      if (!result.success) {
+        return { success: false, error: result.error };
+      }
+
+      const batchSuggestions = Array.isArray(result.parsed.suggestions) ? result.parsed.suggestions : [];
+      for (const s of batchSuggestions) {
+        const target = targetById.get(s.id);
+        if (!target) continue; // ハルシネーション対策: 対象行に存在しないidは無視
+
+        suggestions.push({
+          id: target.id,
+          date: target.date,
+          content: target.content,
+          amount: target.amount,
+          institution: target.institution,
+          currentCategory: target.currentCategory,
+          currentSubcategory: target.currentSubcategory,
+          suggestedCategory: s.category,
+          suggestedSubcategory: s.subcategory,
+          isNewCategory: !existingPairKeys.has(`${s.category} ${s.subcategory}`),
+          reason: s.reason,
+        });
+      }
+
+      logSheet.appendRow([new Date().toISOString(), prompt, JSON.stringify(batchSuggestions)]);
+    }
+
+    return { success: true, suggestions, targetCount: targets.length };
+  } catch (e) {
+    Logger.log(`handleGetAiCategorySuggestions unexpected error: ${e.message}`);
     return { success: false, error: e.message };
   }
 }

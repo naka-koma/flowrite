@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { AiCategorySuggestions } from "./AiCategorySuggestions";
 import { MonthSelector } from "./MonthSelector";
 import { PageHeader } from "./PageHeader";
 import { SectionCard } from "./SectionCard";
@@ -29,6 +30,7 @@ export function TransactionScreen({ hideAmounts, onBack }: TransactionScreenProp
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [pageSize, setPageSize] = useState<TransactionPageSize>(50);
   const [page, setPage] = useState(1);
+  const [showAiSuggestions, setShowAiSuggestions] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [addingCategoryForId, setAddingCategoryForId] = useState<string | null>(null);
   const [newCategoryInput, setNewCategoryInput] = useState("");
@@ -71,9 +73,9 @@ export function TransactionScreen({ hideAmounts, onBack }: TransactionScreenProp
 
   const commitChange = async (
     row: TransactionRow,
-    patch: Partial<Pick<TransactionRow, "category" | "subcategory" | "memo">>,
+    patch: Partial<Pick<TransactionRow, "category" | "subcategory" | "memo" | "locked">>,
   ) => {
-    const previous = { category: row.category, subcategory: row.subcategory, memo: row.memo };
+    const previous = { category: row.category, subcategory: row.subcategory, memo: row.memo, locked: row.locked };
     const next = { ...previous, ...patch };
 
     setSavingId(row.id);
@@ -168,7 +170,25 @@ export function TransactionScreen({ hideAmounts, onBack }: TransactionScreenProp
                 ))}
               </select>
             </label>
+            <button
+              type="button"
+              onClick={() => setShowAiSuggestions((v) => !v)}
+              className={`btn btn-sm ${showAiSuggestions ? "btn-active" : ""}`}
+            >
+              AI分類提案
+            </button>
           </div>
+
+          {showAiSuggestions && (
+            <AiCategorySuggestions
+              year={year}
+              month={month}
+              hideAmounts={hideAmounts}
+              onApplied={list.reload}
+              categoryMaster={categories.categories}
+              addCategory={categories.addCategory}
+            />
+          )}
 
           {list.status === "loading" && list.transactions.length === 0 && (
             <p className="flex items-center gap-2">
@@ -214,6 +234,7 @@ export function TransactionScreen({ hideAmounts, onBack }: TransactionScreenProp
                       <th>大項目</th>
                       <th>中項目</th>
                       <th>メモ</th>
+                      <th>ロック</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -320,6 +341,16 @@ export function TransactionScreen({ hideAmounts, onBack }: TransactionScreenProp
                                 }
                               }}
                               className="input input-bordered input-sm"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="checkbox"
+                              aria-label="ロック"
+                              checked={t.locked}
+                              disabled={isSaving}
+                              onChange={(e) => commitChange(t, { locked: e.target.checked })}
+                              className="checkbox checkbox-sm"
                             />
                           </td>
                         </tr>

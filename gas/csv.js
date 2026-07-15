@@ -1,7 +1,13 @@
 function buildExistingRowMap_(data) {
   const map = new Map();
   data.forEach((row, index) => {
-    map.set(row[0], { rowIndex: index, category: row[5], subcategory: row[6], memo: row[7] });
+    map.set(row[0], {
+      rowIndex: index,
+      category: row[5],
+      subcategory: row[6],
+      memo: row[7],
+      categoryLocked: row[12] === true,
+    });
   });
   return map;
 }
@@ -24,7 +30,7 @@ function applyExistingRowUpdates_(sheet, data, rowMap, csvRows, now, overwriteCa
 
   for (const csvRow of csvRows) {
     const existing = rowMap.get(csvRow.id);
-    if (!existing) continue;
+    if (!existing || existing.categoryLocked) continue;
 
     const merged = mergeExistingRow_(existing, csvRow);
     if (!merged.changed) continue;
@@ -76,7 +82,7 @@ function handleUpload(body) {
 
   const sheet = getRawDataSheet();
   const lastRow = sheet.getLastRow();
-  const data = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, 12).getValues() : [];
+  const data = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, 13).getValues() : [];
   const rowMap = buildExistingRowMap_(data);
 
   const newRows = rows.filter((row) => !rowMap.has(row.id));

@@ -96,6 +96,21 @@ test("表示件数を切り替えるとページングが変わる", async ({ pa
   await expect(page.getByText(/件中 1〜10件を表示/).first()).toBeVisible();
 });
 
+test("ロックチェックボックスを手動でON/OFFできる", async ({ page }) => {
+  await page.goto("/");
+  await openTransactionList(page);
+
+  const row = page.getByRole("row").filter({ hasText: "店舗0" });
+  const lockCheckbox = row.getByLabel("ロック");
+  await expect(lockCheckbox).not.toBeChecked();
+
+  await lockCheckbox.check();
+  await expect(lockCheckbox).toBeChecked();
+
+  await lockCheckbox.uncheck();
+  await expect(lockCheckbox).not.toBeChecked();
+});
+
 test("表示件数ですべてを選択するとスクロールで追加の取引が読み込まれる", async ({ page }) => {
   await page.goto("/");
   await openTransactionList(page);

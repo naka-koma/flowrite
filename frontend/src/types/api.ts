@@ -232,6 +232,7 @@ export interface TransactionRow {
   category: string;
   subcategory: string;
   memo: string;
+  locked: boolean;
 }
 
 export interface TransactionListParams {
@@ -256,10 +257,61 @@ export interface UpdateCategoryParams {
   category: string;
   subcategory: string;
   memo: string;
+  locked: boolean;
 }
 
 export interface UpdateCategoryResponse {
   success: boolean;
+  error?: string;
+}
+
+export type AiCategorySuggestionScope = "uncategorized" | "all";
+
+export interface AiCategorySuggestionCategoryFilterEntry {
+  category: string;
+  subcategory: string;
+}
+
+export interface AiCategorySuggestionParams {
+  year: number;
+  month: number;
+  scope: AiCategorySuggestionScope;
+  categoryFilter?: AiCategorySuggestionCategoryFilterEntry[];
+  institutionKeyword?: string;
+  contentKeyword?: string;
+  amountMin?: number;
+  amountMax?: number;
+}
+
+export interface AiCategorySuggestion {
+  id: string;
+  date: string;
+  content: string;
+  amount: number;
+  institution: string;
+  currentCategory: string;
+  currentSubcategory: string;
+  suggestedCategory: string;
+  suggestedSubcategory: string;
+  isNewCategory: boolean;
+  reason: string;
+}
+
+export interface AiCategorySuggestionsResponse {
+  success: boolean;
+  suggestions: AiCategorySuggestion[];
+  targetCount: number;
+  error?: string;
+}
+
+export interface ApplyAiCategorySuggestionsParams {
+  suggestions: { id: string; category: string; subcategory: string }[];
+}
+
+export interface ApplyAiCategorySuggestionsResponse {
+  success: boolean;
+  applied: number;
+  notFound: number;
   error?: string;
 }
 

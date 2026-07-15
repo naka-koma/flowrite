@@ -111,6 +111,32 @@ const MIGRATIONS = [
       return { updated: newPairs.length };
     },
   },
+  {
+    id: "005_add_category_locked",
+    description: "raw_dataにcategoryLocked列（M列）を追加し、既存行はFALSEで初期化する",
+    run: function () {
+      const sheet = getRawDataSheet();
+      const lastRow = sheet.getLastRow();
+
+      const headerRange = sheet.getRange(1, 13, 1, 1);
+      if (headerRange.getValue() !== "categoryLocked") {
+        headerRange.setValue("categoryLocked");
+      }
+
+      if (lastRow <= 1) {
+        return { updated: 0 };
+      }
+
+      const range = sheet.getRange(2, 13, lastRow - 1, 1);
+      const existing = range.getValues();
+      // 未設定(空文字)の行のみFALSEで埋める。再実行時に既存のロック状態を壊さない
+      const filled = existing.map(function (row) {
+        return [row[0] === "" ? false : row[0]];
+      });
+      range.setValues(filled);
+      return { updated: lastRow - 1 };
+    },
+  },
 ];
 
 function getAppliedMigrationIds_() {

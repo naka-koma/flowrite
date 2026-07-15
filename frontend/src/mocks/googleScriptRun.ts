@@ -2,6 +2,8 @@ import type {
   AddAiAttributeParams,
   AddCategoryParams,
   AiAttribute,
+  AiCategorySuggestionParams,
+  ApplyAiCategorySuggestionsParams,
   Budget,
   CalendarDay,
   ChatTurn,
@@ -40,6 +42,9 @@ interface MockScenario {
   trendEmpty?: boolean;
   trendManyPoints?: boolean;
   transactionListEmpty?: boolean;
+  aiCategorySuggestionsEmpty?: boolean;
+  aiCategorySuggestionsError?: boolean;
+  aiCategorySuggestionsWithNewCategory?: boolean;
 }
 
 function getScenario(): MockScenario {
@@ -554,7 +559,10 @@ const mockCategoriesMaster: Record<string, string[]> = Object.fromEntries(
 );
 
 // カテゴリ・メモの編集はページリロードをまたがなくてよいため、モジュール内メモリで十分
-const mockCategoryOverrides = new Map<string, { category: string; subcategory: string; memo: string }>();
+const mockCategoryOverrides = new Map<
+  string,
+  { category: string; subcategory: string; memo: string; locked: boolean }
+>();
 
 function buildMockTransactions(year: number, month: number): TransactionRow[] {
   const count = 55; // ページネーション（1ページ50件）を跨ぐ件数にする
@@ -575,6 +583,7 @@ function buildMockTransactions(year: number, month: number): TransactionRow[] {
       category,
       subcategory,
       memo: "",
+      locked: false,
     };
   });
 }
@@ -596,7 +605,13 @@ function mockHandleTransactionList(params: TransactionListParams) {
   const transactions = buildMockTransactions(year, month).map((t) => {
     const override = mockCategoryOverrides.get(t.id);
     return override
-      ? { ...t, category: override.category, subcategory: override.subcategory, memo: override.memo }
+      ? {
+          ...t,
+          category: override.category,
+          subcategory: override.subcategory,
+          memo: override.memo,
+          locked: override.locked,
+        }
       : t;
   });
 
@@ -618,8 +633,86 @@ function mockHandleUpdateCategory(body: UpdateCategoryParams) {
     return { success: false, error: "id is required" };
   }
 
-  mockCategoryOverrides.set(body.id, { category: body.category, subcategory: body.subcategory, memo: body.memo });
+  mockCategoryOverrides.set(body.id, {
+    category: body.category,
+    subcategory: body.subcategory,
+    memo: body.memo,
+    locked: !!body.locked,
+  });
   return { success: true };
+}
+
+function mockHandleGetAiCategorySuggestions(params: AiCategorySuggestionParams) {
+  if (getScenario().aiCategorySuggestionsError) {
+    return {
+      success: false,
+      suggestions: [],
+      targetCount: 0,
+      error: "GEMINI_API_KEY is not set in script properties",
+    };
+  }
+  if (getScenario().aiCategorySuggestionsEmpty) {
+    return { success: true, suggestions: [], targetCount: 0 };
+  }
+
+  // scopeに関わらず先頭を固定の提案対象とする（実際の空欄判定はGAS側の責務のためモックでは簡略化）
+  let targets = buildMockTransactions(params.year, params.month);
+
+  if (params.institutionKeyword) {
+    targets = targets.filter((t) => t.institution.includes(params.institutionKeyword!));
+  }
+  if (params.contentKeyword) {
+    targets = targets.filter((t) => t.content.includes(params.contentKeyword!));
+  }
+  if (params.categoryFilter && params.categoryFilter.length > 0) {
+    const keys = new Set(params.categoryFilter.map((f) => `${f.category} ${f.subcategory}`));
+    targets = targets.filter((t) => keys.has(`${t.category} ${t.subcategory}`));
+  }
+  if (params.amountMin || params.amountMax) {
+    targets = targets.filter((t) => {
+      if (t.amount >= 0) return false;
+      const absAmount = Math.abs(t.amount);
+      if (params.amountMin && absAmount < params.amountMin) return false;
+      if (params.amountMax && absAmount > params.amountMax) return false;
+      return true;
+    });
+  }
+
+  targets = targets.slice(0, 5);
+
+  const withNewCategory = getScenario().aiCategorySuggestionsWithNewCategory;
+
+  const suggestions = targets.map((t, i) => {
+    const isNewCategory = withNewCategory && i === 0;
+    return {
+      id: t.id,
+      date: t.date,
+      content: t.content,
+      amount: t.amount,
+      institution: t.institution,
+      currentCategory: t.category,
+      currentSubcategory: t.subcategory,
+      suggestedCategory: isNewCategory ? "新規テスト大項目" : "娯楽",
+      suggestedSubcategory: isNewCategory ? "新規テスト中項目" : "映画",
+      isNewCategory: !!isNewCategory,
+      reason: "内容と金額のパターンから推定しました",
+    };
+  });
+
+  return { success: true, suggestions, targetCount: suggestions.length };
+}
+
+function mockHandleApplyAiCategorySuggestions(body: ApplyAiCategorySuggestionsParams) {
+  body.suggestions.forEach((s) => {
+    const prev = mockCategoryOverrides.get(s.id);
+    mockCategoryOverrides.set(s.id, {
+      category: s.category,
+      subcategory: s.subcategory,
+      memo: prev?.memo ?? "",
+      locked: true,
+    });
+  });
+  return { success: true, applied: body.suggestions.length, notFound: 0 };
 }
 
 function mockHandleGetCategories() {
@@ -849,6 +942,10 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleTransactionList(args[0] as TransactionListParams);
     case "handleUpdateCategory":
       return mockHandleUpdateCategory(args[0] as UpdateCategoryParams);
+    case "handleGetAiCategorySuggestions":
+      return mockHandleGetAiCategorySuggestions(args[0] as AiCategorySuggestionParams);
+    case "handleApplyAiCategorySuggestions":
+      return mockHandleApplyAiCategorySuggestions(args[0] as ApplyAiCategorySuggestionsParams);
     case "handleGetCategories":
       return mockHandleGetCategories();
     case "handleAddCategory":
