@@ -204,6 +204,59 @@ export interface DeleteAiAttributeResponse {
   error?: string;
 }
 
+export type AiMemoryType = "insight" | "categoryPattern";
+
+export interface AiMemory {
+  id: string;
+  type: AiMemoryType;
+  content: string;
+  category: string;
+  subcategory: string;
+  createdAt: string;
+}
+
+export interface GetAiMemoriesResponse {
+  memories: AiMemory[];
+  error?: string;
+}
+
+export interface AddAiMemoryParams {
+  type: AiMemoryType;
+  content: string;
+  category?: string;
+  subcategory?: string;
+}
+
+export interface AddAiMemoryResponse {
+  success: boolean;
+  memory?: AiMemory;
+  error?: string;
+}
+
+export interface DeleteAiMemoryParams {
+  id: string;
+}
+
+export interface DeleteAiMemoryResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface AiFocusPoint {
+  title: string;
+  context: string;
+}
+
+export interface GetAiFocusPointsParams {
+  summaryParams: SummaryParams;
+}
+
+export interface GetAiFocusPointsResponse {
+  success: boolean;
+  focusPoints: AiFocusPoint[];
+  error?: string;
+}
+
 export interface PreferencesResponse {
   theme: string;
   dashboardLayout: string;

@@ -35,7 +35,8 @@ test("非表示時は取引明細やAIアドバイスの金額もマスクされ
   await page.getByRole("button", { name: "食費" }).click();
   await expect(page.getByRole("cell", { name: "***", exact: true }).first()).toBeVisible();
 
-  await page.getByRole("button", { name: "今月のざっくり振り返り" }).click();
+  await page.getByRole("button", { name: "気になる点を探す" }).click();
+  await page.getByRole("button", { name: "外食費が先月より増えています" }).click();
   await page.getByRole("button", { name: "外食が増えたかも" }).click();
   await page.getByRole("button", { name: "来月は減らしたい" }).click();
 

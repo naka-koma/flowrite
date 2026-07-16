@@ -1,17 +1,21 @@
 import type {
   AddAiAttributeParams,
+  AddAiMemoryParams,
   AddCategoryParams,
   AiAttribute,
   AiCategorySuggestionParams,
+  AiMemory,
   ApplyAiCategorySuggestionsParams,
   Budget,
   CalendarDay,
   ChatTurn,
   ContinueAiChatParams,
   DeleteAiAttributeParams,
+  DeleteAiMemoryParams,
   DeleteBudgetParams,
   DeleteCategoryParams,
   DeleteCategoryPairParams,
+  GetAiFocusPointsParams,
   GetBudgetVarianceParams,
   MonthlyCalendarParams,
   PreferenceKey,
@@ -45,6 +49,8 @@ interface MockScenario {
   aiCategorySuggestionsEmpty?: boolean;
   aiCategorySuggestionsError?: boolean;
   aiCategorySuggestionsWithNewCategory?: boolean;
+  aiFocusPointsEmpty?: boolean;
+  aiFocusPointsError?: boolean;
 }
 
 function getScenario(): MockScenario {
@@ -470,6 +476,81 @@ function mockHandleDeleteAiAttribute(body: DeleteAiAttributeParams) {
   const attributes = loadMockAiAttributes().filter((a) => a.id !== body.id);
   saveMockAiAttributes(attributes);
   return { success: true };
+}
+
+const MOCK_AI_MEMORY_STORAGE_KEY = "__mock_ai_memory__";
+
+// 実際のGASではai_memoryシートに永続化されるため、モックでも
+// ページリロードをまたいで再現できるよう sessionStorage に保存する
+function loadMockAiMemories(): AiMemory[] {
+  const raw = sessionStorage.getItem(MOCK_AI_MEMORY_STORAGE_KEY);
+  if (raw) {
+    try {
+      return JSON.parse(raw) as AiMemory[];
+    } catch {
+      // 壊れたデータは無視してデフォルトにフォールバック
+    }
+  }
+  return [];
+}
+
+function saveMockAiMemories(memories: AiMemory[]) {
+  sessionStorage.setItem(MOCK_AI_MEMORY_STORAGE_KEY, JSON.stringify(memories));
+}
+
+function mockHandleGetAiMemories() {
+  return { memories: loadMockAiMemories() };
+}
+
+function mockHandleAddAiMemory(body: AddAiMemoryParams) {
+  const content = body.content?.trim();
+  if (!content) {
+    return { success: false, error: "content is required" };
+  }
+  if (body.type === "categoryPattern" && (!body.category?.trim() || !body.subcategory?.trim())) {
+    return { success: false, error: "category and subcategory are required for categoryPattern" };
+  }
+
+  const memory: AiMemory = {
+    id: crypto.randomUUID(),
+    type: body.type,
+    content,
+    category: body.category?.trim() ?? "",
+    subcategory: body.subcategory?.trim() ?? "",
+    createdAt: new Date().toISOString(),
+  };
+  const memories = loadMockAiMemories();
+  memories.push(memory);
+  saveMockAiMemories(memories);
+  return { success: true, memory };
+}
+
+function mockHandleDeleteAiMemory(body: DeleteAiMemoryParams) {
+  const memories = loadMockAiMemories().filter((m) => m.id !== body.id);
+  saveMockAiMemories(memories);
+  return { success: true };
+}
+
+const MOCK_FOCUS_POINTS = [
+  { title: "外食費が先月より増えています", context: "今月は外食費が先月より増加傾向です。理由を深掘りしましょう。" },
+  { title: "固定費に見直せる余地がありそうです", context: "固定費の割合が高めです。契約内容を一緒に振り返りましょう。" },
+];
+
+function mockHandleGetAiFocusPoints(params: GetAiFocusPointsParams) {
+  if (getScenario().aiFocusPointsError) {
+    return { success: false, focusPoints: [], error: "GEMINI_API_KEY is not set in script properties" };
+  }
+  if (getScenario().aiFocusPointsEmpty) {
+    return { success: true, focusPoints: [] };
+  }
+
+  const summary = mockHandleSummary(params.summaryParams);
+  const hasData = summary.categories.length > 0 || summary.totalExpense > 0 || summary.totalIncome > 0;
+  if (!hasData) {
+    return { success: false, error: "指定した期間のデータがありません" };
+  }
+
+  return { success: true, focusPoints: MOCK_FOCUS_POINTS };
 }
 
 const MOCK_PREFERENCE_KEYS: PreferenceKey[] = ["theme", "dashboardLayout", "trendVisibleCount"];
@@ -934,6 +1015,14 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleUpdateAiAttribute(args[0] as UpdateAiAttributeParams);
     case "handleDeleteAiAttribute":
       return mockHandleDeleteAiAttribute(args[0] as DeleteAiAttributeParams);
+    case "handleGetAiMemories":
+      return mockHandleGetAiMemories();
+    case "handleAddAiMemory":
+      return mockHandleAddAiMemory(args[0] as AddAiMemoryParams);
+    case "handleDeleteAiMemory":
+      return mockHandleDeleteAiMemory(args[0] as DeleteAiMemoryParams);
+    case "handleGetAiFocusPoints":
+      return mockHandleGetAiFocusPoints(args[0] as GetAiFocusPointsParams);
     case "handleGetPreferences":
       return mockHandleGetPreferences();
     case "handleUpdatePreference":

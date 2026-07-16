@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { openSettings } from "./helpers";
+import { openAiScreen } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await openSettings(page);
+  await openAiScreen(page);
 });
 
 test("属性情報が未登録の場合は案内メッセージが表示される", async ({ page }) => {
@@ -85,7 +85,7 @@ test("追加した属性情報は再読み込み後も保持される", async ({
   await expect(aiAttributes.getByLabel("ワークスタイルの項目名")).toBeVisible();
 
   await page.reload();
-  await openSettings(page);
+  await openAiScreen(page);
 
   await expect(page.getByTestId("ai-attributes-settings").getByLabel("ワークスタイルの項目名")).toHaveValue(
     "ワークスタイル",

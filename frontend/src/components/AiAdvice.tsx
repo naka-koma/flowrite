@@ -2,11 +2,13 @@ import { useState } from "react";
 import { MonthSelector } from "./MonthSelector";
 import { YearSelector } from "./YearSelector";
 import { useAiChat } from "../hooks/useAiChat";
-import { useSettings } from "../hooks/useSettings";
+import { useAiFocusPoints } from "../hooks/useAiFocusPoints";
+import { useAiMemories } from "../hooks/useAiMemories";
 import { formatAmount, maskYenAmounts } from "../lib/money";
-import type { SummaryParams } from "../types/api";
+import type { AiFocusPoint, SummaryParams } from "../types/api";
 
 type AiPeriodUnit = "month" | "year" | "all";
+type WizardStep = "period" | "focusPoints" | "chat";
 
 const UNIT_LABELS: Record<AiPeriodUnit, string> = { month: "月", year: "年", all: "全て" };
 
@@ -16,35 +18,42 @@ interface AiAdviceProps {
 
 export function AiAdvice({ hideAmounts }: AiAdviceProps) {
   const now = new Date();
+  const [step, setStep] = useState<WizardStep>("period");
   const [unit, setUnit] = useState<AiPeriodUnit>("month");
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
-  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [selectedFocusPoint, setSelectedFocusPoint] = useState<AiFocusPoint | null>(null);
   const [showFreeTextInput, setShowFreeTextInput] = useState(false);
   const [freeText, setFreeText] = useState("");
+  const [savedMessageIndices, setSavedMessageIndices] = useState<Set<number>>(new Set());
 
-  const { status: settingsStatus, settings } = useSettings();
+  const focusPoints = useAiFocusPoints();
   const chat = useAiChat();
+  const memories = useAiMemories();
 
   const summaryParams: SummaryParams =
     unit === "year" ? { unit: "year", year } : unit === "all" ? { unit: "all" } : { unit: "month", year, month };
 
-  const agendaTopics = (settings?.agendaTopics ?? "")
-    .split("\n")
-    .map((t) => t.trim())
-    .filter(Boolean);
-
   const maskText = (text: string) => (hideAmounts ? maskYenAmounts(text) : text);
 
-  const handleSelectTopic = (topic: string) => {
-    setSelectedTopic(topic);
-    chat.startChat(topic, summaryParams);
+  const handleFindFocusPoints = () => {
+    setStep("focusPoints");
+    focusPoints.fetchFocusPoints(summaryParams);
+  };
+
+  const handleSelectFocusPoint = (focusPoint: AiFocusPoint) => {
+    setSelectedFocusPoint(focusPoint);
+    setStep("chat");
+    chat.startChat(`${focusPoint.title}: ${focusPoint.context}`, summaryParams);
   };
 
   const handleReset = () => {
-    setSelectedTopic(null);
+    setStep("period");
+    setSelectedFocusPoint(null);
     setShowFreeTextInput(false);
     setFreeText("");
+    setSavedMessageIndices(new Set());
+    focusPoints.reset();
     chat.reset();
   };
 
@@ -61,7 +70,14 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
     handleSendReply(text);
   };
 
-  if (!selectedTopic) {
+  const handleSaveMemory = async (index: number, text: string) => {
+    const ok = await memories.addMemory({ type: "insight", content: text });
+    if (ok) {
+      setSavedMessageIndices((prev) => new Set(prev).add(index));
+    }
+  };
+
+  if (step === "period") {
     return (
       <div data-testid="ai-advice">
         <div role="tablist" className="tabs tabs-boxed mb-4 w-fit">
@@ -101,23 +117,50 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
           />
         )}
 
-        <p className="mb-2 mt-4 text-sm font-medium">相談したいテーマを選んでください</p>
+        <button type="button" onClick={handleFindFocusPoints} className="btn btn-primary btn-sm mt-4">
+          気になる点を探す
+        </button>
+      </div>
+    );
+  }
 
-        {settingsStatus === "loading" ? (
+  if (step === "focusPoints") {
+    return (
+      <div data-testid="ai-advice">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-sm text-base-content/70">気になる点を選んでください</p>
+          <button type="button" onClick={handleReset} className="btn btn-ghost btn-xs">
+            期間を選び直す
+          </button>
+        </div>
+
+        {focusPoints.status === "loading" && (
           <p className="flex items-center gap-2">
             <span className="loading loading-spinner loading-sm" />
-            読み込み中...
+            分析中...
           </p>
-        ) : (
+        )}
+
+        {focusPoints.status === "error" && (
+          <p role="alert" className="alert alert-error">
+            エラー: {focusPoints.errorMessage}
+          </p>
+        )}
+
+        {focusPoints.status === "success" && focusPoints.focusPoints.length === 0 && (
+          <p className="text-base-content/70">気になる点は見つかりませんでした</p>
+        )}
+
+        {focusPoints.status === "success" && focusPoints.focusPoints.length > 0 && (
           <div className="flex flex-col gap-2">
-            {agendaTopics.map((topic) => (
+            {focusPoints.focusPoints.map((fp) => (
               <button
-                key={topic}
+                key={fp.title}
                 type="button"
-                onClick={() => handleSelectTopic(topic)}
+                onClick={() => handleSelectFocusPoint(fp)}
                 className="btn btn-outline btn-sm justify-start"
               >
-                {topic}
+                {fp.title}
               </button>
             ))}
           </div>
@@ -129,9 +172,9 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
   return (
     <div data-testid="ai-advice">
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-sm text-base-content/70">テーマ: {selectedTopic}</p>
+        <p className="text-sm text-base-content/70">気になる点: {selectedFocusPoint?.title}</p>
         <button type="button" onClick={handleReset} className="btn btn-ghost btn-xs">
-          テーマを選び直す
+          最初からやり直す
         </button>
       </div>
 
@@ -141,6 +184,22 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
             <div className={`chat-bubble whitespace-pre-wrap ${message.role === "ai" ? "" : "chat-bubble-primary"}`}>
               {maskText(message.text)}
             </div>
+            {message.role === "ai" && (
+              <div className="chat-footer">
+                {savedMessageIndices.has(index) ? (
+                  <span className="text-xs text-success">記憶しました</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleSaveMemory(index, message.text)}
+                    disabled={memories.mutateState.status === "loading"}
+                    className="btn btn-ghost btn-xs"
+                  >
+                    覚えておく
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>

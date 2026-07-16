@@ -1,12 +1,10 @@
 import type { Theme } from "../hooks/useTheme";
 import type { DashboardSection, DashboardSectionId } from "../hooks/useDashboardLayout";
 import { ThemeSelector } from "./ThemeSelector";
-import { SettingsForm } from "./SettingsForm";
 import { AdminSection } from "./AdminSection";
 import { TrendDisplayCountSetting } from "./TrendDisplayCountSetting";
 import { DashboardLayoutSettings } from "./DashboardLayoutSettings";
 import { CategorySettings } from "./CategorySettings";
-import { AiAttributesSettings } from "./AiAttributesSettings";
 import { VersionInfo } from "./VersionInfo";
 import { PageHeader } from "./PageHeader";
 import { SectionCard } from "./SectionCard";
@@ -60,14 +58,6 @@ export function SettingsScreen({
 
       <SectionCard title="カテゴリ">
         <CategorySettings />
-      </SectionCard>
-
-      <SectionCard title="ユーザー属性情報">
-        <AiAttributesSettings />
-      </SectionCard>
-
-      <SectionCard title="AI設定">
-        <SettingsForm />
       </SectionCard>
 
       <SectionCard title="管理">
