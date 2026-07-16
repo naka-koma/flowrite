@@ -30,6 +30,7 @@
 | J | isTarget | number | 計算対象フラグ（1=対象、0=除外） |
 | K | importedAt | string | 初回取り込み日時（ISO 8601形式）。以後のCSV再取込・手動編集でも更新しない |
 | L | updatedAt | string | 最終更新日時（ISO 8601形式）。CSV再取込による上書き・取引一覧画面での手動編集のいずれでも更新する |
+| M | categoryLocked | boolean | カテゴリ上書き保護フラグ。AI分類提案の適用時は自動的にtrueになる。取引一覧画面での手動編集（`handleUpdateCategory`）でも明示的にtrue/falseを指定できる（省略時false） |
 
 ### インデックス
 - A列（id）で重複排除を行う。アップロード時に既存IDと照合し、未登録なら新規追加、既存であればcategory/subcategory/memoのみ更新対象にする（詳細は下記「CSV再取込」を参照）
@@ -42,6 +43,7 @@
 ### CSV再取込時の挙動
 - 同一idの行がすでに存在する場合、`handleUpload`の`overwriteCategory`（デフォルト`true`）がオンであれば、category/subcategory/memoのうちCSV側の値が空でない項目のみ既存値を上書きする（空の場合は既存値を保持する）。オフの場合は既存値を一切変更しない
 - 取引一覧画面からの手動編集（`handleUpdateCategory`）とCSV再取込のどちらでも`updatedAt`を更新する。手動編集した内容は、次回同一idのCSVが再取込された際に（`overwriteCategory`がオンかつCSV側の値が空でなければ）上書きされる
+- `categoryLocked`が`true`の行は、`overwriteCategory`の設定に関わらずcategory/subcategory/memoを一切上書きしない
 
 ---
 
