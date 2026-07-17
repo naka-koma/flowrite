@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAiCategorySuggestions } from "../hooks/useAiCategorySuggestions";
+import { useAiMemories } from "../hooks/useAiMemories";
 import { formatAmount } from "../lib/money";
 import type {
   AddCategoryParams,
@@ -37,6 +38,7 @@ export function AiCategorySuggestions({
 }: AiCategorySuggestionsProps) {
   const [scope, setScope] = useState<AiCategorySuggestionScope>("uncategorized");
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
+  const [memorizeIds, setMemorizeIds] = useState<Set<string>>(new Set());
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<Map<string, AiCategorySuggestionCategoryFilterEntry>>(
     new Map(),
@@ -47,10 +49,12 @@ export function AiCategorySuggestions({
   const [amountMax, setAmountMax] = useState("");
   const [pendingNewCategoryConfirm, setPendingNewCategoryConfirm] = useState<AiCategorySuggestion[] | null>(null);
   const ai = useAiCategorySuggestions();
+  const { addMemory } = useAiMemories();
 
   useEffect(() => {
     if (ai.status === "success") {
       setCheckedIds(new Set(ai.suggestions.map((s) => s.id)));
+      setMemorizeIds(new Set());
     }
   }, [ai.status, ai.suggestions]);
 
@@ -86,6 +90,11 @@ export function AiCategorySuggestions({
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
+        setMemorizeIds((m) => {
+          const nextMemorize = new Set(m);
+          nextMemorize.delete(id);
+          return nextMemorize;
+        });
       } else {
         next.add(id);
       }
@@ -95,6 +104,21 @@ export function AiCategorySuggestions({
 
   const toggleAll = (checked: boolean) => {
     setCheckedIds(checked ? new Set(ai.suggestions.map((s) => s.id)) : new Set());
+    if (!checked) {
+      setMemorizeIds(new Set());
+    }
+  };
+
+  const toggleMemorize = (id: string) => {
+    setMemorizeIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   };
 
   const handleApply = async () => {
@@ -125,6 +149,17 @@ export function AiCategorySuggestions({
     const ok = await ai.applySuggestions(applyParams);
     if (ok) {
       setPendingNewCategoryConfirm(null);
+      const toMemorize = selected.filter((s) => memorizeIds.has(s.id));
+      await Promise.all(
+        toMemorize.map((s) =>
+          addMemory({
+            type: "categoryPattern",
+            content: `${s.institution} ${s.content}`.trim(),
+            category: s.suggestedCategory,
+            subcategory: s.suggestedSubcategory,
+          }),
+        ),
+      );
       onApplied();
     }
   };
@@ -280,6 +315,7 @@ export function AiCategorySuggestions({
                   <th>現在の分類</th>
                   <th>提案分類</th>
                   <th>理由</th>
+                  <th>記憶する</th>
                 </tr>
               </thead>
               <tbody>
@@ -307,6 +343,16 @@ export function AiCategorySuggestions({
                       {s.isNewCategory && <span className="badge badge-warning badge-sm ml-2">未登録</span>}
                     </td>
                     <td className="text-sm text-base-content/70">{s.reason}</td>
+                    <td>
+                      <input
+                        type="checkbox"
+                        aria-label={`${s.content}のパターンを記憶する`}
+                        checked={memorizeIds.has(s.id)}
+                        disabled={!checkedIds.has(s.id)}
+                        onChange={() => toggleMemorize(s.id)}
+                        className="checkbox checkbox-sm"
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>

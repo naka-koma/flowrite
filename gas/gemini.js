@@ -138,6 +138,31 @@ function buildAiAttributesSection_() {
   );
 }
 
+// ユーザーが明示的に「覚えておく」操作をした気づき・傾向のメモリを
+// 「# 過去の気づき・傾向」セクションとして組み立てる。未登録の場合は空文字を返す
+function buildAiMemoryInsightsSection_() {
+  const { memories } = handleGetAiMemories();
+  const insights = memories.filter((m) => m.type === "insight");
+  if (insights.length === 0) {
+    return "";
+  }
+
+  const lines = insights.map((m) => `- ${m.content}`).join("\n");
+  return `# 過去の気づき・傾向\n${lines}`;
+}
+
+// ユーザーが明示的に記憶した分類パターンを、AI分類提案プロンプトへの
+// 参考例テキストとして組み立てる。未登録の場合は空文字を返す
+function buildCategoryPatternExamplesText_() {
+  const { memories } = handleGetAiMemories();
+  const patterns = memories.filter((m) => m.type === "categoryPattern");
+  if (patterns.length === 0) {
+    return "";
+  }
+
+  return patterns.map((m) => `${m.content} → ${m.category}:${m.subcategory}`).join("\n");
+}
+
 // ユーザーが選んだ分析期間に関わらず、予算は月単位で管理されているため
 // 常に「今月」の予算対比を固定コンテキストとして注入する
 function buildBudgetVarianceSection_() {
@@ -154,6 +179,77 @@ function buildBudgetVarianceSection_() {
     })
     .join("\n");
   return `# 今月の予算対比\n${lines}`;
+}
+
+// 「気になる点」提案1件分のレスポンススキーマ
+const FOCUS_POINTS_RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    focusPoints: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          title: { type: "STRING", description: "一覧表示用の短いラベル。20文字程度。" },
+          context: {
+            type: "STRING",
+            description: "この点について深掘り対話を始める際の詳細な状況説明。50〜100文字程度。",
+          },
+        },
+        required: ["title", "context"],
+      },
+      description: "ユーザーが深掘りしたくなりそうな「気になる点」を2〜4件。",
+    },
+  },
+  required: ["focusPoints"],
+};
+
+// AIアドバイスウィザードの②ステップ。データ・予算対比・ユーザー属性・過去の気づき・
+// 関心テーマを踏まえ、Geminiに「気になる点」の候補を提示させる
+function handleGetAiFocusPoints(body) {
+  try {
+    const summaryParams = (body && body.summaryParams) || {};
+    const summary = handleSummary(summaryParams);
+    if (summary.error) {
+      return { success: false, error: summary.error };
+    }
+
+    const apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
+    if (!apiKey) {
+      return { success: false, error: "GEMINI_API_KEY is not set in script properties" };
+    }
+
+    const dataContext = buildAiContext_(summary);
+    const varianceSection = buildBudgetVarianceSection_();
+
+    if (!dataContext && !varianceSection) {
+      return { success: false, error: "指定した期間のデータがありません" };
+    }
+
+    const attributesSection = buildAiAttributesSection_();
+    const memoryInsightsSection = buildAiMemoryInsightsSection_();
+    const agendaTopicsSection = `# ユーザーが関心を持ちやすいテーマ（参考）\n${getAgendaTopics().join("、")}`;
+    const sections = [
+      attributesSection,
+      memoryInsightsSection,
+      "あなたは家計管理のアドバイザーです。以下の支出データを分析し、ユーザーが深掘りしたくなりそうな「気になる点」を2〜4件提示してください。",
+      dataContext ? `# 分析対象データ\n${dataContext}` : "",
+      varianceSection,
+      agendaTopicsSection,
+    ].filter((s) => s);
+    const prompt = sections.join("\n\n");
+
+    const result = runGeminiChat_(apiKey, [{ role: "user", parts: [{ text: prompt }] }], FOCUS_POINTS_RESPONSE_SCHEMA);
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+
+    const focusPoints = Array.isArray(result.parsed.focusPoints) ? result.parsed.focusPoints : [];
+    return { success: true, focusPoints };
+  } catch (e) {
+    Logger.log(`handleGetAiFocusPoints unexpected error: ${e.message}`);
+    return { success: false, error: e.message };
+  }
 }
 
 // 対話の最初のターン。テーマ選択直後に呼ばれ、以後のターンで往復させる履歴を組み立てて返す
@@ -184,8 +280,10 @@ function handleStartAiChat(body) {
     }
 
     const attributesSection = buildAiAttributesSection_();
+    const memoryInsightsSection = buildAiMemoryInsightsSection_();
     const sections = [
       attributesSection,
+      memoryInsightsSection,
       getAiPrompt(),
       dataContext ? `# 分析対象データ\n${dataContext}` : "",
       varianceSection,
@@ -305,6 +403,11 @@ function buildCategorySuggestionPrompt_(rows, categoryPairsText) {
     .map((r) => `${r.id} | ${r.date} | ${r.content} | ${formatYen_(r.amount)} | ${r.institution}`)
     .join("\n");
 
+  const patternExamplesText = buildCategoryPatternExamplesText_();
+  const patternSection = patternExamplesText
+    ? `\n\n# 過去に記憶した分類パターン（参考）\n${patternExamplesText}`
+    : "";
+
   return (
     "あなたは家計簿アプリの取引分類アシスタントです。以下の取引データそれぞれに対し、" +
     "「利用可能な大項目:中項目の一覧」の中から最も適切な組み合わせを1つ選んでください。\n" +
@@ -312,7 +415,8 @@ function buildCategorySuggestionPrompt_(rows, categoryPairsText) {
     "その場合はcategory/subcategoryに新しい名称を記入してください。ただし安易な新設は避け、" +
     "既存の一覧に近いものがあればそちらを優先してください。\n\n" +
     `# 利用可能な大項目:中項目の一覧\n${categoryPairsText}\n\n` +
-    `# 分類対象データ (id | 日付 | 内容 | 金額 | 金融機関)\n${rowsText}`
+    `# 分類対象データ (id | 日付 | 内容 | 金額 | 金融機関)\n${rowsText}` +
+    patternSection
   );
 }
 

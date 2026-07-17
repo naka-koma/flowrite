@@ -9,6 +9,8 @@
 | settings | AIアドバイスのプロンプト・使用モデルなどのキー・バリュー設定 |
 | categories | 大項目・中項目のカテゴリマスタ |
 | budgets | 大項目別の月間予算 |
+| ai_attributes | ユーザー属性情報 |
+| ai_memory | AIメモリ（気づき・傾向、分類パターン） |
 
 ---
 
@@ -78,7 +80,7 @@
 |---|---|---|
 | prompt | AIアドバイスのプロンプトテンプレート | GAS内蔵のデフォルトプロンプトを使う |
 | model | 使用するGeminiモデル名 | `gemini-3.5-flash` → `gemini-3.1-flash-lite` の順に自動フォールバック |
-| agendaTopics | 対話型AIアドバイザーの相談テーマ一覧（改行区切り） | デフォルト4テーマ（「今月のざっくり振り返り」など）を使う |
+| agendaTopics | ユーザーが関心を持ちやすいテーマの参考情報（改行区切り）。`handleGetAiFocusPoints`が「気になる点」を生成する際のヒントとしてプロンプトに注入する | デフォルト4テーマ（「今月のざっくり振り返り」など）を使う |
 
 ### 注意
 - 1行目はヘッダー行とする
@@ -138,3 +140,25 @@
 - 1属性につき1行。`id`で行を識別するため、`key`を変更しても同一の属性として扱える
 - Keyの重複は禁止しない（IDで一意に識別するため）
 - AIアドバイス取得時、登録されているすべての属性がプロンプトの先頭セクションに結合される
+
+---
+
+## ai_memory シート（AIメモリ）
+
+### カラム定義
+
+| 列 | カラム名 | 型 | 説明 |
+|---|---|---|---|
+| A | id | string | メモリの一意なID（UUID。追加時にGAS側で生成する） |
+| B | type | string | `insight`（気づき・傾向） or `categoryPattern`（分類パターン） |
+| C | content | string | insight: 気づきの本文。categoryPattern: 元になった取引の内容・金融機関などの参考テキスト |
+| D | category | string | categoryPatternのみ使用。学習した大項目（insightでは空文字） |
+| E | subcategory | string | categoryPatternのみ使用。学習した中項目（insightでは空文字） |
+| F | createdAt | string | 作成日時（ISO 8601形式。追加時にGAS側で設定する） |
+
+### 注意
+- 1行目はヘッダー行とする
+- 1メモリにつき1行。追加は常にユーザーの明示操作（AIアドバイスの「覚えておく」ボタン、AI分類提案の「記憶する」チェック）からのみ行われる。AIによる自動生成・自動保存は行わない
+- `type=insight`はAIアドバイス取得時（`handleGetAiFocusPoints`/`handleStartAiChat`）にプロンプトへ「過去の気づき・傾向」として注入される
+- `type=categoryPattern`はAI分類提案（`handleGetAiCategorySuggestions`）のプロンプトへ参考例として注入される。完全一致する場合でもGemini呼び出しはスキップしない
+- 更新（値の書き換え）は行わない。内容を変えたい場合は削除して追加し直す
