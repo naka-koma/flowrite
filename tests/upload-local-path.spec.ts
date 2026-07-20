@@ -77,11 +77,11 @@ test("CSV以外の拡張子を指定するとエラーが表示される", async
 test("ファイル選択タブがデフォルトで表示され、パスタブに切り替えられる", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByLabel("CSVファイル")).toBeVisible();
+  await expect(page.getByLabel("CSVファイル", { exact: true })).toBeVisible();
   await expect(page.getByLabel("CSVファイルのパス")).not.toBeVisible();
 
   await page.getByRole("tab", { name: "パスで指定" }).click();
 
-  await expect(page.getByLabel("CSVファイル")).not.toBeVisible();
+  await expect(page.getByLabel("CSVファイル", { exact: true })).not.toBeVisible();
   await expect(page.getByLabel("CSVファイルのパス")).toBeVisible();
 });

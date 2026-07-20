@@ -5,9 +5,10 @@ interface LocalCsvPathPanelProps {
   onFilesLoaded: (files: File[]) => void;
 }
 
-// npm run dev のローカル開発サーバー限定のパネル。UploadForm.tsx から
-// import.meta.env.DEV 判定つきの React.lazy 経由でのみ読み込まれ、本番ビルドには含まれない
-export default function LocalCsvPathPanel({ onFilesLoaded }: LocalCsvPathPanelProps) {
+// パス読み込みは npm run dev のローカル開発サーバー（/__local-csv、scripts/vite-plugin-local-csv.js）
+// でのみ動作する。本番のGAS WebAppではこのエンドポイントが存在しないため、
+// useLocalCsvLoaderのfetchが失敗しエラーメッセージが表示される
+export function LocalCsvPathPanel({ onFilesLoaded }: LocalCsvPathPanelProps) {
   const [pathsText, setPathsText] = useState("");
   const [loadedCount, setLoadedCount] = useState(0);
   const localCsv = useLocalCsvLoader();

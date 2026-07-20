@@ -1,15 +1,10 @@
-import { lazy, Suspense, useState } from "react";
+import { useState } from "react";
 import { useUpload } from "../hooks/useUpload";
+import { LocalCsvPathPanel } from "./LocalCsvPathPanel";
 import { UploadResult } from "./UploadResult";
 import { SECTION_HEADING_CLASS } from "../lib/ui";
 
 type UploadMode = "file" | "path";
-
-// パス指定モードはローカル開発サーバー（scripts/vite-plugin-local-csv.js）でのみ動作するため、
-// main.tsxのモック読み込みと同様にimport.meta.env.DEV判定つきの動的importで隔離し、
-// 本番ビルド（GAS WebApp）のバンドルには一切含まれないようにする
-const IS_DEV = import.meta.env.DEV;
-const LocalCsvPathPanel = IS_DEV ? lazy(() => import("./LocalCsvPathPanel")) : null;
 
 export function UploadForm() {
   const [mode, setMode] = useState<UploadMode>("file");
@@ -28,31 +23,27 @@ export function UploadForm() {
     <div>
       <h2 className={SECTION_HEADING_CLASS}>CSVアップロード</h2>
 
-      {IS_DEV && (
-        <div role="tablist" className="tabs tabs-boxed mb-3 w-fit">
-          <button
-            type="button"
-            role="tab"
-            className={`tab ${mode === "file" ? "tab-active" : ""}`}
-            onClick={() => setMode("file")}
-          >
-            ファイルを選択
-          </button>
-          <button
-            type="button"
-            role="tab"
-            className={`tab ${mode === "path" ? "tab-active" : ""}`}
-            onClick={() => setMode("path")}
-          >
-            パスで指定
-          </button>
-        </div>
-      )}
+      <div role="tablist" className="tabs tabs-boxed mb-3 w-fit">
+        <button
+          type="button"
+          role="tab"
+          className={`tab ${mode === "file" ? "tab-active" : ""}`}
+          onClick={() => setMode("file")}
+        >
+          ファイルを選択
+        </button>
+        <button
+          type="button"
+          role="tab"
+          className={`tab ${mode === "path" ? "tab-active" : ""}`}
+          onClick={() => setMode("path")}
+        >
+          パスで指定
+        </button>
+      </div>
 
-      {mode === "path" && LocalCsvPathPanel ? (
-        <Suspense fallback={<p className="text-sm text-base-content/70">読み込み中...</p>}>
-          <LocalCsvPathPanel onFilesLoaded={setFiles} />
-        </Suspense>
+      {mode === "path" ? (
+        <LocalCsvPathPanel onFilesLoaded={setFiles} />
       ) : (
         <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
           <input

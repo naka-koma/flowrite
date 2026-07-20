@@ -30,7 +30,8 @@ function base64ToFile(base64: string, name: string): File {
 
 // npm run dev のローカル開発サーバーが提供する /__local-csv （scripts/vite-plugin-local-csv.js）を
 // 呼び出し、ローカルファイルシステム上のCSVをFileオブジェクトとして読み込む。
-// このエンドポイントは本番のGAS WebAppには存在しないため、呼び出し側でimport.meta.env.DEVによりガードすること
+// このエンドポイントは本番のGAS WebAppには存在しないため、本番で呼び出すと必ず失敗する
+// （下記catch節のフォールバックメッセージ参照）
 export function useLocalCsvLoader() {
   const [state, setState] = useState<LocalCsvState>({ status: "idle", errors: [] });
 
@@ -62,9 +63,13 @@ export function useLocalCsvLoader() {
 
       setState({ status: "idle", errors });
       return files;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "読み込みに失敗しました";
-      setState({ status: "idle", errors: [{ path: "", error: message }] });
+    } catch {
+      // 本番のGAS WebAppにはこのエンドポイントが存在しないため、通常のネットワークエラーと
+      // 区別せず「ローカル開発環境限定」であることを案内する
+      setState({
+        status: "idle",
+        errors: [{ path: "", error: "読み込みに失敗しました（この機能はnpm run devのローカル開発環境でのみ利用できます）" }],
+      });
       return [];
     }
   };
