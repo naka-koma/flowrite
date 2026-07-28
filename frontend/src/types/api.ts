@@ -204,6 +204,36 @@ export interface DeleteAiAttributeResponse {
   error?: string;
 }
 
+export type SavingsTargetMode = "amount" | "rate";
+
+export interface Goals {
+  monthlyIncome: number;
+  savingsTargetMode: SavingsTargetMode;
+  savingsTargetAmount: number;
+  savingsTargetRate: number;
+  // 定額・率のどちらの指定でも金額に解決した目標貯蓄額
+  resolvedSavingsTarget: number;
+  // 定期収入から目標貯蓄額を引いた、1ヶ月に使える総額
+  spendableTotal: number;
+}
+
+export interface GetGoalsResponse extends Goals {
+  error?: string;
+}
+
+export interface UpdateGoalsParams {
+  monthlyIncome?: number;
+  savingsTargetMode?: SavingsTargetMode;
+  savingsTargetAmount?: number;
+  savingsTargetRate?: number;
+}
+
+export interface UpdateGoalsResponse {
+  success: boolean;
+  goals?: Goals;
+  error?: string;
+}
+
 export type AiMemoryType = "insight" | "categoryPattern";
 
 export interface AiMemory {
