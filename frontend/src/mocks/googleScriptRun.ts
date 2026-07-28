@@ -22,6 +22,7 @@ import type {
   RenameCategoryParams,
   Settings,
   StartAiChatParams,
+  SummarizeAiInsightParams,
   SummaryParams,
   SummaryUnit,
   TodoAction,
@@ -531,6 +532,37 @@ function mockHandleDeleteAiMemory(body: DeleteAiMemoryParams) {
   return { success: true };
 }
 
+function mockHandleSummarizeAiInsight(body: SummarizeAiInsightParams) {
+  const text = body.text?.trim();
+  if (!text) {
+    return { success: false, error: "text is required" };
+  }
+
+  const summary = text.length > 40 ? `${text.slice(0, 40)}…` : text;
+  return { success: true, summary };
+}
+
+function mockHandleConsolidateAiMemoryInsights() {
+  const memories = loadMockAiMemories();
+  const insights = memories.filter((m) => m.type === "insight");
+  if (insights.length < 2) {
+    return { success: true, changed: false, memories };
+  }
+
+  const consolidated: AiMemory = {
+    id: crypto.randomUUID(),
+    type: "insight",
+    content: `${insights.length}件の気づきを1件に整理しました`,
+    category: "",
+    subcategory: "",
+    createdAt: new Date().toISOString(),
+  };
+
+  const newMemories = [...memories.filter((m) => m.type !== "insight"), consolidated];
+  saveMockAiMemories(newMemories);
+  return { success: true, changed: true, memories: newMemories };
+}
+
 const MOCK_FOCUS_POINTS = [
   { title: "外食費が先月より増えています", context: "今月は外食費が先月より増加傾向です。理由を深掘りしましょう。" },
   { title: "固定費に見直せる余地がありそうです", context: "固定費の割合が高めです。契約内容を一緒に振り返りましょう。" },
@@ -1021,6 +1053,10 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleAddAiMemory(args[0] as AddAiMemoryParams);
     case "handleDeleteAiMemory":
       return mockHandleDeleteAiMemory(args[0] as DeleteAiMemoryParams);
+    case "handleSummarizeAiInsight":
+      return mockHandleSummarizeAiInsight(args[0] as SummarizeAiInsightParams);
+    case "handleConsolidateAiMemoryInsights":
+      return mockHandleConsolidateAiMemoryInsights();
     case "handleGetAiFocusPoints":
       return mockHandleGetAiFocusPoints(args[0] as GetAiFocusPointsParams);
     case "handleGetPreferences":

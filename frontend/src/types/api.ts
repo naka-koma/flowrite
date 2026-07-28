@@ -242,6 +242,23 @@ export interface DeleteAiMemoryResponse {
   error?: string;
 }
 
+export interface SummarizeAiInsightParams {
+  text: string;
+}
+
+export interface SummarizeAiInsightResponse {
+  success: boolean;
+  summary?: string;
+  error?: string;
+}
+
+export interface ConsolidateAiMemoryInsightsResponse {
+  success: boolean;
+  changed?: boolean;
+  memories?: AiMemory[];
+  error?: string;
+}
+
 export interface AiFocusPoint {
   title: string;
   context: string;

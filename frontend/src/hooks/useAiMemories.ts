@@ -3,9 +3,11 @@ import type {
   AddAiMemoryParams,
   AddAiMemoryResponse,
   AiMemory,
+  ConsolidateAiMemoryInsightsResponse,
   DeleteAiMemoryParams,
   DeleteAiMemoryResponse,
   GetAiMemoriesResponse,
+  SummarizeAiInsightResponse,
 } from "../types/api";
 import { runScript } from "../lib/googleScriptRun";
 
@@ -26,6 +28,7 @@ interface MutateState {
 export function useAiMemories() {
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading", memories: [], errorMessage: null });
   const [mutateState, setMutateState] = useState<MutateState>({ status: "idle", errorMessage: null });
+  const [consolidateState, setConsolidateState] = useState<MutateState>({ status: "idle", errorMessage: null });
 
   useEffect(() => {
     let cancelled = false;
@@ -75,6 +78,23 @@ export function useAiMemories() {
     }
   };
 
+  // 「覚えておく」操作向け。元のAI回答テキストをまずGeminiに要約させてから保存する。
+  // 要約リクエスト自体が失敗しても「覚えておく」操作は失敗させず、元テキストのまま保存する
+  const addMemoryFromRawText = async (text: string) => {
+    let content = text;
+
+    try {
+      const summarizeData = await runScript<SummarizeAiInsightResponse>("handleSummarizeAiInsight", { text });
+      if (summarizeData.success && summarizeData.summary) {
+        content = summarizeData.summary;
+      }
+    } catch {
+      // 要約に失敗した場合は元のテキストのまま保存する
+    }
+
+    return addMemory({ type: "insight", content });
+  };
+
   // 削除はローカルを即座に反映し、失敗時のみ元に戻す
   const deleteMemory = async (params: DeleteAiMemoryParams) => {
     const previous = loadState.memories;
@@ -99,5 +119,27 @@ export function useAiMemories() {
     }
   };
 
-  return { ...loadState, mutateState, addMemory, deleteMemory };
+  // 蓄積された気づきをAIに分析させ、重複統合・一般化した内容にまとめて置き換える
+  const consolidateInsights = async () => {
+    setConsolidateState({ status: "loading", errorMessage: null });
+
+    try {
+      const data = await runScript<ConsolidateAiMemoryInsightsResponse>("handleConsolidateAiMemoryInsights");
+
+      if (!data.success || !data.memories) {
+        setConsolidateState({ status: "error", errorMessage: data.error ?? "メモリの整理に失敗しました" });
+        return false;
+      }
+
+      setLoadState((s) => ({ ...s, memories: data.memories as AiMemory[] }));
+      setConsolidateState({ status: "success", errorMessage: null });
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "メモリの整理に失敗しました";
+      setConsolidateState({ status: "error", errorMessage: message });
+      return false;
+    }
+  };
+
+  return { ...loadState, mutateState, addMemory, addMemoryFromRawText, deleteMemory, consolidateState, consolidateInsights };
 }

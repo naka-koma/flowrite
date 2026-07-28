@@ -71,7 +71,7 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
   };
 
   const handleSaveMemory = async (index: number, text: string) => {
-    const ok = await memories.addMemory({ type: "insight", content: text });
+    const ok = await memories.addMemoryFromRawText(text);
     if (ok) {
       setSavedMessageIndices((prev) => new Set(prev).add(index));
     }
