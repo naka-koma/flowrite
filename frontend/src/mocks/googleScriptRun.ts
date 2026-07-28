@@ -17,6 +17,9 @@ import type {
   DeleteCategoryPairParams,
   GetAiFocusPointsParams,
   GetBudgetVarianceParams,
+  Goals,
+  SavingsTargetMode,
+  UpdateGoalsParams,
   MonthlyCalendarParams,
   PreferenceKey,
   RenameCategoryParams,
@@ -1015,6 +1018,74 @@ function mockHandleDeleteBudget(body: DeleteBudgetParams) {
   return { success: true };
 }
 
+const MOCK_GOALS_STORAGE_KEY = "__mock_goals__";
+
+const DEFAULT_MOCK_GOALS = {
+  monthlyIncome: 0,
+  savingsTargetMode: "amount" as SavingsTargetMode,
+  savingsTargetAmount: 0,
+  savingsTargetRate: 0,
+};
+
+type StoredGoals = typeof DEFAULT_MOCK_GOALS;
+
+// 実際のGASではgoalsシートに永続化されるため、モックでも
+// ページリロードをまたいで再現できるよう sessionStorage に保存する
+function loadMockGoals(): StoredGoals {
+  const raw = sessionStorage.getItem(MOCK_GOALS_STORAGE_KEY);
+  if (raw) {
+    try {
+      return JSON.parse(raw) as StoredGoals;
+    } catch {
+      // 壊れたデータは無視してデフォルトにフォールバック
+    }
+  }
+  return { ...DEFAULT_MOCK_GOALS };
+}
+
+// GAS側のresolveSavingsTarget_と同じ計算をモックでも再現する
+function resolveMockGoals(stored: StoredGoals): Goals {
+  const resolvedSavingsTarget =
+    stored.savingsTargetMode === "rate"
+      ? Math.round((stored.monthlyIncome * stored.savingsTargetRate) / 100)
+      : stored.savingsTargetAmount;
+
+  return { ...stored, resolvedSavingsTarget, spendableTotal: stored.monthlyIncome - resolvedSavingsTarget };
+}
+
+function mockHandleGetGoals() {
+  return resolveMockGoals(loadMockGoals());
+}
+
+function mockHandleUpdateGoals(body: UpdateGoalsParams) {
+  const stored = loadMockGoals();
+
+  if (body.monthlyIncome !== undefined) {
+    if (!Number.isFinite(body.monthlyIncome) || body.monthlyIncome < 0) {
+      return { success: false, error: "monthlyIncome must be a non-negative number" };
+    }
+    stored.monthlyIncome = body.monthlyIncome;
+  }
+  if (body.savingsTargetMode !== undefined) {
+    stored.savingsTargetMode = body.savingsTargetMode;
+  }
+  if (body.savingsTargetAmount !== undefined) {
+    if (!Number.isFinite(body.savingsTargetAmount) || body.savingsTargetAmount < 0) {
+      return { success: false, error: "savingsTargetAmount must be a non-negative number" };
+    }
+    stored.savingsTargetAmount = body.savingsTargetAmount;
+  }
+  if (body.savingsTargetRate !== undefined) {
+    if (!Number.isFinite(body.savingsTargetRate) || body.savingsTargetRate < 0 || body.savingsTargetRate > 100) {
+      return { success: false, error: "savingsTargetRate must be between 0 and 100" };
+    }
+    stored.savingsTargetRate = body.savingsTargetRate;
+  }
+
+  sessionStorage.setItem(MOCK_GOALS_STORAGE_KEY, JSON.stringify(stored));
+  return { success: true, goals: resolveMockGoals(stored) };
+}
+
 function mockHandleGetVersion() {
   return { version: "v-dev (mock)" };
 }
@@ -1091,6 +1162,10 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleUpsertBudget(args[0] as UpsertBudgetParams);
     case "handleDeleteBudget":
       return mockHandleDeleteBudget(args[0] as DeleteBudgetParams);
+    case "handleGetGoals":
+      return mockHandleGetGoals();
+    case "handleUpdateGoals":
+      return mockHandleUpdateGoals(args[0] as UpdateGoalsParams);
     case "handleGetVersion":
       return mockHandleGetVersion();
     default:

@@ -203,7 +203,7 @@ export function App() {
           ) : screen === "transactions" ? (
             <TransactionScreen hideAmounts={hideAmounts} onBack={() => navigate("dashboard")} />
           ) : screen === "budget" ? (
-            <BudgetScreen onBack={() => navigate("dashboard")} />
+            <BudgetScreen hideAmounts={hideAmounts} onBack={() => navigate("dashboard")} />
           ) : screen === "ai" ? (
             <AiScreen hideAmounts={hideAmounts} onBack={() => navigate("dashboard")} />
           ) : (

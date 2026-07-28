@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useBudgets } from "../hooks/useBudgets";
 import { useCategories } from "../hooks/useCategories";
+import { GoalSettings } from "./GoalSettings";
 import { PageHeader } from "./PageHeader";
 import { SectionCard } from "./SectionCard";
 import { formatAmount } from "../lib/money";
@@ -15,10 +16,11 @@ const NEW_CATEGORY_VALUE = "__new__";
 const RECOMMENDED_CATEGORIES = ["食費", "交通費", "住居", "水道光熱費", "通信費", "娯楽", "医療", "保険", "その他"];
 
 interface BudgetScreenProps {
+  hideAmounts: boolean;
   onBack: () => void;
 }
 
-export function BudgetScreen({ onBack }: BudgetScreenProps) {
+export function BudgetScreen({ hideAmounts, onBack }: BudgetScreenProps) {
   const { status, budgets, errorMessage, mutateState, upsertBudget, deleteBudget } = useBudgets();
   const { status: categoriesStatus, categories, errorMessage: categoriesErrorMessage } = useCategories();
   const [newCategory, setNewCategory] = useState("");
@@ -65,6 +67,10 @@ export function BudgetScreen({ onBack }: BudgetScreenProps) {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="予算" onBack={onBack} />
+
+      <SectionCard title="家計の目標">
+        <GoalSettings totalBudget={totalBudget} hideAmounts={hideAmounts} />
+      </SectionCard>
 
       <SectionCard title="大項目別の月間予算">
         {isLoading ? (
