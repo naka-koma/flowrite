@@ -53,8 +53,9 @@ function MemoryList({
 }
 
 export function AiMemorySettings() {
-  const { status, memories, errorMessage, deleteMemory } = useAiMemories();
+  const { status, memories, errorMessage, deleteMemory, consolidateInsights, consolidateState } = useAiMemories();
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [confirmingConsolidate, setConfirmingConsolidate] = useState(false);
 
   const handleDeleteClick = (id: string) => {
     if (!id) {
@@ -66,6 +67,15 @@ export function AiMemorySettings() {
       deleteMemory({ id });
     } else {
       setConfirmingId(id);
+    }
+  };
+
+  const handleConsolidateClick = () => {
+    if (confirmingConsolidate) {
+      setConfirmingConsolidate(false);
+      consolidateInsights();
+    } else {
+      setConfirmingConsolidate(true);
     }
   };
 
@@ -92,8 +102,40 @@ export function AiMemorySettings() {
   return (
     <div className="flex flex-col gap-6" data-testid="ai-memory-settings">
       <div className="flex flex-col gap-2" data-testid="ai-memory-insights">
-        <h3 className="text-sm font-medium">気づき・傾向</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium">気づき・傾向</h3>
+          {confirmingConsolidate ? (
+            <div className="flex shrink-0 gap-1">
+              <button
+                type="button"
+                onClick={handleConsolidateClick}
+                disabled={consolidateState.status === "loading"}
+                className="btn btn-primary btn-xs"
+              >
+                {consolidateState.status === "loading" && <span className="loading loading-spinner loading-xs" />}
+                本当に整理する
+              </button>
+              <button type="button" onClick={() => setConfirmingConsolidate(false)} className="btn btn-xs">
+                キャンセル
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleConsolidateClick}
+              disabled={insights.length < 2}
+              className="btn btn-ghost btn-xs"
+            >
+              整理する
+            </button>
+          )}
+        </div>
         <MemoryList memories={insights} confirmingId={confirmingId} onDeleteClick={handleDeleteClick} />
+        {consolidateState.status === "error" && (
+          <p role="alert" className="alert alert-error">
+            エラー: {consolidateState.errorMessage}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-2" data-testid="ai-memory-category-patterns">

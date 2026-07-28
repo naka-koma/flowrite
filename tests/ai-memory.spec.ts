@@ -37,6 +37,44 @@ test("メモリを削除できる（2段階確認）", async ({ page }) => {
   await expect(insightsSection.getByText("まだ記憶はありません")).toBeVisible();
 });
 
+test("メモリを整理すると、複数の気づきが1件にまとめられる", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "気になる点を探す" }).click();
+  await page.getByRole("button", { name: "外食費が先月より増えています" }).click();
+  await expect(page.getByText("今月は先月より支出が増えていますね")).toBeVisible();
+  await page.getByRole("button", { name: "覚えておく" }).click();
+  await expect(page.getByText("記憶しました")).toBeVisible();
+
+  await page.getByRole("button", { name: "外食が増えたかも" }).click();
+  await expect(page.getByText("なるほど、外食が増えているんですね")).toBeVisible();
+  await page.getByRole("button", { name: "覚えておく" }).click();
+  await expect(page.getByText("記憶しました")).toHaveCount(2);
+
+  await openAiScreen(page);
+  const insightsSection = page.getByTestId("ai-memory-insights");
+  await expect(insightsSection.getByRole("listitem")).toHaveCount(2);
+
+  await insightsSection.getByRole("button", { name: "整理する" }).click();
+  await insightsSection.getByRole("button", { name: "本当に整理する" }).click();
+
+  await expect(insightsSection.getByText("2件の気づきを1件に整理しました")).toBeVisible();
+  await expect(insightsSection.getByRole("listitem")).toHaveCount(1);
+});
+
+test("気づきが1件以下の場合は「整理する」ボタンが無効化される", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "気になる点を探す" }).click();
+  await page.getByRole("button", { name: "外食費が先月より増えています" }).click();
+  await page.getByRole("button", { name: "覚えておく" }).click();
+  await expect(page.getByText("記憶しました")).toBeVisible();
+
+  await openAiScreen(page);
+  const insightsSection = page.getByTestId("ai-memory-insights");
+  await expect(insightsSection.getByRole("button", { name: "整理する" })).toBeDisabled();
+});
+
 async function openAiSuggestions(page: import("@playwright/test").Page) {
   await page.goto("/");
   await openTransactionList(page);

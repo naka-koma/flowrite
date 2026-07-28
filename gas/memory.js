@@ -46,6 +46,24 @@ function handleAddAiMemory(body) {
   return { success: true, memory: { id, type, content, category, subcategory, createdAt } };
 }
 
+// insightタイプの行のみを新しい内容で一括入れ替える。categoryPattern行は保持する
+function replaceAiMemoryInsights_(contents) {
+  const sheet = getAiMemorySheet();
+  const lastRow = sheet.getLastRow();
+  const existingRows = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, 6).getValues() : [];
+  const keptRows = existingRows.filter((row) => row[0] && row[1] !== "insight");
+
+  const createdAt = new Date().toISOString();
+  const newRows = contents.map((content) => [Utilities.getUuid(), "insight", content, "", "", createdAt]);
+  const rows = keptRows.concat(newRows);
+
+  sheet.clearContents();
+  sheet.appendRow(["id", "type", "content", "category", "subcategory", "createdAt"]);
+  if (rows.length > 0) {
+    sheet.getRange(2, 1, rows.length, 6).setValues(rows);
+  }
+}
+
 function handleDeleteAiMemory(body) {
   const id = body && body.id;
   if (!id) {

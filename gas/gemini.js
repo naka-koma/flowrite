@@ -163,6 +163,117 @@ function buildCategoryPatternExamplesText_() {
   return patterns.map((m) => `${m.content} → ${m.category}:${m.subcategory}`).join("\n");
 }
 
+// 「覚えておく」操作時の元テキストを、事実・気づきのみの簡潔な文に要約するためのスキーマ
+const INSIGHT_SUMMARY_RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    summary: {
+      type: "STRING",
+      description: "挨拶・相槌・提案の言い回しを除いた、事実・気づき・傾向のみを1〜2文、40字程度で簡潔にまとめたもの。",
+    },
+  },
+  required: ["summary"],
+};
+
+// ユーザーが「覚えておく」を押した際、元のAI回答を今後の分析に再利用しやすい
+// 簡潔な形に要約する。失敗時は呼び出し元が元テキストへフォールバックできるようerrorを返す
+function handleSummarizeAiInsight(body) {
+  try {
+    const text = ((body && body.text) || "").trim();
+    if (!text) {
+      return { success: false, error: "text is required" };
+    }
+
+    const apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
+    if (!apiKey) {
+      return { success: false, error: "GEMINI_API_KEY is not set in script properties" };
+    }
+
+    const prompt =
+      "以下は家計相談でAIが回答した内容です。今後の分析に再利用できるよう、" +
+      "挨拶・相槌・提案の言い回しを除いた事実・気づき・傾向だけを1〜2文、40字程度で簡潔に要約してください。\n\n" +
+      `# 元の回答\n${text}`;
+
+    const result = runGeminiChat_(
+      apiKey,
+      [{ role: "user", parts: [{ text: prompt }] }],
+      INSIGHT_SUMMARY_RESPONSE_SCHEMA,
+    );
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+
+    const summary = (result.parsed.summary || "").trim();
+    if (!summary) {
+      return { success: false, error: "要約結果が空でした" };
+    }
+
+    return { success: true, summary };
+  } catch (e) {
+    Logger.log(`handleSummarizeAiInsight unexpected error: ${e.message}`);
+    return { success: false, error: e.message };
+  }
+}
+
+// 「気づき・傾向」メモリ一覧の整理1回分のレスポンススキーマ
+const CONSOLIDATE_INSIGHTS_RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    insights: {
+      type: "ARRAY",
+      items: { type: "STRING" },
+      description: "重複統合・一般化した後の気づき・傾向。1件あたり40字程度。",
+    },
+  },
+  required: ["insights"],
+};
+
+// 蓄積された「気づき・傾向」メモリをGeminiに分析させ、重複統合・一般化した内容に置き換える。
+// 対象が0〜1件の場合は整理不要としてそのまま返す
+function handleConsolidateAiMemoryInsights() {
+  try {
+    const { memories } = handleGetAiMemories();
+    const insights = memories.filter((m) => m.type === "insight");
+    if (insights.length < 2) {
+      return { success: true, changed: false, memories };
+    }
+
+    const apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
+    if (!apiKey) {
+      return { success: false, error: "GEMINI_API_KEY is not set in script properties" };
+    }
+
+    const listText = insights.map((m, i) => `${i + 1}. ${m.content}`).join("\n");
+    const prompt =
+      "以下は家計管理アプリに蓄積された「気づき・傾向」のメモリ一覧です。" +
+      "内容が重複・類似しているものは1件に統合し、一般化できるものはより汎用的な表現にまとめてください。" +
+      "古くなった・他の項目と矛盾する内容は除外して構いません。各項目は40字程度の簡潔な文にしてください。\n\n" +
+      `# 現在の気づき・傾向一覧\n${listText}`;
+
+    const result = runGeminiChat_(
+      apiKey,
+      [{ role: "user", parts: [{ text: prompt }] }],
+      CONSOLIDATE_INSIGHTS_RESPONSE_SCHEMA,
+    );
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+
+    const consolidated = Array.isArray(result.parsed.insights)
+      ? result.parsed.insights.map((s) => String(s).trim()).filter((s) => s)
+      : [];
+    if (consolidated.length === 0) {
+      return { success: false, error: "整理結果が空でした" };
+    }
+
+    replaceAiMemoryInsights_(consolidated);
+    return { success: true, changed: true, memories: handleGetAiMemories().memories };
+  } catch (e) {
+    Logger.log(`handleConsolidateAiMemoryInsights unexpected error: ${e.message}`);
+    return { success: false, error: e.message };
+  }
+}
+
 // ユーザーが選んだ分析期間に関わらず、予算は月単位で管理されているため
 // 常に「今月」の予算対比を固定コンテキストとして注入する
 function buildBudgetVarianceSection_() {
