@@ -59,15 +59,28 @@ function getGeminiModelsToTry() {
   return configuredModel ? [configuredModel] : GEMINI_MODEL_FALLBACK_ORDER;
 }
 
-function callGeminiChatApi_(model, apiKey, contents, responseSchema) {
+// configは { responseSchema } （構造化出力）か { tools, allowedFunctionNames } （function calling）のいずれか。
+// 構造化出力とtoolsは併用できないため、呼び出し側でどちらかを選ぶ
+function callGeminiChatApi_(model, apiKey, contents, config) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  const payload = {
-    contents,
-    generationConfig: {
+  const payload = { contents };
+
+  if (config.tools) {
+    payload.tools = config.tools;
+    // ANY = 必ずいずれかの関数を呼ばせる。回答自体もrespond_to_userという関数のため、
+    // これで「データを取りに行く」か「回答する」かのどちらかに必ず着地する
+    const functionCallingConfig = { mode: "ANY" };
+    if (config.allowedFunctionNames) {
+      functionCallingConfig.allowedFunctionNames = config.allowedFunctionNames;
+    }
+    payload.toolConfig = { functionCallingConfig };
+  } else {
+    payload.generationConfig = {
       responseMimeType: "application/json",
-      responseSchema,
-    },
-  };
+      responseSchema: config.responseSchema,
+    };
+  }
+
   const options = {
     method: "post",
     contentType: "application/json",
@@ -79,18 +92,18 @@ function callGeminiChatApi_(model, apiKey, contents, responseSchema) {
   return { code: response.getResponseCode(), body: response.getContentText() };
 }
 
-// モデルのフォールバック・リトライを行いつつ1ターン分のGemini応答を取得し、
-// 構造化出力(JSON文字列)をパースして返す
-function runGeminiChat_(apiKey, contents, responseSchema) {
+// モデルのフォールバック・リトライを行い、Geminiの応答パート配列をそのまま返す。
+// function callingではtextではなくfunctionCallパートが返るため、パート単位で扱う
+function fetchGeminiParts_(apiKey, contents, config) {
   for (const model of getGeminiModelsToTry()) {
-    const { code, body: responseBody } = callGeminiChatApi_(model, apiKey, contents, responseSchema);
+    const { code, body: responseBody } = callGeminiChatApi_(model, apiKey, contents, config);
 
     if (code === 200) {
       const json = JSON.parse(responseBody);
       const candidate = json.candidates && json.candidates[0] && json.candidates[0].content;
-      const rawText = candidate ? candidate.parts[0].text : null;
+      const parts = candidate && candidate.parts;
 
-      if (!rawText) {
+      if (!parts || parts.length === 0) {
         const blockReason = json.promptFeedback && json.promptFeedback.blockReason;
         Logger.log(`Gemini chat response has no candidates (model: ${model}): ${responseBody}`);
         return {
@@ -101,15 +114,7 @@ function runGeminiChat_(apiKey, contents, responseSchema) {
         };
       }
 
-      let parsed;
-      try {
-        parsed = JSON.parse(rawText);
-      } catch (e) {
-        Logger.log(`Gemini chat response is not valid JSON (model: ${model}): ${rawText}`);
-        return { success: false, error: "Geminiからの応答を解析できませんでした" };
-      }
-
-      return { success: true, parsed, rawText };
+      return { success: true, parts };
     }
 
     Logger.log(`Gemini chat API error (model: ${model}): ${responseBody}`);
@@ -119,6 +124,29 @@ function runGeminiChat_(apiKey, contents, responseSchema) {
   }
 
   return { success: false, error: "Gemini API request failed" };
+}
+
+// 構造化出力で1ターン分のGemini応答を取得し、JSON文字列をパースして返す
+function runGeminiChat_(apiKey, contents, responseSchema) {
+  const result = fetchGeminiParts_(apiKey, contents, { responseSchema });
+  if (!result.success) {
+    return result;
+  }
+
+  const rawText = result.parts[0].text;
+  if (!rawText) {
+    return { success: false, error: "Geminiからの応答に有効な候補がありません" };
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch (e) {
+    Logger.log(`Gemini chat response is not valid JSON: ${rawText}`);
+    return { success: false, error: "Geminiからの応答を解析できませんでした" };
+  }
+
+  return { success: true, parsed, rawText };
 }
 
 // Geminiが構造化出力のJSON文字列内で改行を二重エスケープして返すことがあり、
@@ -522,17 +550,14 @@ function handleStartAiChat(body) {
     ].filter((s) => s);
     const initialPrompt = sections.join("\n\n");
 
-    const result = runGeminiChat_(apiKey, [{ role: "user", parts: [{ text: initialPrompt }] }], CHAT_RESPONSE_SCHEMA);
+    // 初期コンテキストは足がかりとして渡し、追加のデータはAIがツールで取りに行く
+    const result = runAiAgent_(apiKey, [{ role: "user", parts: [{ text: initialPrompt }] }]);
     if (!result.success) {
       return { success: false, error: result.error };
     }
 
     const { quick_replies, is_final, todo_actions } = result.parsed;
     const ai_message = normalizeAiText_(result.parsed.ai_message);
-    const history = [
-      { role: "user", text: initialPrompt },
-      { role: "model", text: result.rawText },
-    ];
 
     getAiLogSheet().appendRow([new Date().toISOString(), initialPrompt, ai_message]);
 
@@ -542,7 +567,7 @@ function handleStartAiChat(body) {
       quick_replies: quick_replies || [],
       is_final: !!is_final,
       todo_actions: todo_actions || [],
-      history,
+      history: result.contents,
     };
   } catch (e) {
     Logger.log(`handleStartAiChat unexpected error: ${e.message}`);
@@ -565,17 +590,16 @@ function handleContinueAiChat(body) {
       return { success: false, error: "GEMINI_API_KEY is not set in script properties" };
     }
 
-    const nextHistory = history.concat([{ role: "user", text: userReply }]);
-    const contents = nextHistory.map((turn) => ({ role: turn.role, parts: [{ text: turn.text }] }));
+    // historyはGeminiのcontents形式をそのまま往復させている（サーバーは状態を持たない）
+    const nextContents = history.concat([{ role: "user", parts: [{ text: userReply }] }]);
 
-    const result = runGeminiChat_(apiKey, contents, CHAT_RESPONSE_SCHEMA);
+    const result = runAiAgent_(apiKey, nextContents);
     if (!result.success) {
       return { success: false, error: result.error };
     }
 
     const { quick_replies, is_final, todo_actions } = result.parsed;
     const ai_message = normalizeAiText_(result.parsed.ai_message);
-    const updatedHistory = nextHistory.concat([{ role: "model", text: result.rawText }]);
 
     getAiLogSheet().appendRow([new Date().toISOString(), userReply, ai_message]);
 
@@ -585,7 +609,7 @@ function handleContinueAiChat(body) {
       quick_replies: quick_replies || [],
       is_final: !!is_final,
       todo_actions: todo_actions || [],
-      history: updatedHistory,
+      history: result.contents,
     };
   } catch (e) {
     Logger.log(`handleContinueAiChat unexpected error: ${e.message}`);
