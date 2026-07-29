@@ -1,16 +1,31 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useUpload } from "../hooks/useUpload";
-import { LocalCsvPathPanel } from "./LocalCsvPathPanel";
 import { UploadResult } from "./UploadResult";
 import { SECTION_HEADING_CLASS } from "../lib/ui";
+import { collectDroppedCsvFiles, toCsvFiles } from "../lib/csvFiles";
 
-type UploadMode = "file" | "path";
+// webkitdirectoryはTypeScriptの標準の型定義に含まれないため、属性として渡すために型を緩める
+const DIRECTORY_ATTRS = { webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>;
 
 export function UploadForm() {
-  const [mode, setMode] = useState<UploadMode>("file");
   const [files, setFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [overwriteCategory, setOverwriteCategory] = useState(true);
   const { status, results, upload } = useUpload();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const directoryInputRef = useRef<HTMLInputElement>(null);
+
+  // 入手経路がファイル選択・フォルダ選択・ドロップのどれであっても、
+  // ここでFile配列に揃えてしまえば以降の処理は共通でよい
+  const addFiles = (added: File[]) => {
+    setFiles((current) => toCsvFiles([...current, ...added]));
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    addFiles(await collectDroppedCsvFiles(e.dataTransfer));
+  };
 
   const handleSubmit = () => {
     if (files.length === 0) {
@@ -19,41 +34,74 @@ export function UploadForm() {
     upload(files, overwriteCategory);
   };
 
+  const clearFiles = () => {
+    setFiles([]);
+    // 同じファイルを選び直せるよう、input側の選択状態もリセットする
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (directoryInputRef.current) directoryInputRef.current.value = "";
+  };
+
   return (
     <div>
       <h2 className={SECTION_HEADING_CLASS}>CSVアップロード</h2>
 
-      <div role="tablist" className="tabs tabs-boxed mb-3 w-fit">
-        <button
-          type="button"
-          role="tab"
-          className={`tab ${mode === "file" ? "tab-active" : ""}`}
-          onClick={() => setMode("file")}
-        >
-          ファイルを選択
-        </button>
-        <button
-          type="button"
-          role="tab"
-          className={`tab ${mode === "path" ? "tab-active" : ""}`}
-          onClick={() => setMode("path")}
-        >
-          パスで指定
-        </button>
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        data-testid="csv-drop-zone"
+        className={`flex flex-col items-center gap-3 rounded-box border-2 border-dashed p-6 transition-colors ${
+          isDragging ? "border-primary bg-primary/5" : "border-base-300"
+        }`}
+      >
+        <p className="text-sm text-base-content/70">CSVファイルやフォルダをここにドラッグ&ドロップ</p>
+
+        <div className="flex flex-wrap justify-center gap-2">
+          <button type="button" onClick={() => fileInputRef.current?.click()} className="btn btn-outline btn-sm">
+            ファイルを選択
+          </button>
+          <button type="button" onClick={() => directoryInputRef.current?.click()} className="btn btn-outline btn-sm">
+            フォルダを選択
+          </button>
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          multiple
+          aria-label="CSVファイル"
+          onChange={(e) => addFiles(Array.from(e.target.files ?? []))}
+          className="hidden"
+        />
+        <input
+          ref={directoryInputRef}
+          type="file"
+          aria-label="CSVフォルダ"
+          onChange={(e) => addFiles(Array.from(e.target.files ?? []))}
+          className="hidden"
+          {...DIRECTORY_ATTRS}
+        />
       </div>
 
-      {mode === "path" ? (
-        <LocalCsvPathPanel onFilesLoaded={setFiles} />
-      ) : (
-        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-          <input
-            type="file"
-            accept=".csv"
-            multiple
-            aria-label="CSVファイル"
-            onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-            className="file-input file-input-bordered w-full sm:w-auto"
-          />
+      {files.length > 0 && (
+        <div className="mt-3" data-testid="selected-csv-files">
+          <div className="mb-1 flex items-center gap-2">
+            <p className="text-sm font-medium">選択中: {files.length}件</p>
+            <button type="button" onClick={clearFiles} className="btn btn-ghost btn-xs">
+              クリア
+            </button>
+          </div>
+          <ul className="max-h-40 overflow-y-auto text-sm text-base-content/70">
+            {files.map((file) => (
+              <li key={`${file.name}:${file.size}`} className="font-mono">
+                {file.name}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
