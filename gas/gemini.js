@@ -274,6 +274,77 @@ function handleConsolidateAiMemoryInsights() {
   }
 }
 
+// 推移としてプロンプトに含める直近の月数。長すぎるとプロンプトが冗長になるため絞る
+const AI_TREND_POINT_LIMIT = 6;
+
+// 設定済みの家計の目標を「# 家計の目標」セクションとして組み立てる。
+// 支出の多寡を評価する基準になるため、カテゴリ予算の合計との差分も併せて渡す。
+// 定期収入が未設定の場合は目標が成立しないため空文字を返す
+function buildGoalsSection_() {
+  const goals = handleGetGoals();
+  if (!goals.monthlyIncome) {
+    return "";
+  }
+
+  const { budgets } = handleGetBudgets();
+  const totalBudget = budgets.reduce((sum, b) => sum + b.monthlyBudget, 0);
+  const difference = goals.spendableTotal - totalBudget;
+  const differenceText =
+    difference < 0
+      ? `カテゴリ予算の合計が使える総額を${formatYen_(Math.abs(difference))}超過している（目標達成には予算の見直しが必要）`
+      : `カテゴリ予算の合計は使える総額に対して${formatYen_(difference)}の余裕がある`;
+  const targetSuffix = goals.savingsTargetMode === "rate" ? `（収入の${goals.savingsTargetRate}%）` : "";
+
+  return (
+    "# 家計の目標\n" +
+    "この家計は以下の月次目標を掲げています。支出の多寡は一般論ではなく、この目標に照らして評価してください。\n" +
+    `- 定期収入（手取り月額。ボーナスを含まない）: ${formatYen_(goals.monthlyIncome)}\n` +
+    `- 目標貯蓄額: ${formatYen_(goals.resolvedSavingsTarget)}${targetSuffix}\n` +
+    `- 使える総額（定期収入 − 目標貯蓄額）: ${formatYen_(goals.spendableTotal)}\n` +
+    `- 設定済みカテゴリ予算の合計: ${formatYen_(totalBudget)}\n` +
+    `- ${differenceText}`
+  );
+}
+
+// 増減は今期間から見た差分（プラスなら今期間のほうが多い）として表現する
+function formatDiff_(diff) {
+  return `${diff > 0 ? "+" : ""}${formatYen_(diff)}`;
+}
+
+function formatComparisonLine_(name, comparison) {
+  return (
+    `- ${name}（${comparison.label}）との比較: ` +
+    `支出 ${formatDiff_(comparison.expenseDiff)}、収入 ${formatDiff_(comparison.incomeDiff)}、収支 ${formatDiff_(comparison.balanceDiff)}`
+  );
+}
+
+// 前月比・前年同月比と直近数ヶ月の推移を「# 時系列の変化」セクションとして組み立てる。
+// これがないとAIは単月の断面しか見られず、増減の傾向を指摘できない
+function buildTrendSection_(summary) {
+  const lines = [];
+
+  // comparisonはunit=month時のみ存在する
+  if (summary.comparison) {
+    lines.push(formatComparisonLine_("前月", summary.comparison.previousMonth));
+    lines.push(formatComparisonLine_("前年同月", summary.comparison.previousYear));
+  }
+
+  const { points } = handleTrend({ unit: "month" });
+  const recentPoints = points.slice(-AI_TREND_POINT_LIMIT);
+  if (recentPoints.length > 0) {
+    const pointLines = recentPoints
+      .map((p) => `  - ${p.label}: 支出${formatYen_(p.totalExpense)}、収入${formatYen_(p.totalIncome)}`)
+      .join("\n");
+    lines.push(`- 直近${recentPoints.length}ヶ月の推移:\n${pointLines}`);
+  }
+
+  if (lines.length === 0) {
+    return "";
+  }
+
+  return `# 時系列の変化\n${lines.join("\n")}`;
+}
+
 // ユーザーが選んだ分析期間に関わらず、予算は月単位で管理されているため
 // 常に「今月」の予算対比を固定コンテキストとして注入する
 function buildBudgetVarianceSection_() {
@@ -344,7 +415,9 @@ function handleGetAiFocusPoints(body) {
       attributesSection,
       memoryInsightsSection,
       "あなたは家計管理のアドバイザーです。以下の支出データを分析し、ユーザーが深掘りしたくなりそうな「気になる点」を2〜4件提示してください。",
+      buildGoalsSection_(),
       dataContext ? `# 分析対象データ\n${dataContext}` : "",
+      buildTrendSection_(summary),
       varianceSection,
       agendaTopicsSection,
     ].filter((s) => s);
@@ -396,7 +469,9 @@ function handleStartAiChat(body) {
       attributesSection,
       memoryInsightsSection,
       getAiPrompt(),
+      buildGoalsSection_(),
       dataContext ? `# 分析対象データ\n${dataContext}` : "",
+      buildTrendSection_(summary),
       varianceSection,
       `# 相談テーマ\n${agendaTopic}`,
     ].filter((s) => s);
