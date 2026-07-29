@@ -23,6 +23,39 @@ test("quick_replyを選ぶと対話が進む", async ({ page }) => {
   await expect(page.getByRole("button", { name: "来月は減らしたい" })).toBeVisible();
 });
 
+test("AIの応答がMarkdownとして描画され、改行が文字として残らない", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "気になる点を探す" }).click();
+  await page.getByRole("button", { name: "外食費が先月より増えています" }).click();
+  await page.getByRole("button", { name: "外食が増えたかも" }).click();
+
+  const bubble = page.locator(".ai-advice-markdown").filter({ hasText: "なるほど、外食が増えているんですね" });
+
+  // 見出し・箇条書き・強調がプレーンテキストではなく要素として描画される
+  await expect(bubble.getByRole("heading", { name: "気になった点" })).toBeVisible();
+  await expect(bubble.getByRole("listitem")).toHaveCount(2);
+  await expect(bubble.getByText("食費全体")).toHaveJSProperty("tagName", "STRONG");
+
+  // エスケープされた改行が文字として表示されていない
+  await expect(bubble).not.toContainText("\\n");
+  await expect(bubble).not.toContainText("##");
+});
+
+test("ユーザーの発言はMarkdownとして描画されない", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "気になる点を探す" }).click();
+  await page.getByRole("button", { name: "外食費が先月より増えています" }).click();
+  await page.getByRole("button", { name: "その他を入力" }).click();
+  await page.getByLabel("自由入力の返信").fill("# これは見出しではない");
+  await page.getByRole("button", { name: "送信" }).click();
+
+  const userBubble = page.locator(".chat-bubble-primary").filter({ hasText: "これは見出しではない" });
+  await expect(userBubble).toContainText("# これは見出しではない");
+  await expect(userBubble.getByRole("heading")).toHaveCount(0);
+});
+
 test("対話が完了すると予算適用ボタンが表示され、押すと予算に反映される", async ({ page }) => {
   await page.goto("/");
 

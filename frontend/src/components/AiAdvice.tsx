@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Markdown from "react-markdown";
 import { MonthSelector } from "./MonthSelector";
 import { YearSelector } from "./YearSelector";
 import { useAiChat } from "../hooks/useAiChat";
@@ -181,9 +182,14 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
       <div className="flex flex-col gap-3">
         {chat.messages.map((message, index) => (
           <div key={index} className={`chat ${message.role === "ai" ? "chat-start" : "chat-end"}`}>
-            <div className={`chat-bubble whitespace-pre-wrap ${message.role === "ai" ? "" : "chat-bubble-primary"}`}>
-              {maskText(message.text)}
-            </div>
+            {/* AIの応答は見出し・箇条書きを含むMarkdownで返るため描画する。ユーザーの発言はプレーンテキストのまま */}
+            {message.role === "ai" ? (
+              <div className="chat-bubble ai-advice-markdown">
+                <Markdown>{maskText(message.text)}</Markdown>
+              </div>
+            ) : (
+              <div className="chat-bubble chat-bubble-primary whitespace-pre-wrap">{maskText(message.text)}</div>
+            )}
             {message.role === "ai" && (
               <div className="chat-footer">
                 {savedMessageIndices.has(index) ? (
