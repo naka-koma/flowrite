@@ -75,9 +75,12 @@ export interface TrendResponse {
   error?: string;
 }
 
+// Geminiの会話履歴。サーバーが状態を持たないため、クライアントが保持して往復させる。
+// 中身はGeminiのcontents形式そのもの（ツール呼び出しのやり取りも含む）で、
+// フロントエンドは解釈せず受け取ったまま返す
 export interface ChatTurn {
   role: "user" | "model";
-  text: string;
+  parts: unknown[];
 }
 
 export type TodoActionType = "budget" | "savingsTarget" | "specialReserve";

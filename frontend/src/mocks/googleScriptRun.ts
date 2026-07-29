@@ -653,11 +653,12 @@ function mockHandleStartAiChat(body: StartAiChatParams) {
     return { success: false, error: "指定した期間のデータがありません" };
   }
 
+  // 履歴はGeminiのcontents形式。実際のGASではツール呼び出しのやり取りも含まれる
   const initialPrompt = `agenda:${body.agendaTopic}`;
   const turn = mockChatTurn(0);
   const history: ChatTurn[] = [
-    { role: "user", text: initialPrompt },
-    { role: "model", text: JSON.stringify(turn) },
+    { role: "user", parts: [{ text: initialPrompt }] },
+    { role: "model", parts: [{ functionCall: { name: "respond_to_user", args: turn } }] },
   ];
   return { success: true, ...turn, history };
 }
@@ -666,8 +667,8 @@ function mockHandleContinueAiChat(body: ContinueAiChatParams) {
   const modelTurnCount = body.history.filter((h) => h.role === "model").length;
   const turn = mockChatTurn(modelTurnCount);
   const history: ChatTurn[] = body.history.concat([
-    { role: "user", text: body.userReply },
-    { role: "model", text: JSON.stringify(turn) },
+    { role: "user", parts: [{ text: body.userReply }] },
+    { role: "model", parts: [{ functionCall: { name: "respond_to_user", args: turn } }] },
   ]);
   return { success: true, ...turn, history };
 }
