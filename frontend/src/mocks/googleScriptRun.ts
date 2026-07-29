@@ -6,6 +6,7 @@ import type {
   AiCategorySuggestionParams,
   AiMemory,
   ApplyAiCategorySuggestionsParams,
+  ApplyTodoActionsParams,
   Budget,
   CalendarDay,
   ChatTurn,
@@ -634,7 +635,12 @@ function mockChatTurn(modelTurnCount: number) {
     ai_message: "では食費の予算を見直しましょう。来月は35,000円を目安にしてみましょう。",
     quick_replies: [] as string[],
     is_final: true,
-    todo_actions: [{ category: "食費", new_budget: 35000 }] as TodoAction[],
+    // 予算・貯蓄目標・特別費積立の3種別がそれぞれ正しく反映されることを検証できるようにする
+    todo_actions: [
+      { type: "budget", category: "食費", amount: 35000 },
+      { type: "savingsTarget", amount: 100000 },
+      { type: "specialReserve", amount: 15000 },
+    ] as TodoAction[],
   };
 }
 
@@ -1028,6 +1034,7 @@ const DEFAULT_MOCK_GOALS = {
   savingsTargetMode: "amount" as SavingsTargetMode,
   savingsTargetAmount: 0,
   savingsTargetRate: 0,
+  specialReserveAmount: 0,
 };
 
 type StoredGoals = typeof DEFAULT_MOCK_GOALS;
@@ -1053,7 +1060,11 @@ function resolveMockGoals(stored: StoredGoals): Goals {
       ? Math.round((stored.monthlyIncome * stored.savingsTargetRate) / 100)
       : stored.savingsTargetAmount;
 
-  return { ...stored, resolvedSavingsTarget, spendableTotal: stored.monthlyIncome - resolvedSavingsTarget };
+  return {
+    ...stored,
+    resolvedSavingsTarget,
+    spendableTotal: stored.monthlyIncome - resolvedSavingsTarget - stored.specialReserveAmount,
+  };
 }
 
 function mockHandleGetGoals() {
@@ -1084,9 +1095,57 @@ function mockHandleUpdateGoals(body: UpdateGoalsParams) {
     }
     stored.savingsTargetRate = body.savingsTargetRate;
   }
+  if (body.specialReserveAmount !== undefined) {
+    if (!Number.isFinite(body.specialReserveAmount) || body.specialReserveAmount < 0) {
+      return { success: false, error: "specialReserveAmount must be a non-negative number" };
+    }
+    stored.specialReserveAmount = body.specialReserveAmount;
+  }
 
   sessionStorage.setItem(MOCK_GOALS_STORAGE_KEY, JSON.stringify(stored));
   return { success: true, goals: resolveMockGoals(stored) };
+}
+
+// GAS側のhandleApplyAiTodoActionsと同じく、予算と目標の両方へまとめて反映する
+function mockHandleApplyAiTodoActions(body: ApplyTodoActionsParams) {
+  const actions = body.actions ?? [];
+  if (actions.length === 0) {
+    return { success: false, error: "actions is required" };
+  }
+
+  const goalUpdates: UpdateGoalsParams = {};
+
+  for (const action of actions) {
+    if (!Number.isFinite(action.amount) || action.amount < 0) {
+      return { success: false, error: "amount must be a non-negative number" };
+    }
+
+    if (action.type === "budget") {
+      if (!action.category) {
+        return { success: false, error: "category is required for budget action" };
+      }
+      const result = mockHandleUpsertBudget({ category: action.category, monthlyBudget: action.amount });
+      if (!result.success) {
+        return { success: false, error: result.error };
+      }
+    } else if (action.type === "savingsTarget") {
+      goalUpdates.savingsTargetMode = "amount";
+      goalUpdates.savingsTargetAmount = action.amount;
+    } else if (action.type === "specialReserve") {
+      goalUpdates.specialReserveAmount = action.amount;
+    } else {
+      return { success: false, error: `unknown action type: ${action.type}` };
+    }
+  }
+
+  if (Object.keys(goalUpdates).length > 0) {
+    const result = mockHandleUpdateGoals(goalUpdates);
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+  }
+
+  return { success: true, applied: actions.length };
 }
 
 function mockHandleGetVersion() {
@@ -1165,6 +1224,8 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleUpsertBudget(args[0] as UpsertBudgetParams);
     case "handleDeleteBudget":
       return mockHandleDeleteBudget(args[0] as DeleteBudgetParams);
+    case "handleApplyAiTodoActions":
+      return mockHandleApplyAiTodoActions(args[0] as ApplyTodoActionsParams);
     case "handleGetGoals":
       return mockHandleGetGoals();
     case "handleUpdateGoals":

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { periodSelector, selectPeriodUnit } from "./helpers";
+import { openBudget, periodSelector, selectPeriodUnit } from "./helpers";
 
 test("気になる点を探すと候補が表示され、選ぶと最初のAIメッセージとquick_repliesが表示される", async ({ page }) => {
   await page.goto("/");
@@ -56,7 +56,7 @@ test("ユーザーの発言はMarkdownとして描画されない", async ({ pag
   await expect(userBubble.getByRole("heading")).toHaveCount(0);
 });
 
-test("対話が完了すると予算適用ボタンが表示され、押すと予算に反映される", async ({ page }) => {
+test("対話が完了すると見直し案が種別ごとに表示され、押すと予算と目標に反映される", async ({ page }) => {
   await page.goto("/");
 
   await page.getByRole("button", { name: "気になる点を探す" }).click();
@@ -66,11 +66,24 @@ test("対話が完了すると予算適用ボタンが表示され、押すと�
 
   await expect(page.getByText("食費の予算を見直しましょう")).toBeVisible();
   await expect(page.getByText("見直し案", { exact: true })).toBeVisible();
-  await expect(page.getByText("35,000円", { exact: true })).toBeVisible();
+
+  // 貯蓄・積立がカテゴリ予算ではなく、それぞれの反映先とともに表示される
+  const advice = page.getByTestId("ai-advice");
+  await expect(advice.getByText("食費", { exact: true })).toBeVisible();
+  await expect(advice.getByText("目標貯蓄額", { exact: true })).toBeVisible();
+  await expect(advice.getByText("特別費積立", { exact: true })).toBeVisible();
+  await expect(advice.getByText("家計の目標の貯蓄額に反映されます")).toBeVisible();
 
   await page.getByRole("button", { name: "この見直し案を予算ページに適用する" }).click();
-
   await expect(page.getByText("予算に反映しました")).toBeVisible();
+
+  // 予算はカテゴリ予算に、貯蓄・積立は家計の目標に反映される
+  await openBudget(page);
+  await expect(page.getByLabel("食費の月間予算額")).toHaveValue("35,000");
+
+  const goalSettings = page.getByTestId("goal-settings");
+  await expect(goalSettings.getByLabel("目標貯蓄額")).toHaveValue("100,000");
+  await expect(goalSettings.getByLabel("特別費積立")).toHaveValue("15,000");
 });
 
 test("「その他を入力」で自由入力の返信を送信できる", async ({ page }) => {

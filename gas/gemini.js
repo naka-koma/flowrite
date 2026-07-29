@@ -5,6 +5,10 @@ const GEMINI_MODEL_FALLBACK_ORDER = ["gemini-3.5-flash", "gemini-3.1-flash-lite"
 // どちらも別モデルへの切り替えやリトライで回復しうる一時的なエラー。
 const GEMINI_RETRYABLE_STATUS_CODES = [429, 503];
 
+// 見直し案として提案できるアクションの種別。
+// budgetはカテゴリ別の支出予算、他の2つは家計の目標（goals）側に反映される
+const AI_TODO_ACTION_TYPES = ["budget", "savingsTarget", "specialReserve"];
+
 // 対話1ターンごとにGeminiへ要求する構造化出力のスキーマ。
 // descriptionはプロンプトの一部としてGemini側の出力内容をガイドする役割も兼ねる
 const CHAT_RESPONSE_SCHEMA = {
@@ -30,12 +34,21 @@ const CHAT_RESPONSE_SCHEMA = {
       items: {
         type: "OBJECT",
         properties: {
-          category: { type: "STRING" },
-          new_budget: { type: "INTEGER" },
+          type: {
+            type: "STRING",
+            enum: AI_TODO_ACTION_TYPES,
+            description:
+              "budget=カテゴリ別の月間支出予算、savingsTarget=月次の目標貯蓄額、specialReserve=帰省やイベントなど不定期支出に備える月々の積立額。",
+          },
+          category: { type: "STRING", description: "type=budgetの場合のみ設定する対象の大項目名。" },
+          amount: { type: "INTEGER", description: "設定する月額（円）。" },
         },
-        required: ["category", "new_budget"],
+        required: ["type", "amount"],
       },
-      description: "is_finalがtrueの場合に設定される、来月に向けた予算見直し案のデータ配列。",
+      description:
+        "is_finalがtrueの場合に設定される、来月に向けた見直し案の配列。" +
+        "貯蓄や積立はカテゴリ別の支出予算ではないため、type=budgetで提案してはいけない。" +
+        "貯蓄はsavingsTarget、不定期支出への積立はspecialReserveを使うこと。",
     },
   },
   required: ["ai_message", "quick_replies", "is_final"],
@@ -312,7 +325,8 @@ function buildGoalsSection_() {
     "この家計は以下の月次目標を掲げています。支出の多寡は一般論ではなく、この目標に照らして評価してください。\n" +
     `- 定期収入（手取り月額。ボーナスを含まない）: ${formatYen_(goals.monthlyIncome)}\n` +
     `- 目標貯蓄額: ${formatYen_(goals.resolvedSavingsTarget)}${targetSuffix}\n` +
-    `- 使える総額（定期収入 − 目標貯蓄額）: ${formatYen_(goals.spendableTotal)}\n` +
+    `- 特別費積立額（不定期支出に備える月々の積立）: ${formatYen_(goals.specialReserveAmount)}\n` +
+    `- 使える総額（定期収入 − 目標貯蓄額 − 特別費積立額）: ${formatYen_(goals.spendableTotal)}\n` +
     `- 設定済みカテゴリ予算の合計: ${formatYen_(totalBudget)}\n` +
     `- ${differenceText}`
   );
@@ -556,6 +570,57 @@ function handleContinueAiChat(body) {
     };
   } catch (e) {
     Logger.log(`handleContinueAiChat unexpected error: ${e.message}`);
+    return { success: false, error: e.message };
+  }
+}
+
+// 対話で合意した見直し案を予算・家計の目標へ反映する。
+// 予算と目標の両方に跨るため、フロントエンドから個別に呼ばずGAS側でまとめて処理する
+function handleApplyAiTodoActions(body) {
+  try {
+    const actions = Array.isArray(body && body.actions) ? body.actions : [];
+    if (actions.length === 0) {
+      return { success: false, error: "actions is required" };
+    }
+
+    const goalUpdates = {};
+
+    for (const action of actions) {
+      const amount = Number(action.amount);
+      if (!Number.isFinite(amount) || amount < 0) {
+        return { success: false, error: "amount must be a non-negative number" };
+      }
+
+      if (action.type === "budget") {
+        const category = (action.category || "").trim();
+        if (!category) {
+          return { success: false, error: "category is required for budget action" };
+        }
+        const result = handleUpsertBudget({ category, monthlyBudget: amount });
+        if (!result.success) {
+          return { success: false, error: result.error };
+        }
+      } else if (action.type === "savingsTarget") {
+        // AIは金額で提案するため、率モードで設定されていた場合は定額モードへ切り替える
+        goalUpdates.savingsTargetMode = "amount";
+        goalUpdates.savingsTargetAmount = amount;
+      } else if (action.type === "specialReserve") {
+        goalUpdates.specialReserveAmount = amount;
+      } else {
+        return { success: false, error: `unknown action type: ${action.type}` };
+      }
+    }
+
+    if (Object.keys(goalUpdates).length > 0) {
+      const result = handleUpdateGoals(goalUpdates);
+      if (!result.success) {
+        return { success: false, error: result.error };
+      }
+    }
+
+    return { success: true, applied: actions.length };
+  } catch (e) {
+    Logger.log(`handleApplyAiTodoActions unexpected error: ${e.message}`);
     return { success: false, error: e.message };
   }
 }

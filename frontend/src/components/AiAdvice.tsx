@@ -6,12 +6,25 @@ import { useAiChat } from "../hooks/useAiChat";
 import { useAiFocusPoints } from "../hooks/useAiFocusPoints";
 import { useAiMemories } from "../hooks/useAiMemories";
 import { formatAmount, maskYenAmounts } from "../lib/money";
-import type { AiFocusPoint, SummaryParams } from "../types/api";
+import type { AiFocusPoint, SummaryParams, TodoActionType } from "../types/api";
 
 type AiPeriodUnit = "month" | "year" | "all";
 type WizardStep = "period" | "focusPoints" | "chat";
 
 const UNIT_LABELS: Record<AiPeriodUnit, string> = { month: "月", year: "年", all: "全て" };
+
+// 見直し案がどこに反映されるのかを利用者に明示するためのラベル
+const TODO_ACTION_LABELS: Record<TodoActionType, string> = {
+  budget: "カテゴリ予算",
+  savingsTarget: "目標貯蓄額",
+  specialReserve: "特別費積立",
+};
+
+const TODO_ACTION_DESCRIPTIONS: Record<TodoActionType, string> = {
+  budget: "大項目別の月間予算に反映されます",
+  savingsTarget: "家計の目標の貯蓄額に反映されます",
+  specialReserve: "家計の目標の特別費積立に反映されます",
+};
 
 interface AiAdviceProps {
   hideAmounts: boolean;
@@ -265,14 +278,22 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
         <div className="mt-3 flex flex-col gap-2">
           <div className="rounded-box border border-base-300 p-3">
             <p className="mb-2 text-sm font-medium">見直し案</p>
-            <ul className="flex flex-col gap-1">
-              {chat.todoActions.map((action) => (
-                <li key={action.category} className="flex justify-between text-sm">
-                  <span>{action.category}</span>
-                  <span>{hideAmounts ? "***" : `${formatAmount(action.new_budget)}円`}</span>
+            <ul className="flex flex-col gap-2">
+              {chat.todoActions.map((action, index) => (
+                <li key={`${action.type}-${action.category ?? index}`} className="flex justify-between gap-2 text-sm">
+                  <span className="flex flex-col">
+                    <span>{action.type === "budget" ? action.category : TODO_ACTION_LABELS[action.type]}</span>
+                    <span className="text-xs text-base-content/70">{TODO_ACTION_DESCRIPTIONS[action.type]}</span>
+                  </span>
+                  <span className="shrink-0">{hideAmounts ? "***" : `${formatAmount(action.amount)}円`}</span>
                 </li>
               ))}
             </ul>
+            {chat.todoActions.some((a) => a.type === "savingsTarget") && (
+              <p className="mt-2 text-xs text-base-content/70">
+                貯蓄目標を率で設定している場合、適用すると定額指定に切り替わります
+              </p>
+            )}
           </div>
           <button
             type="button"

@@ -1,5 +1,13 @@
 import { useState } from "react";
-import type { AiChatResponse, ChatTurn, StartAiChatParams, SummaryParams, TodoAction } from "../types/api";
+import type {
+  AiChatResponse,
+  ApplyTodoActionsParams,
+  ApplyTodoActionsResponse,
+  ChatTurn,
+  StartAiChatParams,
+  SummaryParams,
+  TodoAction,
+} from "../types/api";
 import { runScript } from "../lib/googleScriptRun";
 
 type ChatStatus = "idle" | "loading" | "success" | "error";
@@ -91,29 +99,23 @@ export function useAiChat() {
     setApplyState({ status: "idle", errorMessage: null });
   };
 
+  // 見直し案はカテゴリ予算と家計の目標の両方に跨るため、GAS側で一括して反映する
   const applyTodoActions = async () => {
     setApplyState({ status: "loading", errorMessage: null });
 
     try {
-      const results = await Promise.all(
-        state.todoActions.map((action) =>
-          runScript<{ success: boolean; error?: string }>("handleUpsertBudget", {
-            category: action.category,
-            monthlyBudget: action.new_budget,
-          }),
-        ),
-      );
+      const params: ApplyTodoActionsParams = { actions: state.todoActions };
+      const data = await runScript<ApplyTodoActionsResponse>("handleApplyAiTodoActions", params);
 
-      const failed = results.find((r) => !r.success);
-      if (failed) {
-        setApplyState({ status: "error", errorMessage: failed.error ?? "予算への反映に失敗しました" });
+      if (!data.success) {
+        setApplyState({ status: "error", errorMessage: data.error ?? "見直し案の反映に失敗しました" });
         return false;
       }
 
       setApplyState({ status: "success", errorMessage: null });
       return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "予算への反映に失敗しました";
+      const message = error instanceof Error ? error.message : "見直し案の反映に失敗しました";
       setApplyState({ status: "error", errorMessage: message });
       return false;
     }

@@ -80,9 +80,23 @@ export interface ChatTurn {
   text: string;
 }
 
+export type TodoActionType = "budget" | "savingsTarget" | "specialReserve";
+
 export interface TodoAction {
-  category: string;
-  new_budget: number;
+  type: TodoActionType;
+  // type=budgetの場合のみ設定される対象の大項目名
+  category?: string;
+  amount: number;
+}
+
+export interface ApplyTodoActionsParams {
+  actions: TodoAction[];
+}
+
+export interface ApplyTodoActionsResponse {
+  success: boolean;
+  applied?: number;
+  error?: string;
 }
 
 export interface StartAiChatParams {
@@ -211,9 +225,11 @@ export interface Goals {
   savingsTargetMode: SavingsTargetMode;
   savingsTargetAmount: number;
   savingsTargetRate: number;
+  // 帰省・イベントなど不定期支出を月割りで積み立てる額
+  specialReserveAmount: number;
   // 定額・率のどちらの指定でも金額に解決した目標貯蓄額
   resolvedSavingsTarget: number;
-  // 定期収入から目標貯蓄額を引いた、1ヶ月に使える総額
+  // 定期収入から目標貯蓄額と特別費積立額を引いた、1ヶ月に使える総額
   spendableTotal: number;
 }
 
@@ -226,6 +242,7 @@ export interface UpdateGoalsParams {
   savingsTargetMode?: SavingsTargetMode;
   savingsTargetAmount?: number;
   savingsTargetRate?: number;
+  specialReserveAmount?: number;
 }
 
 export interface UpdateGoalsResponse {

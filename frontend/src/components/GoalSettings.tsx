@@ -21,6 +21,7 @@ export function GoalSettings({ totalBudget, hideAmounts }: GoalSettingsProps) {
   const [mode, setMode] = useState<SavingsTargetMode>("amount");
   const [savingsTargetAmount, setSavingsTargetAmount] = useState("");
   const [savingsTargetRate, setSavingsTargetRate] = useState("");
+  const [specialReserveAmount, setSpecialReserveAmount] = useState("");
 
   useEffect(() => {
     if (goals) {
@@ -28,6 +29,7 @@ export function GoalSettings({ totalBudget, hideAmounts }: GoalSettingsProps) {
       setMode(goals.savingsTargetMode);
       setSavingsTargetAmount(String(goals.savingsTargetAmount));
       setSavingsTargetRate(String(goals.savingsTargetRate));
+      setSpecialReserveAmount(String(goals.specialReserveAmount));
     }
   }, [goals]);
 
@@ -55,6 +57,7 @@ export function GoalSettings({ totalBudget, hideAmounts }: GoalSettingsProps) {
       savingsTargetMode: mode,
       savingsTargetAmount: parseAmountInput(savingsTargetAmount),
       savingsTargetRate: Number(savingsTargetRate) || 0,
+      specialReserveAmount: parseAmountInput(specialReserveAmount),
     });
   };
 
@@ -76,6 +79,10 @@ export function GoalSettings({ totalBudget, hideAmounts }: GoalSettingsProps) {
           <div className="flex justify-between">
             <dt>目標貯蓄額</dt>
             <dd>{amountText(goals.resolvedSavingsTarget)}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>特別費積立</dt>
+            <dd>{amountText(goals.specialReserveAmount)}</dd>
           </div>
           <div className="flex justify-between font-medium">
             <dt>使える総額</dt>
@@ -163,6 +170,22 @@ export function GoalSettings({ totalBudget, hideAmounts }: GoalSettingsProps) {
             </label>
           )}
         </div>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium">特別費積立（月額）</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            aria-label="特別費積立"
+            value={specialReserveAmount === "0" ? "" : formatAmount(parseAmountInput(specialReserveAmount))}
+            onChange={(e) => setSpecialReserveAmount(String(parseAmountInput(e.target.value)))}
+            placeholder="例: 15,000"
+            className="input input-bordered input-sm w-40"
+          />
+          <span className="text-xs text-base-content/70">
+            帰省・イベント・年払いなど、毎月は発生しない支出に備える積立額です
+          </span>
+        </label>
 
         <div>
           <button type="submit" disabled={saveState.status === "loading"} className="btn btn-primary btn-sm">

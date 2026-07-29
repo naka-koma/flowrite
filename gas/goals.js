@@ -57,12 +57,14 @@ function handleGetGoals() {
     savingsTargetMode: mode,
     savingsTargetAmount: toNonNegativeNumber_(map.savingsTargetAmount),
     savingsTargetRate: toNonNegativeNumber_(map.savingsTargetRate),
+    // 帰省・イベントなど不定期支出を月割りで積み立てる額（年間特別費の月割り）
+    specialReserveAmount: toNonNegativeNumber_(map.specialReserveAmount),
   };
 
   const resolvedSavingsTarget = resolveSavingsTarget_(goals);
   // 目標が収入を上回る場合は負になるが、実現不可能な計画であることを示す情報として
   // そのまま返し、UI側で警告できるようにする
-  const spendableTotal = goals.monthlyIncome - resolvedSavingsTarget;
+  const spendableTotal = goals.monthlyIncome - resolvedSavingsTarget - goals.specialReserveAmount;
 
   return Object.assign({}, goals, { resolvedSavingsTarget, spendableTotal });
 }
@@ -99,6 +101,14 @@ function handleUpdateGoals(body) {
       return { success: false, error: "savingsTargetRate must be between 0 and 100" };
     }
     setGoal_("savingsTargetRate", savingsTargetRate);
+  }
+
+  if (params.specialReserveAmount !== undefined) {
+    const specialReserveAmount = Number(params.specialReserveAmount);
+    if (!Number.isFinite(specialReserveAmount) || specialReserveAmount < 0) {
+      return { success: false, error: "specialReserveAmount must be a non-negative number" };
+    }
+    setGoal_("specialReserveAmount", specialReserveAmount);
   }
 
   return { success: true, goals: handleGetGoals() };
