@@ -31,6 +31,21 @@ test("率で貯蓄目標を指定すると、金額に換算されて使える�
   await expect(goalSettings.getByTestId("spendable-total")).toHaveText("240,000円");
 });
 
+test("特別費積立を設定すると、貯蓄目標とあわせて使える総額から差し引かれる", async ({ page }) => {
+  await page.goto("/");
+  await openBudget(page);
+
+  const goalSettings = page.getByTestId("goal-settings");
+  await goalSettings.getByLabel("定期収入（手取り月額）").fill("300000");
+  await goalSettings.getByLabel("目標貯蓄額").fill("50000");
+  await goalSettings.getByLabel("特別費積立").fill("15000");
+  await goalSettings.getByRole("button", { name: "保存" }).click();
+
+  await expect(goalSettings.getByText("保存しました")).toBeVisible();
+  // 300,000 − 50,000 − 15,000 = 235,000
+  await expect(goalSettings.getByTestId("spendable-total")).toHaveText("235,000円");
+});
+
 test("予算の合計が使える総額を超えると超過額と警告が表示される", async ({ page }) => {
   await page.goto("/");
   await openBudget(page);
