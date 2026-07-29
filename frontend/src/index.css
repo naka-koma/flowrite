@@ -284,3 +284,10 @@ body {
   border-radius: 0.25rem;
   padding: 0.1rem 0.35rem;
 }
+/* チャットバブル内に収めるため、先頭・末尾要素の余白は打ち消す */
+.ai-advice-markdown > :first-child {
+  margin-top: 0;
+}
+.ai-advice-markdown > :last-child {
+  margin-bottom: 0;
+}

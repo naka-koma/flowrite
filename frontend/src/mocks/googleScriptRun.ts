@@ -620,8 +620,11 @@ function mockChatTurn(modelTurnCount: number) {
     };
   }
   if (modelTurnCount === 1) {
+    // GAS側のnormalizeAiText_を通った後を再現する。見出し・箇条書きが
+    // Markdownとして描画されること、\nが文字として残らないことを検証できる
     return {
-      ai_message: "なるほど、外食が増えているんですね。来月はどうしたいですか？",
+      ai_message:
+        "なるほど、外食が増えているんですね。来月はどうしたいですか？\n\n## 気になった点\n\n- 外食費が先月より1万円増えている\n- 一方で**食費全体**は横ばい",
       quick_replies: ["来月は減らしたい", "このままでいい"],
       is_final: false,
       todo_actions: [] as TodoAction[],

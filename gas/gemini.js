@@ -12,7 +12,9 @@ const CHAT_RESPONSE_SCHEMA = {
   properties: {
     ai_message: {
       type: "STRING",
-      description: "ユーザーへの問いかけ文。150〜200文字程度の短く親しみやすい文章（柔らかい標準語、タメ口）。",
+      description:
+        "ユーザーへの問いかけ文（柔らかい標準語、タメ口）。要点が複数ある場合は見出し・箇条書きなどのMarkdown記法で構造化してよい。" +
+        "改行はエスケープせず実際の改行文字を使うこと。冗長にならないよう、長くても400文字程度に収めること。",
     },
     quick_replies: {
       type: "ARRAY",
@@ -104,6 +106,16 @@ function runGeminiChat_(apiKey, contents, responseSchema) {
   }
 
   return { success: false, error: "Gemini API request failed" };
+}
+
+// Geminiが構造化出力のJSON文字列内で改行を二重エスケープして返すことがあり、
+// JSON.parse後にバックスラッシュと n の2文字が残る。表示・メモリ・ログの
+// すべてに一貫して効くよう、GAS側で実際の改行文字に戻す
+function normalizeAiText_(text) {
+  if (typeof text !== "string") {
+    return text;
+  }
+  return text.replace(/\\r\\n/g, "\n").replace(/\\n/g, "\n").replace(/\\t/g, "\t");
 }
 
 function formatYen_(amount) {
@@ -482,7 +494,8 @@ function handleStartAiChat(body) {
       return { success: false, error: result.error };
     }
 
-    const { ai_message, quick_replies, is_final, todo_actions } = result.parsed;
+    const { quick_replies, is_final, todo_actions } = result.parsed;
+    const ai_message = normalizeAiText_(result.parsed.ai_message);
     const history = [
       { role: "user", text: initialPrompt },
       { role: "model", text: result.rawText },
@@ -527,7 +540,8 @@ function handleContinueAiChat(body) {
       return { success: false, error: result.error };
     }
 
-    const { ai_message, quick_replies, is_final, todo_actions } = result.parsed;
+    const { quick_replies, is_final, todo_actions } = result.parsed;
+    const ai_message = normalizeAiText_(result.parsed.ai_message);
     const updatedHistory = nextHistory.concat([{ role: "model", text: result.rawText }]);
 
     getAiLogSheet().appendRow([new Date().toISOString(), userReply, ai_message]);
