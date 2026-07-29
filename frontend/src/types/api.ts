@@ -104,7 +104,6 @@ export interface ApplyTodoActionsResponse {
 
 export interface StartAiChatParams {
   agendaTopic: string;
-  summaryParams: SummaryParams;
 }
 
 export interface ContinueAiChatParams {
@@ -306,21 +305,6 @@ export interface ConsolidateAiMemoryInsightsResponse {
   success: boolean;
   changed?: boolean;
   memories?: AiMemory[];
-  error?: string;
-}
-
-export interface AiFocusPoint {
-  title: string;
-  context: string;
-}
-
-export interface GetAiFocusPointsParams {
-  summaryParams: SummaryParams;
-}
-
-export interface GetAiFocusPointsResponse {
-  success: boolean;
-  focusPoints: AiFocusPoint[];
   error?: string;
 }
 

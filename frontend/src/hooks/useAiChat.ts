@@ -5,7 +5,6 @@ import type {
   ApplyTodoActionsResponse,
   ChatTurn,
   StartAiChatParams,
-  SummaryParams,
   TodoAction,
 } from "../types/api";
 import { runScript } from "../lib/googleScriptRun";
@@ -66,11 +65,12 @@ export function useAiChat() {
     }));
   };
 
-  const startChat = async (agendaTopic: string, summaryParams: SummaryParams) => {
+  // 対象期間はAIがツールで判断するため、クライアントからは相談テーマのみを渡す
+  const startChat = async (agendaTopic: string) => {
     setState({ ...INITIAL_STATE, status: "loading" });
 
     try {
-      const params: StartAiChatParams = { agendaTopic, summaryParams };
+      const params: StartAiChatParams = { agendaTopic };
       const data = await runScript<AiChatResponse>("handleStartAiChat", params);
       applyResponse(null, data);
     } catch (error) {

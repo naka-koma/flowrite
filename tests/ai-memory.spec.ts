@@ -4,8 +4,7 @@ import { openAiScreen, openTransactionList } from "./helpers";
 test("AIアドバイスで「覚えておく」を押すと、AIページのメモリに気づきが追加される", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { name: "気になる点を探す" }).click();
-  await page.getByRole("button", { name: "外食費が先月より増えています" }).click();
+  await page.getByRole("button", { name: "今月のざっくり振り返り" }).click();
   await expect(page.getByText("今月は先月より支出が増えていますね")).toBeVisible();
 
   await page.getByRole("button", { name: "覚えておく" }).click();
@@ -19,8 +18,7 @@ test("AIアドバイスで「覚えておく」を押すと、AIページのメ�
 test("メモリを削除できる（2段階確認）", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { name: "気になる点を探す" }).click();
-  await page.getByRole("button", { name: "外食費が先月より増えています" }).click();
+  await page.getByRole("button", { name: "今月のざっくり振り返り" }).click();
   await page.getByRole("button", { name: "覚えておく" }).click();
   await expect(page.getByText("記憶しました")).toBeVisible();
 
@@ -40,8 +38,7 @@ test("メモリを削除できる（2段階確認）", async ({ page }) => {
 test("メモリを整理すると、複数の気づきが1件にまとめられる", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { name: "気になる点を探す" }).click();
-  await page.getByRole("button", { name: "外食費が先月より増えています" }).click();
+  await page.getByRole("button", { name: "今月のざっくり振り返り" }).click();
   await expect(page.getByText("今月は先月より支出が増えていますね")).toBeVisible();
   await page.getByRole("button", { name: "覚えておく" }).click();
   await expect(page.getByText("記憶しました")).toBeVisible();
@@ -65,8 +62,7 @@ test("メモリを整理すると、複数の気づきが1件にまとめられ�
 test("気づきが1件以下の場合は「整理する」ボタンが無効化される", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { name: "気になる点を探す" }).click();
-  await page.getByRole("button", { name: "外食費が先月より増えています" }).click();
+  await page.getByRole("button", { name: "今月のざっくり振り返り" }).click();
   await page.getByRole("button", { name: "覚えておく" }).click();
   await expect(page.getByText("記憶しました")).toBeVisible();
 

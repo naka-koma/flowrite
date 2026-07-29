@@ -1,17 +1,10 @@
 import { useState } from "react";
 import Markdown from "react-markdown";
-import { MonthSelector } from "./MonthSelector";
-import { YearSelector } from "./YearSelector";
 import { useAiChat } from "../hooks/useAiChat";
-import { useAiFocusPoints } from "../hooks/useAiFocusPoints";
 import { useAiMemories } from "../hooks/useAiMemories";
+import { useSettings } from "../hooks/useSettings";
 import { formatAmount, maskYenAmounts } from "../lib/money";
-import type { AiFocusPoint, SummaryParams, TodoActionType } from "../types/api";
-
-type AiPeriodUnit = "month" | "year" | "all";
-type WizardStep = "period" | "focusPoints" | "chat";
-
-const UNIT_LABELS: Record<AiPeriodUnit, string> = { month: "月", year: "年", all: "全て" };
+import type { TodoActionType } from "../types/api";
 
 // 見直し案がどこに反映されるのかを利用者に明示するためのラベル
 const TODO_ACTION_LABELS: Record<TodoActionType, string> = {
@@ -31,43 +24,39 @@ interface AiAdviceProps {
 }
 
 export function AiAdvice({ hideAmounts }: AiAdviceProps) {
-  const now = new Date();
-  const [step, setStep] = useState<WizardStep>("period");
-  const [unit, setUnit] = useState<AiPeriodUnit>("month");
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [selectedFocusPoint, setSelectedFocusPoint] = useState<AiFocusPoint | null>(null);
+  const [inputText, setInputText] = useState("");
   const [showFreeTextInput, setShowFreeTextInput] = useState(false);
   const [freeText, setFreeText] = useState("");
   const [savedMessageIndices, setSavedMessageIndices] = useState<Set<number>>(new Set());
 
-  const focusPoints = useAiFocusPoints();
   const chat = useAiChat();
   const memories = useAiMemories();
+  const { settings } = useSettings();
 
-  const summaryParams: SummaryParams =
-    unit === "year" ? { unit: "year", year } : unit === "all" ? { unit: "all" } : { unit: "month", year, month };
+  // 設定の相談テーマを、対話の入口に並べる候補ボタンとして使う
+  const agendaTopics = (settings?.agendaTopics ?? "")
+    .split("\n")
+    .map((t) => t.trim())
+    .filter((t) => t);
 
   const maskText = (text: string) => (hideAmounts ? maskYenAmounts(text) : text);
 
-  const handleFindFocusPoints = () => {
-    setStep("focusPoints");
-    focusPoints.fetchFocusPoints(summaryParams);
+  const handleStart = (topic: string) => {
+    const trimmed = topic.trim();
+    if (!trimmed) return;
+    chat.startChat(trimmed);
   };
 
-  const handleSelectFocusPoint = (focusPoint: AiFocusPoint) => {
-    setSelectedFocusPoint(focusPoint);
-    setStep("chat");
-    chat.startChat(`${focusPoint.title}: ${focusPoint.context}`, summaryParams);
+  const handleSubmitInput = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleStart(inputText);
   };
 
   const handleReset = () => {
-    setStep("period");
-    setSelectedFocusPoint(null);
+    setInputText("");
     setShowFreeTextInput(false);
     setFreeText("");
     setSavedMessageIndices(new Set());
-    focusPoints.reset();
     chat.reset();
   };
 
@@ -91,102 +80,47 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
     }
   };
 
-  if (step === "period") {
+  // 対話が始まる前は入口を出す。期間はAIがツールで判断するため選ばせない
+  if (chat.status === "idle") {
     return (
       <div data-testid="ai-advice">
-        <div role="tablist" className="tabs tabs-boxed mb-4 w-fit">
-          {(Object.keys(UNIT_LABELS) as AiPeriodUnit[]).map((u) => (
-            <button
-              key={u}
-              type="button"
-              role="tab"
-              className={`tab ${unit === u ? "tab-active" : ""}`}
-              onClick={() => setUnit(u)}
-            >
-              {UNIT_LABELS[u]}
-            </button>
-          ))}
-        </div>
+        <p className="mb-3 text-sm text-base-content/70">何を相談しますか？</p>
 
-        {unit === "month" && (
-          <MonthSelector
-            year={year}
-            month={month}
-            onChange={(newYear, newMonth) => {
-              setYear(newYear);
-              setMonth(newMonth);
-            }}
-            selectLabel="AIアドバイス対象年月"
-            prevLabel="AIアドバイス前の月"
-            nextLabel="AIアドバイス次の月"
-          />
-        )}
-        {unit === "year" && (
-          <YearSelector
-            year={year}
-            onChange={setYear}
-            selectLabel="AIアドバイス対象年"
-            prevLabel="AIアドバイス前の年"
-            nextLabel="AIアドバイス次の年"
-          />
-        )}
-
-        <button type="button" onClick={handleFindFocusPoints} className="btn btn-primary btn-sm mt-4">
-          気になる点を探す
-        </button>
-      </div>
-    );
-  }
-
-  if (step === "focusPoints") {
-    return (
-      <div data-testid="ai-advice">
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm text-base-content/70">気になる点を選んでください</p>
-          <button type="button" onClick={handleReset} className="btn btn-ghost btn-xs">
-            期間を選び直す
-          </button>
-        </div>
-
-        {focusPoints.status === "loading" && (
-          <p className="flex items-center gap-2">
-            <span className="loading loading-spinner loading-sm" />
-            分析中...
-          </p>
-        )}
-
-        {focusPoints.status === "error" && (
-          <p role="alert" className="alert alert-error">
-            エラー: {focusPoints.errorMessage}
-          </p>
-        )}
-
-        {focusPoints.status === "success" && focusPoints.focusPoints.length === 0 && (
-          <p className="text-base-content/70">気になる点は見つかりませんでした</p>
-        )}
-
-        {focusPoints.status === "success" && focusPoints.focusPoints.length > 0 && (
-          <div className="flex flex-col gap-2">
-            {focusPoints.focusPoints.map((fp) => (
+        {agendaTopics.length > 0 && (
+          <div className="mb-3 flex flex-col gap-2">
+            {agendaTopics.map((topic) => (
               <button
-                key={fp.title}
+                key={topic}
                 type="button"
-                onClick={() => handleSelectFocusPoint(fp)}
+                onClick={() => handleStart(topic)}
                 className="btn btn-outline btn-sm justify-start"
               >
-                {fp.title}
+                {topic}
               </button>
             ))}
           </div>
         )}
+
+        <form onSubmit={handleSubmitInput} className="flex gap-2">
+          <input
+            type="text"
+            aria-label="相談したいこと"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder="例: 年末の使いすぎを見直したい"
+            className="input input-bordered input-sm flex-1"
+          />
+          <button type="submit" disabled={!inputText.trim()} className="btn btn-primary btn-sm">
+            相談する
+          </button>
+        </form>
       </div>
     );
   }
 
   return (
     <div data-testid="ai-advice">
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-sm text-base-content/70">気になる点: {selectedFocusPoint?.title}</p>
+      <div className="mb-3 flex items-center justify-end">
         <button type="button" onClick={handleReset} className="btn btn-ghost btn-xs">
           最初からやり直す
         </button>
@@ -226,7 +160,7 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
       {chat.status === "loading" && (
         <p className="mt-3 flex items-center gap-2 text-sm text-base-content/70">
           <span className="loading loading-spinner loading-sm" />
-          読み込み中...
+          データを確認しています...
         </p>
       )}
 
