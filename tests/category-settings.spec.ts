@@ -13,6 +13,17 @@ test("設定画面に大項目ごとにグループ化されたカテゴリが�
   await expect(categorySettings.getByLabel("食費/スーパーの中項目")).toHaveValue("スーパー");
 });
 
+test("大項目ごとに固定費・変動費を切り替えられる", async ({ page }) => {
+  const categorySettings = page.getByTestId("category-settings");
+
+  // 未設定の大項目は変動費が既定
+  await expect(categorySettings.getByLabel("食費の費目区分")).toHaveValue("variable");
+  await expect(categorySettings.getByLabel("光熱費の費目区分")).toHaveValue("fixed");
+
+  await categorySettings.getByLabel("食費の費目区分").selectOption("fixed");
+  await expect(categorySettings.getByLabel("食費の費目区分")).toHaveValue("fixed");
+});
+
 test("▼をクリックすると大項目グループの開閉ができる", async ({ page }) => {
   const categorySettings = page.getByTestId("category-settings");
   await expect(categorySettings.getByLabel("食費/外食の中項目")).toBeVisible();

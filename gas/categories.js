@@ -1,23 +1,70 @@
+const COST_TYPES = ["fixed", "variable"];
+const DEFAULT_COST_TYPE = "variable";
+
 function handleGetCategories() {
   const sheet = getCategoriesSheet();
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) {
-    return { categories: {} };
+    return { categories: {}, costTypes: {} };
   }
 
-  const values = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+  const values = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
   const categories = {};
+  const costTypes = {};
 
-  for (const [category, subcategory] of values) {
+  for (const [category, subcategory, costType] of values) {
     if (!categories[category]) {
       categories[category] = [];
+      costTypes[category] = DEFAULT_COST_TYPE;
     }
     if (!categories[category].includes(subcategory)) {
       categories[category].push(subcategory);
     }
+    // 大項目単位の属性なので、同じ大項目の行で最初に見つかった有効な値を採用する
+    // （中項目の追加時は空欄で追記されるため、既存行の値が失われないようにする）
+    if (COST_TYPES.indexOf(costType) !== -1) {
+      costTypes[category] = costType;
+    }
   }
 
-  return { categories };
+  return { categories, costTypes };
+}
+
+// 大項目単位で費目区分を更新する。(大項目, 中項目)の行構造上、
+// 同じ大項目を持つ全行のcostType列をまとめて書き換える
+function handleUpdateCategoryCostType(body) {
+  const category = ((body && body.category) || "").trim();
+  const costType = (body && body.costType) || "";
+
+  if (!category) {
+    return { success: false, error: "category is required" };
+  }
+  if (COST_TYPES.indexOf(costType) === -1) {
+    return { success: false, error: "costType must be 'fixed' or 'variable'" };
+  }
+
+  const sheet = getCategoriesSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) {
+    return { success: false, error: "category not found" };
+  }
+
+  const values = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+  let found = false;
+  const updated = values.map((row) => {
+    if (row[0] !== category) {
+      return [row[2]];
+    }
+    found = true;
+    return [costType];
+  });
+
+  if (!found) {
+    return { success: false, error: "category not found" };
+  }
+
+  sheet.getRange(2, 3, updated.length, 1).setValues(updated);
+  return { success: true };
 }
 
 function handleAddCategory(body) {
@@ -147,11 +194,12 @@ function handleDeleteCategory(body) {
   const sheet = getCategoriesSheet();
   const lastRow = sheet.getLastRow();
   if (lastRow > 1) {
-    const values = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+    // costType列も含めて詰め直さないと、残った行と費目区分がずれる
+    const values = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
     const kept = values.filter((row) => row[0] !== category);
-    sheet.getRange(2, 1, lastRow - 1, 2).clearContent();
+    sheet.getRange(2, 1, lastRow - 1, 3).clearContent();
     if (kept.length > 0) {
-      sheet.getRange(2, 1, kept.length, 2).setValues(kept);
+      sheet.getRange(2, 1, kept.length, 3).setValues(kept);
     }
   }
 

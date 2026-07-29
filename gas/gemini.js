@@ -143,8 +143,20 @@ function buildAiContext_(summary) {
     return "";
   }
 
-  const categoryText = summary.categories.map((c) => `${c.name}: ${formatYen_(c.total)}`).join("、");
-  return `${summary.label}: 支出${formatYen_(summary.totalExpense)}、収入${formatYen_(summary.totalIncome)}${categoryText ? `（内訳: ${categoryText}）` : ""}`;
+  // 固定費・変動費のどちらの支出なのかを併記し、構造的な改善と日々の節約を区別できるようにする
+  const { costTypes } = handleGetCategories();
+  const categoryText = summary.categories
+    .map((c) => `${c.name}（${costTypes[c.name] === "fixed" ? "固定費" : "変動費"}）: ${formatYen_(c.total)}`)
+    .join("、");
+  const fixedTotal = summary.categories
+    .filter((c) => costTypes[c.name] === "fixed")
+    .reduce((sum, c) => sum + c.total, 0);
+  const costTypeText = `固定費計${formatYen_(fixedTotal)}、変動費計${formatYen_(summary.totalExpense - fixedTotal)}`;
+
+  return (
+    `${summary.label}: 支出${formatYen_(summary.totalExpense)}、収入${formatYen_(summary.totalIncome)}` +
+    `（${costTypeText}）${categoryText ? `\n内訳: ${categoryText}` : ""}`
+  );
 }
 
 // 登録されているユーザー属性情報を「# ユーザーの属性・前提条件」セクションとして組み立てる。
@@ -312,7 +324,11 @@ function buildGoalsSection_() {
   }
 
   const { budgets } = handleGetBudgets();
+  const { costTypes } = handleGetCategories();
   const totalBudget = budgets.reduce((sum, b) => sum + b.monthlyBudget, 0);
+  const fixedBudget = budgets
+    .filter((b) => costTypes[b.category] === "fixed")
+    .reduce((sum, b) => sum + b.monthlyBudget, 0);
   const difference = goals.spendableTotal - totalBudget;
   const differenceText =
     difference < 0
@@ -327,8 +343,11 @@ function buildGoalsSection_() {
     `- 目標貯蓄額: ${formatYen_(goals.resolvedSavingsTarget)}${targetSuffix}\n` +
     `- 特別費積立額（不定期支出に備える月々の積立）: ${formatYen_(goals.specialReserveAmount)}\n` +
     `- 使える総額（定期収入 − 目標貯蓄額 − 特別費積立額）: ${formatYen_(goals.spendableTotal)}\n` +
-    `- 設定済みカテゴリ予算の合計: ${formatYen_(totalBudget)}\n` +
-    `- ${differenceText}`
+    `- 設定済みカテゴリ予算の合計: ${formatYen_(totalBudget)}` +
+    `（うち固定費 ${formatYen_(fixedBudget)}、変動費 ${formatYen_(totalBudget - fixedBudget)}）\n` +
+    `- ${differenceText}\n` +
+    "固定費の見直しは一度行えば毎月自動的に効くのに対し、変動費の節約は毎月意識し続ける必要があります。" +
+    "改善を提案する際はこの違いを踏まえ、どちらの性質の打ち手なのかが伝わるようにしてください。"
   );
 }
 

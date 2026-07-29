@@ -3,6 +3,7 @@ import type {
   AddCategoryParams,
   AddCategoryResponse,
   CategoryMaster,
+  CostTypeMap,
   DeleteCategoryParams,
   DeleteCategoryPairParams,
   DeleteCategoryPairResponse,
@@ -10,6 +11,8 @@ import type {
   GetCategoriesResponse,
   RenameCategoryParams,
   RenameCategoryResponse,
+  UpdateCategoryCostTypeParams,
+  UpdateCategoryCostTypeResponse,
   UpdateCategoryPairParams,
   UpdateCategoryPairResponse,
 } from "../types/api";
@@ -29,6 +32,7 @@ export interface CategoryPairRow {
 interface LoadState {
   status: LoadStatus;
   pairs: CategoryPairRow[];
+  costTypes: CostTypeMap;
   errorMessage: string | null;
 }
 
@@ -64,6 +68,7 @@ export function useCategories() {
   const [loadState, setLoadState] = useState<LoadState>({
     status: "loading",
     pairs: [],
+    costTypes: {},
     errorMessage: null,
   });
   const [mutateState, setMutateState] = useState<MutateState>({ status: "idle", errorMessage: null });
@@ -76,16 +81,21 @@ export function useCategories() {
         if (cancelled) return;
 
         if (data.error) {
-          setLoadState({ status: "error", pairs: [], errorMessage: data.error });
+          setLoadState({ status: "error", pairs: [], costTypes: {}, errorMessage: data.error });
           return;
         }
 
-        setLoadState({ status: "success", pairs: flattenCategories(data.categories), errorMessage: null });
+        setLoadState({
+          status: "success",
+          pairs: flattenCategories(data.categories),
+          costTypes: data.costTypes ?? {},
+          errorMessage: null,
+        });
       })
       .catch((error: unknown) => {
         if (cancelled) return;
         const message = error instanceof Error ? error.message : "カテゴリの取得に失敗しました";
-        setLoadState({ status: "error", pairs: [], errorMessage: message });
+        setLoadState({ status: "error", pairs: [], costTypes: {}, errorMessage: message });
       });
 
     return () => {
@@ -179,18 +189,51 @@ export function useCategories() {
     }
   };
 
+  // 費目区分は大項目単位の属性。GAS側で同じ大項目の全行がまとめて書き換わる
+  const updateCostType = async (params: UpdateCategoryCostTypeParams) => {
+    const previous = loadState.costTypes;
+    setLoadState((s) => ({ ...s, costTypes: { ...s.costTypes, [params.category]: params.costType } }));
+    setMutateState({ status: "loading", errorMessage: null });
+
+    try {
+      const data = await runScript<UpdateCategoryCostTypeResponse>("handleUpdateCategoryCostType", params);
+
+      if (!data.success) {
+        setLoadState((s) => ({ ...s, costTypes: previous }));
+        setMutateState({ status: "error", errorMessage: data.error ?? "費目区分の更新に失敗しました" });
+        return false;
+      }
+
+      setMutateState({ status: "success", errorMessage: null });
+      return true;
+    } catch (error) {
+      setLoadState((s) => ({ ...s, costTypes: previous }));
+      const message = error instanceof Error ? error.message : "費目区分の更新に失敗しました";
+      setMutateState({ status: "error", errorMessage: message });
+      return false;
+    }
+  };
+
   // 大項目単位の一括リネーム。同じ大項目を持つ全行をローカルでも一括更新する
   const renameCategory = async (params: RenameCategoryParams) => {
     const previous = loadState.pairs;
+    const previousCostTypes = loadState.costTypes;
     const optimistic = previous.map((p) => (p.category === params.oldCategory ? { ...p, category: params.newCategory } : p));
-    setLoadState((s) => ({ ...s, pairs: optimistic }));
+    // 費目区分も大項目名をキーにしているため一緒に付け替える
+    const optimisticCostTypes: CostTypeMap = { ...previousCostTypes };
+    const renamedCostType = optimisticCostTypes[params.oldCategory];
+    if (renamedCostType) {
+      delete optimisticCostTypes[params.oldCategory];
+      optimisticCostTypes[params.newCategory] = renamedCostType;
+    }
+    setLoadState((s) => ({ ...s, pairs: optimistic, costTypes: optimisticCostTypes }));
     setMutateState({ status: "loading", errorMessage: null });
 
     try {
       const data = await runScript<RenameCategoryResponse>("handleRenameCategory", params);
 
       if (!data.success) {
-        setLoadState((s) => ({ ...s, pairs: previous }));
+        setLoadState((s) => ({ ...s, pairs: previous, costTypes: previousCostTypes }));
         setMutateState({ status: "error", errorMessage: data.error ?? "カテゴリ名の変更に失敗しました" });
         return false;
       }
@@ -198,7 +241,7 @@ export function useCategories() {
       setMutateState({ status: "success", errorMessage: null });
       return true;
     } catch (error) {
-      setLoadState((s) => ({ ...s, pairs: previous }));
+      setLoadState((s) => ({ ...s, pairs: previous, costTypes: previousCostTypes }));
       const message = error instanceof Error ? error.message : "カテゴリ名の変更に失敗しました";
       setMutateState({ status: "error", errorMessage: message });
       return false;
@@ -233,6 +276,7 @@ export function useCategories() {
     status: loadState.status,
     pairs: loadState.pairs,
     categories: toCategoryMaster(loadState.pairs),
+    costTypes: loadState.costTypes,
     errorMessage: loadState.errorMessage,
     mutateState,
     // TransactionScreenが既存の名前で参照しているため、mutateStateへのエイリアスとして残す
@@ -242,5 +286,6 @@ export function useCategories() {
     deleteCategoryPair,
     renameCategory,
     deleteCategory,
+    updateCostType,
   };
 }

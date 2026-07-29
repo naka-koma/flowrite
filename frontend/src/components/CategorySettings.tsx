@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useCategories, type CategoryPairRow } from "../hooks/useCategories";
 import { SECTION_HEADING_CLASS } from "../lib/ui";
+import type { CostType } from "../types/api";
 
 export function CategorySettings() {
   const {
@@ -13,6 +14,8 @@ export function CategorySettings() {
     deleteCategoryPair,
     renameCategory,
     deleteCategory,
+    costTypes,
+    updateCostType,
   } = useCategories();
   const [newCategory, setNewCategory] = useState("");
   const [newSubcategoryByCategory, setNewSubcategoryByCategory] = useState<Record<string, string>>({});
@@ -176,6 +179,15 @@ export function CategorySettings() {
                           ({categoryPairs.length}件)
                         </span>
                       </span>
+                      <select
+                        aria-label={`${category}の費目区分`}
+                        value={costTypes[category] ?? "variable"}
+                        onChange={(e) => updateCostType({ category, costType: e.target.value as CostType })}
+                        className="select select-bordered select-xs w-24"
+                      >
+                        <option value="variable">変動費</option>
+                        <option value="fixed">固定費</option>
+                      </select>
                       <button type="button" onClick={() => startRename(category)} className="btn btn-ghost btn-xs">
                         名前変更
                       </button>
