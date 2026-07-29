@@ -17,7 +17,6 @@ import type {
   DeleteBudgetParams,
   DeleteCategoryParams,
   DeleteCategoryPairParams,
-  GetAiFocusPointsParams,
   GetBudgetVarianceParams,
   Goals,
   SavingsTargetMode,
@@ -56,8 +55,7 @@ interface MockScenario {
   aiCategorySuggestionsEmpty?: boolean;
   aiCategorySuggestionsError?: boolean;
   aiCategorySuggestionsWithNewCategory?: boolean;
-  aiFocusPointsEmpty?: boolean;
-  aiFocusPointsError?: boolean;
+  aiChatError?: boolean;
 }
 
 function getScenario(): MockScenario {
@@ -569,28 +567,6 @@ function mockHandleConsolidateAiMemoryInsights() {
   return { success: true, changed: true, memories: newMemories };
 }
 
-const MOCK_FOCUS_POINTS = [
-  { title: "外食費が先月より増えています", context: "今月は外食費が先月より増加傾向です。理由を深掘りしましょう。" },
-  { title: "固定費に見直せる余地がありそうです", context: "固定費の割合が高めです。契約内容を一緒に振り返りましょう。" },
-];
-
-function mockHandleGetAiFocusPoints(params: GetAiFocusPointsParams) {
-  if (getScenario().aiFocusPointsError) {
-    return { success: false, focusPoints: [], error: "GEMINI_API_KEY is not set in script properties" };
-  }
-  if (getScenario().aiFocusPointsEmpty) {
-    return { success: true, focusPoints: [] };
-  }
-
-  const summary = mockHandleSummary(params.summaryParams);
-  const hasData = summary.categories.length > 0 || summary.totalExpense > 0 || summary.totalIncome > 0;
-  if (!hasData) {
-    return { success: false, error: "指定した期間のデータがありません" };
-  }
-
-  return { success: true, focusPoints: MOCK_FOCUS_POINTS };
-}
-
 const MOCK_PREFERENCE_KEYS: PreferenceKey[] = ["theme", "dashboardLayout", "trendVisibleCount"];
 const MOCK_PREFERENCE_STORAGE_PREFIX = "__mock_preference_";
 
@@ -647,10 +623,8 @@ function mockChatTurn(modelTurnCount: number) {
 }
 
 function mockHandleStartAiChat(body: StartAiChatParams) {
-  const summary = mockHandleSummary(body.summaryParams);
-  const hasData = summary.categories.length > 0 || summary.totalExpense > 0 || summary.totalIncome > 0;
-  if (!hasData) {
-    return { success: false, error: "指定した期間のデータがありません" };
+  if (getScenario().aiChatError) {
+    return { success: false, error: "GEMINI_API_KEY is not set in script properties" };
   }
 
   // 履歴はGeminiのcontents形式。実際のGASではツール呼び出しのやり取りも含まれる
@@ -1212,8 +1186,6 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleSummarizeAiInsight(args[0] as SummarizeAiInsightParams);
     case "handleConsolidateAiMemoryInsights":
       return mockHandleConsolidateAiMemoryInsights();
-    case "handleGetAiFocusPoints":
-      return mockHandleGetAiFocusPoints(args[0] as GetAiFocusPointsParams);
     case "handleGetPreferences":
       return mockHandleGetPreferences();
     case "handleUpdatePreference":

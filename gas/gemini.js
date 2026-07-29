@@ -163,30 +163,6 @@ function formatYen_(amount) {
   return `${amount.toLocaleString("ja-JP")}円`;
 }
 
-// handleSummaryの結果からAIへ渡すコンテキスト文を組み立てる。
-// データが無い期間の場合は空文字を返す
-function buildAiContext_(summary) {
-  const hasData = summary.categories.length > 0 || summary.totalExpense > 0 || summary.totalIncome > 0;
-  if (!hasData) {
-    return "";
-  }
-
-  // 固定費・変動費のどちらの支出なのかを併記し、構造的な改善と日々の節約を区別できるようにする
-  const { costTypes } = handleGetCategories();
-  const categoryText = summary.categories
-    .map((c) => `${c.name}（${costTypes[c.name] === "fixed" ? "固定費" : "変動費"}）: ${formatYen_(c.total)}`)
-    .join("、");
-  const fixedTotal = summary.categories
-    .filter((c) => costTypes[c.name] === "fixed")
-    .reduce((sum, c) => sum + c.total, 0);
-  const costTypeText = `固定費計${formatYen_(fixedTotal)}、変動費計${formatYen_(summary.totalExpense - fixedTotal)}`;
-
-  return (
-    `${summary.label}: 支出${formatYen_(summary.totalExpense)}、収入${formatYen_(summary.totalIncome)}` +
-    `（${costTypeText}）${categoryText ? `\n内訳: ${categoryText}` : ""}`
-  );
-}
-
 // 登録されているユーザー属性情報を「# ユーザーの属性・前提条件」セクションとして組み立てる。
 // 未登録の場合は空文字を返す
 function buildAiAttributesSection_() {
@@ -339,9 +315,6 @@ function handleConsolidateAiMemoryInsights() {
   }
 }
 
-// 推移としてプロンプトに含める直近の月数。長すぎるとプロンプトが冗長になるため絞る
-const AI_TREND_POINT_LIMIT = 6;
-
 // 設定済みの家計の目標を「# 家計の目標」セクションとして組み立てる。
 // 支出の多寡を評価する基準になるため、カテゴリ予算の合計との差分も併せて渡す。
 // 定期収入が未設定の場合は目標が成立しないため空文字を返す
@@ -379,137 +352,14 @@ function buildGoalsSection_() {
   );
 }
 
-// 増減は今期間から見た差分（プラスなら今期間のほうが多い）として表現する
-function formatDiff_(diff) {
-  return `${diff > 0 ? "+" : ""}${formatYen_(diff)}`;
+// 「今日」を明示しないと、AIは「今月」「先月」「年末」といった相対的な表現を
+// ツールの引数（年・月）に変換できない
+function buildTodaySection_() {
+  const today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy年M月d日");
+  return `# 今日の日付\n${today}\nユーザーが「今月」「先月」「年末」などと言った場合は、この日付を基準に対象期間を判断してください。`;
 }
 
-function formatComparisonLine_(name, comparison) {
-  return (
-    `- ${name}（${comparison.label}）との比較: ` +
-    `支出 ${formatDiff_(comparison.expenseDiff)}、収入 ${formatDiff_(comparison.incomeDiff)}、収支 ${formatDiff_(comparison.balanceDiff)}`
-  );
-}
-
-// 前月比・前年同月比と直近数ヶ月の推移を「# 時系列の変化」セクションとして組み立てる。
-// これがないとAIは単月の断面しか見られず、増減の傾向を指摘できない
-function buildTrendSection_(summary) {
-  const lines = [];
-
-  // comparisonはunit=month時のみ存在する
-  if (summary.comparison) {
-    lines.push(formatComparisonLine_("前月", summary.comparison.previousMonth));
-    lines.push(formatComparisonLine_("前年同月", summary.comparison.previousYear));
-  }
-
-  const { points } = handleTrend({ unit: "month" });
-  const recentPoints = points.slice(-AI_TREND_POINT_LIMIT);
-  if (recentPoints.length > 0) {
-    const pointLines = recentPoints
-      .map((p) => `  - ${p.label}: 支出${formatYen_(p.totalExpense)}、収入${formatYen_(p.totalIncome)}`)
-      .join("\n");
-    lines.push(`- 直近${recentPoints.length}ヶ月の推移:\n${pointLines}`);
-  }
-
-  if (lines.length === 0) {
-    return "";
-  }
-
-  return `# 時系列の変化\n${lines.join("\n")}`;
-}
-
-// ユーザーが選んだ分析期間に関わらず、予算は月単位で管理されているため
-// 常に「今月」の予算対比を固定コンテキストとして注入する
-function buildBudgetVarianceSection_() {
-  const now = new Date();
-  const variance = handleGetBudgetVariance({ unit: "month", year: now.getFullYear(), month: now.getMonth() + 1 });
-  if (!variance.entries || variance.entries.length === 0) {
-    return "";
-  }
-
-  const lines = variance.entries
-    .map((e) => {
-      const sign = e.variance > 0 ? "+" : "";
-      return `${e.category}: 予算${formatYen_(e.budget)}、実績${formatYen_(e.actual)}、乖離${sign}${formatYen_(e.variance)}`;
-    })
-    .join("\n");
-  return `# 今月の予算対比\n${lines}`;
-}
-
-// 「気になる点」提案1件分のレスポンススキーマ
-const FOCUS_POINTS_RESPONSE_SCHEMA = {
-  type: "OBJECT",
-  properties: {
-    focusPoints: {
-      type: "ARRAY",
-      items: {
-        type: "OBJECT",
-        properties: {
-          title: { type: "STRING", description: "一覧表示用の短いラベル。20文字程度。" },
-          context: {
-            type: "STRING",
-            description: "この点について深掘り対話を始める際の詳細な状況説明。50〜100文字程度。",
-          },
-        },
-        required: ["title", "context"],
-      },
-      description: "ユーザーが深掘りしたくなりそうな「気になる点」を2〜4件。",
-    },
-  },
-  required: ["focusPoints"],
-};
-
-// AIアドバイスウィザードの②ステップ。データ・予算対比・ユーザー属性・過去の気づき・
-// 関心テーマを踏まえ、Geminiに「気になる点」の候補を提示させる
-function handleGetAiFocusPoints(body) {
-  try {
-    const summaryParams = (body && body.summaryParams) || {};
-    const summary = handleSummary(summaryParams);
-    if (summary.error) {
-      return { success: false, error: summary.error };
-    }
-
-    const apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
-    if (!apiKey) {
-      return { success: false, error: "GEMINI_API_KEY is not set in script properties" };
-    }
-
-    const dataContext = buildAiContext_(summary);
-    const varianceSection = buildBudgetVarianceSection_();
-
-    if (!dataContext && !varianceSection) {
-      return { success: false, error: "指定した期間のデータがありません" };
-    }
-
-    const attributesSection = buildAiAttributesSection_();
-    const memoryInsightsSection = buildAiMemoryInsightsSection_();
-    const agendaTopicsSection = `# ユーザーが関心を持ちやすいテーマ（参考）\n${getAgendaTopics().join("、")}`;
-    const sections = [
-      attributesSection,
-      memoryInsightsSection,
-      "あなたは家計管理のアドバイザーです。以下の支出データを分析し、ユーザーが深掘りしたくなりそうな「気になる点」を2〜4件提示してください。",
-      buildGoalsSection_(),
-      dataContext ? `# 分析対象データ\n${dataContext}` : "",
-      buildTrendSection_(summary),
-      varianceSection,
-      agendaTopicsSection,
-    ].filter((s) => s);
-    const prompt = sections.join("\n\n");
-
-    const result = runGeminiChat_(apiKey, [{ role: "user", parts: [{ text: prompt }] }], FOCUS_POINTS_RESPONSE_SCHEMA);
-    if (!result.success) {
-      return { success: false, error: result.error };
-    }
-
-    const focusPoints = Array.isArray(result.parsed.focusPoints) ? result.parsed.focusPoints : [];
-    return { success: true, focusPoints };
-  } catch (e) {
-    Logger.log(`handleGetAiFocusPoints unexpected error: ${e.message}`);
-    return { success: false, error: e.message };
-  }
-}
-
-// 対話の最初のターン。テーマ選択直後に呼ばれ、以後のターンで往復させる履歴を組み立てて返す
+// 対話の最初のターン。以後のターンで往復させる履歴を組み立てて返す
 // （サーバー側は対話状態を保持しないステートレス設計）
 function handleStartAiChat(body) {
   try {
@@ -518,35 +368,21 @@ function handleStartAiChat(body) {
       return { success: false, error: "agendaTopic is required" };
     }
 
-    const summaryParams = (body && body.summaryParams) || {};
-    const summary = handleSummary(summaryParams);
-    if (summary.error) {
-      return { success: false, error: summary.error };
-    }
-
     const apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
     if (!apiKey) {
       return { success: false, error: "GEMINI_API_KEY is not set in script properties" };
     }
 
-    const dataContext = buildAiContext_(summary);
-    const varianceSection = buildBudgetVarianceSection_();
-
-    if (!dataContext && !varianceSection) {
-      return { success: false, error: "指定した期間のデータがありません" };
-    }
-
-    const attributesSection = buildAiAttributesSection_();
-    const memoryInsightsSection = buildAiMemoryInsightsSection_();
+    // 収支データは静的に渡さず、相談内容に応じてAIがツールで取りに行く。
+    // 常に必要で量の少ない属性・メモリ・目標だけを前提として渡す
     const sections = [
-      attributesSection,
-      memoryInsightsSection,
+      buildAiAttributesSection_(),
+      buildAiMemoryInsightsSection_(),
       getAiPrompt(),
       buildGoalsSection_(),
-      dataContext ? `# 分析対象データ\n${dataContext}` : "",
-      buildTrendSection_(summary),
-      varianceSection,
+      buildTodaySection_(),
       `# 相談テーマ\n${agendaTopic}`,
+      "回答する前に、相談テーマに関係するデータを必ずツールで取得してください。推測で答えてはいけません。",
     ].filter((s) => s);
     const initialPrompt = sections.join("\n\n");
 
