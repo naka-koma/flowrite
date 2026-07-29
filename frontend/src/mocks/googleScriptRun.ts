@@ -11,6 +11,7 @@ import type {
   CalendarDay,
   ChatTurn,
   ContinueAiChatParams,
+  CostType,
   DeleteAiAttributeParams,
   DeleteAiMemoryParams,
   DeleteBudgetParams,
@@ -35,6 +36,7 @@ import type {
   TrendParams,
   TrendPoint,
   UpdateAiAttributeParams,
+  UpdateCategoryCostTypeParams,
   UpdateCategoryParams,
   UpdateCategoryPairParams,
   UpdatePreferenceParams,
@@ -840,8 +842,27 @@ function mockHandleApplyAiCategorySuggestions(body: ApplyAiCategorySuggestionsPa
   return { success: true, applied: body.suggestions.length, notFound: 0 };
 }
 
+// 費目区分は大項目単位。実際のGASではcategoriesシートのcostType列に保持される
+const mockCostTypes: Record<string, CostType> = { 住居: "fixed", 光熱費: "fixed", 通信費: "fixed" };
+
 function mockHandleGetCategories() {
-  return { categories: mockCategoriesMaster };
+  return { categories: mockCategoriesMaster, costTypes: mockCostTypes };
+}
+
+function mockHandleUpdateCategoryCostType(body: UpdateCategoryCostTypeParams) {
+  const category = body.category?.trim();
+  if (!category) {
+    return { success: false, error: "category is required" };
+  }
+  if (body.costType !== "fixed" && body.costType !== "variable") {
+    return { success: false, error: "costType must be 'fixed' or 'variable'" };
+  }
+  if (!mockCategoriesMaster[category]) {
+    return { success: false, error: "category not found" };
+  }
+
+  mockCostTypes[category] = body.costType;
+  return { success: true };
 }
 
 function mockHandleAddCategory(body: AddCategoryParams) {
@@ -1206,6 +1227,8 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleApplyAiCategorySuggestions(args[0] as ApplyAiCategorySuggestionsParams);
     case "handleGetCategories":
       return mockHandleGetCategories();
+    case "handleUpdateCategoryCostType":
+      return mockHandleUpdateCategoryCostType(args[0] as UpdateCategoryCostTypeParams);
     case "handleAddCategory":
       return mockHandleAddCategory(args[0] as AddCategoryParams);
     case "handleRenameCategory":

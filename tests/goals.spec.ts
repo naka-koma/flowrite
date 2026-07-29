@@ -46,6 +46,27 @@ test("特別費積立を設定すると、貯蓄目標とあわせて使える�
   await expect(goalSettings.getByTestId("spendable-total")).toHaveText("235,000円");
 });
 
+test("予算の合計が固定費・変動費に分けて表示される", async ({ page }) => {
+  await page.goto("/");
+  await openBudget(page);
+
+  const goalSettings = page.getByTestId("goal-settings");
+  await goalSettings.getByLabel("定期収入（手取り月額）").fill("300000");
+  await goalSettings.getByRole("button", { name: "保存" }).click();
+  await expect(goalSettings.getByText("保存しました")).toBeVisible();
+
+  // 光熱費は固定費、食費は変動費として登録されている
+  await page.getByLabel("予算を設定する大項目").selectOption("光熱費");
+  await page.getByLabel("新しい月間予算額").fill("12000");
+  await page.getByRole("button", { name: "追加" }).click();
+
+  await page.getByLabel("予算を設定する大項目").selectOption("食費");
+  await page.getByLabel("新しい月間予算額").fill("40000");
+  await page.getByRole("button", { name: "追加" }).click();
+
+  await expect(goalSettings.getByTestId("budget-cost-type-breakdown")).toContainText("12,000円 / 40,000円");
+});
+
 test("予算の合計が使える総額を超えると超過額と警告が表示される", async ({ page }) => {
   await page.goto("/");
   await openBudget(page);

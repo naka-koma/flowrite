@@ -434,8 +434,24 @@ export interface ApplyAiCategorySuggestionsResponse {
 
 export type CategoryMaster = Record<string, string[]>;
 
+// 大項目単位の費目区分。fixed=固定費（一度見直せば毎月効く）、variable=変動費
+export type CostType = "fixed" | "variable";
+
+export type CostTypeMap = Record<string, CostType>;
+
 export interface GetCategoriesResponse {
   categories: CategoryMaster;
+  costTypes: CostTypeMap;
+  error?: string;
+}
+
+export interface UpdateCategoryCostTypeParams {
+  category: string;
+  costType: CostType;
+}
+
+export interface UpdateCategoryCostTypeResponse {
+  success: boolean;
   error?: string;
 }
 

@@ -12,10 +12,11 @@ function parseAmountInput(value: string): number {
 
 interface GoalSettingsProps {
   totalBudget: number;
+  fixedBudget: number;
   hideAmounts: boolean;
 }
 
-export function GoalSettings({ totalBudget, hideAmounts }: GoalSettingsProps) {
+export function GoalSettings({ totalBudget, fixedBudget, hideAmounts }: GoalSettingsProps) {
   const { status, goals, errorMessage, saveState, saveGoals } = useGoals();
   const [monthlyIncome, setMonthlyIncome] = useState("");
   const [mode, setMode] = useState<SavingsTargetMode>("amount");
@@ -92,6 +93,14 @@ export function GoalSettings({ totalBudget, hideAmounts }: GoalSettingsProps) {
             <dt>予算の合計</dt>
             <dd>{amountText(totalBudget)}</dd>
           </div>
+          {totalBudget > 0 && (
+            <div className="flex justify-between text-xs text-base-content/70" data-testid="budget-cost-type-breakdown">
+              <dt>うち固定費 / 変動費</dt>
+              <dd>
+                {amountText(fixedBudget)} / {amountText(totalBudget - fixedBudget)}
+              </dd>
+            </div>
+          )}
           <div
             className={`flex justify-between font-medium ${isOverspent ? "text-error" : "text-success"}`}
             data-testid="budget-difference"

@@ -22,7 +22,12 @@ interface BudgetScreenProps {
 
 export function BudgetScreen({ hideAmounts, onBack }: BudgetScreenProps) {
   const { status, budgets, errorMessage, mutateState, upsertBudget, deleteBudget } = useBudgets();
-  const { status: categoriesStatus, categories, errorMessage: categoriesErrorMessage } = useCategories();
+  const {
+    status: categoriesStatus,
+    categories,
+    costTypes,
+    errorMessage: categoriesErrorMessage,
+  } = useCategories();
   const [newCategory, setNewCategory] = useState("");
   const [customCategory, setCustomCategory] = useState("");
   const [newAmount, setNewAmount] = useState("");
@@ -38,6 +43,9 @@ export function BudgetScreen({ hideAmounts, onBack }: BudgetScreenProps) {
   const isNewCategorySelected = newCategory === NEW_CATEGORY_VALUE;
   const categoryToSubmit = isNewCategorySelected ? customCategory.trim() : newCategory;
   const totalBudget = budgets.reduce((sum, b) => sum + b.monthlyBudget, 0);
+  const fixedBudget = budgets
+    .filter((b) => costTypes[b.category] === "fixed")
+    .reduce((sum, b) => sum + b.monthlyBudget, 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +77,7 @@ export function BudgetScreen({ hideAmounts, onBack }: BudgetScreenProps) {
       <PageHeader title="予算" onBack={onBack} />
 
       <SectionCard title="家計の目標">
-        <GoalSettings totalBudget={totalBudget} hideAmounts={hideAmounts} />
+        <GoalSettings totalBudget={totalBudget} fixedBudget={fixedBudget} hideAmounts={hideAmounts} />
       </SectionCard>
 
       <SectionCard title="大項目別の月間予算">
