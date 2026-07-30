@@ -90,6 +90,34 @@ export interface TodoAction {
   // type=budgetの場合のみ設定される対象の大項目名
   category?: string;
   amount: number;
+  // なぜその金額にするのか。変更履歴に残して後から見直しの成否を検証するために使う
+  reason?: string;
+}
+
+// 変更がAIの見直し案からの適用か、画面からの手動編集か
+export type DecisionSource = "ai" | "manual";
+
+// 予算・目標をいつ・なぜ・いくらから変えたかの記録
+export interface Decision {
+  id: string;
+  changedAt: string;
+  source: DecisionSource;
+  type: TodoActionType;
+  // type=budgetの場合のみ設定される大項目名
+  target: string;
+  // 新規設定時は変更前が存在しないためnull
+  beforeAmount: number | null;
+  afterAmount: number;
+  reason: string;
+}
+
+export interface GetDecisionsParams {
+  limit?: number;
+}
+
+export interface GetDecisionsResponse {
+  decisions: Decision[];
+  error?: string;
 }
 
 export interface ApplyTodoActionsParams {
@@ -253,6 +281,9 @@ export interface UpdateGoalsParams {
   savingsTargetAmount?: number;
   savingsTargetRate?: number;
   specialReserveAmount?: number;
+  // 変更履歴への記録用。AIの見直し案から適用された場合のみGAS側が設定する
+  source?: DecisionSource;
+  reason?: string;
 }
 
 export interface UpdateGoalsResponse {
@@ -519,6 +550,9 @@ export interface GetBudgetsResponse {
 export interface UpsertBudgetParams {
   category: string;
   monthlyBudget: number;
+  // 変更履歴への記録用。AIの見直し案から適用された場合のみGAS側が設定する
+  source?: DecisionSource;
+  reason?: string;
 }
 
 export interface UpsertBudgetResponse {

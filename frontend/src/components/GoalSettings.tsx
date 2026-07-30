@@ -14,9 +14,11 @@ interface GoalSettingsProps {
   totalBudget: number;
   fixedBudget: number;
   hideAmounts: boolean;
+  // 変更履歴を取り直させるための通知
+  onChanged: () => void;
 }
 
-export function GoalSettings({ totalBudget, fixedBudget, hideAmounts }: GoalSettingsProps) {
+export function GoalSettings({ totalBudget, fixedBudget, hideAmounts, onChanged }: GoalSettingsProps) {
   const { status, goals, errorMessage, saveState, saveGoals } = useGoals();
   const [monthlyIncome, setMonthlyIncome] = useState("");
   const [mode, setMode] = useState<SavingsTargetMode>("amount");
@@ -51,15 +53,18 @@ export function GoalSettings({ totalBudget, fixedBudget, hideAmounts }: GoalSett
     );
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    saveGoals({
+    const saved = await saveGoals({
       monthlyIncome: parseAmountInput(monthlyIncome),
       savingsTargetMode: mode,
       savingsTargetAmount: parseAmountInput(savingsTargetAmount),
       savingsTargetRate: Number(savingsTargetRate) || 0,
       specialReserveAmount: parseAmountInput(specialReserveAmount),
     });
+    if (saved) {
+      onChanged();
+    }
   };
 
   const amountText = (amount: number) => (hideAmounts ? "***" : formatYen(amount));

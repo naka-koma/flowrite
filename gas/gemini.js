@@ -42,8 +42,14 @@ const CHAT_RESPONSE_SCHEMA = {
           },
           category: { type: "STRING", description: "type=budgetの場合のみ設定する対象の大項目名。" },
           amount: { type: "INTEGER", description: "設定する月額（円）。" },
+          reason: {
+            type: "STRING",
+            description:
+              "なぜその金額にするのかを1文で。後から見直しの成否を検証するため、" +
+              "「端末代の分割払いが完了したため実勢額に戻す」のように根拠が分かるように書くこと。",
+          },
         },
-        required: ["type", "amount"],
+        required: ["type", "amount", "reason"],
       },
       description:
         "is_finalがtrueの場合に設定される、来月に向けた見直し案の配列。" +
@@ -464,36 +470,36 @@ function handleApplyAiTodoActions(body) {
       return { success: false, error: "actions is required" };
     }
 
-    const goalUpdates = {};
-
+    // 提案理由を項目ごとに変更履歴へ残すため、アクションはまとめずに1件ずつ適用する
     for (const action of actions) {
       const amount = Number(action.amount);
       if (!Number.isFinite(amount) || amount < 0) {
         return { success: false, error: "amount must be a non-negative number" };
       }
 
+      const reason = action.reason || "";
+      let result;
+
       if (action.type === "budget") {
         const category = (action.category || "").trim();
         if (!category) {
           return { success: false, error: "category is required for budget action" };
         }
-        const result = handleUpsertBudget({ category, monthlyBudget: amount });
-        if (!result.success) {
-          return { success: false, error: result.error };
-        }
+        result = handleUpsertBudget({ category, monthlyBudget: amount, source: "ai", reason });
       } else if (action.type === "savingsTarget") {
         // AIは金額で提案するため、率モードで設定されていた場合は定額モードへ切り替える
-        goalUpdates.savingsTargetMode = "amount";
-        goalUpdates.savingsTargetAmount = amount;
+        result = handleUpdateGoals({
+          savingsTargetMode: "amount",
+          savingsTargetAmount: amount,
+          source: "ai",
+          reason,
+        });
       } else if (action.type === "specialReserve") {
-        goalUpdates.specialReserveAmount = amount;
+        result = handleUpdateGoals({ specialReserveAmount: amount, source: "ai", reason });
       } else {
         return { success: false, error: `unknown action type: ${action.type}` };
       }
-    }
 
-    if (Object.keys(goalUpdates).length > 0) {
-      const result = handleUpdateGoals(goalUpdates);
       if (!result.success) {
         return { success: false, error: result.error };
       }

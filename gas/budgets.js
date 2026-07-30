@@ -22,9 +22,13 @@ function handleGetBudgets() {
   return { budgets };
 }
 
+// sourceとreasonは変更履歴（decisionsシート）への記録用。
+// AIの見直し案から適用された場合は source="ai" と理由が渡る
 function handleUpsertBudget(body) {
   const category = (body.category || "").trim();
   const monthlyBudget = Number(body.monthlyBudget);
+  const source = body.source || "manual";
+  const reason = body.reason || "";
 
   if (!category) {
     return { success: false, error: "category is required" };
@@ -32,6 +36,9 @@ function handleUpsertBudget(body) {
   if (!Number.isFinite(monthlyBudget) || monthlyBudget < 0) {
     return { success: false, error: "monthlyBudget must be a non-negative number" };
   }
+
+  const existingBudget = handleGetBudgets().budgets.find((b) => b.category === category);
+  const beforeAmount = existingBudget ? existingBudget.monthlyBudget : null;
 
   // categoriesシートに未登録の大項目であれば、中項目を仮の値("未分類")で自動登録する
   const categoriesSheet = getCategoriesSheet();
@@ -48,11 +55,13 @@ function handleUpsertBudget(body) {
 
     if (rowIndex !== -1) {
       sheet.getRange(rowIndex + 2, 2, 1, 1).setValues([[monthlyBudget]]);
+      recordDecision_({ type: "budget", target: category, beforeAmount, afterAmount: monthlyBudget, source, reason });
       return { success: true, budget: { category, monthlyBudget } };
     }
   }
 
   sheet.appendRow([category, monthlyBudget]);
+  recordDecision_({ type: "budget", target: category, beforeAmount, afterAmount: monthlyBudget, source, reason });
   return { success: true, budget: { category, monthlyBudget } };
 }
 

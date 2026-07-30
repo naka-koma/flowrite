@@ -13,6 +13,8 @@ import type {
   ChatTurn,
   ContinueAiChatParams,
   CostType,
+  Decision,
+  GetDecisionsParams,
   DeleteAiAttributeParams,
   DeleteAiMemoryParams,
   DeleteBudgetParams,
@@ -624,9 +626,9 @@ function mockChatTurn(modelTurnCount: number) {
     is_final: true,
     // 予算・貯蓄目標・特別費積立の3種別がそれぞれ正しく反映されることを検証できるようにする
     todo_actions: [
-      { type: "budget", category: "食費", amount: 35000 },
-      { type: "savingsTarget", amount: 100000 },
-      { type: "specialReserve", amount: 15000 },
+      { type: "budget", category: "食費", amount: 35000, reason: "外食の頻度を月2回に抑えるため" },
+      { type: "savingsTarget", amount: 100000, reason: "支出削減分をそのまま貯蓄に回すため" },
+      { type: "specialReserve", amount: 15000, reason: "年末の帰省費を月割りで備えるため" },
     ] as TodoAction[],
     // 追加でデータを見る必要がなかったターンはツール呼び出しなしになる
     tool_calls: [] as AiToolCall[],
@@ -1019,12 +1021,22 @@ function mockHandleUpsertBudget(body: UpsertBudgetParams) {
 
   const budgets = loadMockBudgets();
   const existing = budgets.find((b) => b.category === category);
+  const beforeAmount = existing ? existing.monthlyBudget : null;
   if (existing) {
     existing.monthlyBudget = monthlyBudget;
   } else {
     budgets.push({ category, monthlyBudget });
   }
   saveMockBudgets(budgets);
+
+  recordMockDecision({
+    source: body.source ?? "manual",
+    type: "budget",
+    target: category,
+    beforeAmount,
+    afterAmount: monthlyBudget,
+    reason: body.reason ?? "",
+  });
 
   return { success: true, budget: { category, monthlyBudget } };
 }
@@ -1080,6 +1092,7 @@ function mockHandleGetGoals() {
 
 function mockHandleUpdateGoals(body: UpdateGoalsParams) {
   const stored = loadMockGoals();
+  const before = resolveMockGoals(stored);
 
   if (body.monthlyIncome !== undefined) {
     if (!Number.isFinite(body.monthlyIncome) || body.monthlyIncome < 0) {
@@ -1110,7 +1123,28 @@ function mockHandleUpdateGoals(body: UpdateGoalsParams) {
   }
 
   sessionStorage.setItem(MOCK_GOALS_STORAGE_KEY, JSON.stringify(stored));
-  return { success: true, goals: resolveMockGoals(stored) };
+
+  const after = resolveMockGoals(stored);
+  const source = body.source ?? "manual";
+  const reason = body.reason ?? "";
+  recordMockDecision({
+    source,
+    type: "savingsTarget",
+    target: "",
+    beforeAmount: before.resolvedSavingsTarget,
+    afterAmount: after.resolvedSavingsTarget,
+    reason,
+  });
+  recordMockDecision({
+    source,
+    type: "specialReserve",
+    target: "",
+    beforeAmount: before.specialReserveAmount,
+    afterAmount: after.specialReserveAmount,
+    reason,
+  });
+
+  return { success: true, goals: after };
 }
 
 // GAS側のhandleApplyAiTodoActionsと同じく、予算と目標の両方へまとめて反映する
@@ -1119,8 +1153,6 @@ function mockHandleApplyAiTodoActions(body: ApplyTodoActionsParams) {
   if (actions.length === 0) {
     return { success: false, error: "actions is required" };
   }
-
-  const goalUpdates: UpdateGoalsParams = {};
 
   for (const action of actions) {
     if (!Number.isFinite(action.amount) || action.amount < 0) {
@@ -1131,28 +1163,71 @@ function mockHandleApplyAiTodoActions(body: ApplyTodoActionsParams) {
       if (!action.category) {
         return { success: false, error: "category is required for budget action" };
       }
-      const result = mockHandleUpsertBudget({ category: action.category, monthlyBudget: action.amount });
+      const result = mockHandleUpsertBudget({
+        category: action.category,
+        monthlyBudget: action.amount,
+        source: "ai",
+        reason: action.reason ?? "",
+      });
       if (!result.success) {
         return { success: false, error: result.error };
       }
     } else if (action.type === "savingsTarget") {
-      goalUpdates.savingsTargetMode = "amount";
-      goalUpdates.savingsTargetAmount = action.amount;
+      const result = mockHandleUpdateGoals({
+        savingsTargetMode: "amount",
+        savingsTargetAmount: action.amount,
+        source: "ai",
+        reason: action.reason ?? "",
+      });
+      if (!result.success) {
+        return { success: false, error: result.error };
+      }
     } else if (action.type === "specialReserve") {
-      goalUpdates.specialReserveAmount = action.amount;
+      const result = mockHandleUpdateGoals({
+        specialReserveAmount: action.amount,
+        source: "ai",
+        reason: action.reason ?? "",
+      });
+      if (!result.success) {
+        return { success: false, error: result.error };
+      }
     } else {
       return { success: false, error: `unknown action type: ${action.type}` };
     }
   }
 
-  if (Object.keys(goalUpdates).length > 0) {
-    const result = mockHandleUpdateGoals(goalUpdates);
-    if (!result.success) {
-      return { success: false, error: result.error };
+  return { success: true, applied: actions.length };
+}
+
+const MOCK_DECISIONS_STORAGE_KEY = "__mock_decisions__";
+
+// 実際のGASではdecisionsシートに永続化されるため、モックでも
+// ページリロードをまたいで再現できるよう sessionStorage に保存する
+function loadMockDecisions(): Decision[] {
+  const raw = sessionStorage.getItem(MOCK_DECISIONS_STORAGE_KEY);
+  if (raw) {
+    try {
+      return JSON.parse(raw) as Decision[];
+    } catch {
+      // 壊れたデータは無視してデフォルトにフォールバック
     }
   }
+  return [];
+}
 
-  return { success: true, applied: actions.length };
+// GAS側のrecordDecision_と同じく、値が変わっていない場合は記録しない
+function recordMockDecision(entry: Omit<Decision, "id" | "changedAt">) {
+  if (entry.beforeAmount === entry.afterAmount) {
+    return;
+  }
+  const decisions = loadMockDecisions();
+  decisions.push({ ...entry, id: crypto.randomUUID(), changedAt: new Date().toISOString() });
+  sessionStorage.setItem(MOCK_DECISIONS_STORAGE_KEY, JSON.stringify(decisions));
+}
+
+function mockHandleGetDecisions(body: GetDecisionsParams) {
+  const limit = Math.min(Math.max(body?.limit ?? 20, 1), 100);
+  return { decisions: loadMockDecisions().reverse().slice(0, limit) };
 }
 
 function mockHandleGetVersion() {
@@ -1237,6 +1312,8 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleGetGoals();
     case "handleUpdateGoals":
       return mockHandleUpdateGoals(args[0] as UpdateGoalsParams);
+    case "handleGetDecisions":
+      return mockHandleGetDecisions(args[0] as GetDecisionsParams);
     case "handleGetVersion":
       return mockHandleGetVersion();
     default:

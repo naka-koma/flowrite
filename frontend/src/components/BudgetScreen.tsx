@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useBudgets } from "../hooks/useBudgets";
 import { useCategories } from "../hooks/useCategories";
+import { CollapsibleSection } from "./CollapsibleSection";
+import { DecisionHistory } from "./DecisionHistory";
 import { GoalSettings } from "./GoalSettings";
 import { PageHeader } from "./PageHeader";
 import { SectionCard } from "./SectionCard";
@@ -32,6 +34,9 @@ export function BudgetScreen({ hideAmounts, onBack }: BudgetScreenProps) {
   const [customCategory, setCustomCategory] = useState("");
   const [newAmount, setNewAmount] = useState("");
   const [confirmingCategory, setConfirmingCategory] = useState<string | null>(null);
+  // 予算・目標を変更したら値を進め、変更履歴を取り直させる
+  const [historyVersion, setHistoryVersion] = useState(0);
+  const notifyChanged = () => setHistoryVersion((v) => v + 1);
 
   const categoryNames = Object.keys(categories);
   const budgetedCategories = new Set(budgets.map((b) => b.category));
@@ -54,6 +59,7 @@ export function BudgetScreen({ hideAmounts, onBack }: BudgetScreenProps) {
 
     const saved = await upsertBudget({ category: categoryToSubmit, monthlyBudget: amount });
     if (saved) {
+      notifyChanged();
       setNewCategory("");
       setCustomCategory("");
       setNewAmount("");
@@ -63,7 +69,7 @@ export function BudgetScreen({ hideAmounts, onBack }: BudgetScreenProps) {
   const handleDeleteClick = (category: string) => {
     if (confirmingCategory === category) {
       setConfirmingCategory(null);
-      deleteBudget({ category });
+      deleteBudget({ category }).then(notifyChanged);
     } else {
       setConfirmingCategory(category);
     }
@@ -77,8 +83,17 @@ export function BudgetScreen({ hideAmounts, onBack }: BudgetScreenProps) {
       <PageHeader title="予算" onBack={onBack} />
 
       <SectionCard title="家計の目標">
-        <GoalSettings totalBudget={totalBudget} fixedBudget={fixedBudget} hideAmounts={hideAmounts} />
+        <GoalSettings
+          totalBudget={totalBudget}
+          fixedBudget={fixedBudget}
+          hideAmounts={hideAmounts}
+          onChanged={notifyChanged}
+        />
       </SectionCard>
+
+      <CollapsibleSection title="変更履歴">
+        <DecisionHistory hideAmounts={hideAmounts} version={historyVersion} />
+      </CollapsibleSection>
 
       <SectionCard title="大項目別の月間予算">
         {isLoading ? (
@@ -112,7 +127,7 @@ export function BudgetScreen({ hideAmounts, onBack }: BudgetScreenProps) {
                         onBlur={(e) => {
                           const amount = parseAmountInput(e.target.value);
                           if (Number.isFinite(amount) && amount >= 0 && amount !== budget.monthlyBudget) {
-                            upsertBudget({ category: budget.category, monthlyBudget: amount });
+                            upsertBudget({ category: budget.category, monthlyBudget: amount }).then(notifyChanged);
                           }
                         }}
                         className="input input-bordered input-sm w-32"
