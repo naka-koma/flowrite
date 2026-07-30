@@ -203,6 +203,37 @@ function executeAiTool_(name, args) {
   }
 }
 
+// AIが何を調べたのかを画面に出すための説明文。引数から日本語を組み立てる責務は
+// GAS側に置き、フロントエンドはラベルをそのまま表示するだけにする
+function describeToolCall_(name, args) {
+  const a = args || {};
+
+  if (name === "get_summary") {
+    if (a.unit === "all") return "全期間の収支を確認";
+    if (a.unit === "year") return `${a.year}年の収支を確認`;
+    return `${a.year}年${a.month}月の収支を確認`;
+  }
+
+  if (name === "get_trend") {
+    const unitLabel = a.unit === "year" ? "年次" : a.unit === "week" ? "週次" : "月次";
+    return `${unitLabel}の推移を確認`;
+  }
+
+  if (name === "get_budget_variance") {
+    return `${a.year}年${a.month}月の予算対比を確認`;
+  }
+
+  if (name === "get_transactions") {
+    const conditions = [];
+    if (a.category) conditions.push(a.category);
+    if (a.minAmount) conditions.push(`${formatYen_(a.minAmount)}以上`);
+    const suffix = conditions.length > 0 ? `（${conditions.join("・")}）` : "";
+    return `${a.year}年${a.month}月の明細${suffix}を確認`;
+  }
+
+  return name;
+}
+
 function findFunctionCallPart_(parts) {
   for (const part of parts) {
     if (part.functionCall) {
@@ -225,6 +256,8 @@ function joinTextParts_(parts) {
 function runAiAgent_(apiKey, contents) {
   const tools = getAiAgentTools_();
   const workingContents = contents.slice();
+  // 回答の根拠として、このターンで何を調べたのかを呼び出し元へ返す
+  const toolCalls = [];
 
   for (let round = 0; round <= AI_AGENT_MAX_TOOL_ROUNDS; round++) {
     // 上限に達したターンはrespond_to_userのみ許可し、その時点の情報で必ず回答させる
@@ -251,14 +284,19 @@ function runAiAgent_(apiKey, contents) {
         success: true,
         parsed: { ai_message: text, quick_replies: [], is_final: false, todo_actions: [] },
         contents: workingContents,
+        toolCalls,
       };
     }
 
     if (functionCall.name === "respond_to_user") {
-      return { success: true, parsed: functionCall.args || {}, contents: workingContents };
+      return { success: true, parsed: functionCall.args || {}, contents: workingContents, toolCalls };
     }
 
     const toolResult = executeAiTool_(functionCall.name, functionCall.args);
+    toolCalls.push({
+      name: functionCall.name,
+      label: describeToolCall_(functionCall.name, functionCall.args),
+    });
     Logger.log(`AI tool called: ${functionCall.name} ${JSON.stringify(functionCall.args)}`);
 
     workingContents.push({

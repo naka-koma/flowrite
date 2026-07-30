@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Search } from "lucide-react";
 import Markdown from "react-markdown";
 import { useAiChat } from "../hooks/useAiChat";
 import { useAiMemories } from "../hooks/useAiMemories";
@@ -129,6 +130,17 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
       <div className="flex flex-col gap-3">
         {chat.messages.map((message, index) => (
           <div key={index} className={`chat ${message.role === "ai" ? "chat-start" : "chat-end"}`}>
+            {/* 回答の根拠として、AIがそのターンで参照したデータを控えめに示す */}
+            {message.toolCalls && message.toolCalls.length > 0 && (
+              <div className="chat-header mb-1 flex flex-col gap-0.5 font-normal" data-testid="ai-tool-calls">
+                {message.toolCalls.map((call, callIndex) => (
+                  <span key={callIndex} className="flex items-center gap-1 text-xs text-base-content/60">
+                    <Search aria-hidden="true" className="size-3 shrink-0" />
+                    {call.label}
+                  </span>
+                ))}
+              </div>
+            )}
             {/* AIの応答は見出し・箇条書きを含むMarkdownで返るため描画する。ユーザーの発言はプレーンテキストのまま */}
             {message.role === "ai" ? (
               <div className="chat-bubble ai-advice-markdown">

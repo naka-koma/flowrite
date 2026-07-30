@@ -403,6 +403,7 @@ function handleStartAiChat(body) {
       quick_replies: quick_replies || [],
       is_final: !!is_final,
       todo_actions: todo_actions || [],
+      tool_calls: result.toolCalls || [],
       history: result.contents,
     };
   } catch (e) {
@@ -445,6 +446,7 @@ function handleContinueAiChat(body) {
       quick_replies: quick_replies || [],
       is_final: !!is_final,
       todo_actions: todo_actions || [],
+      tool_calls: result.toolCalls || [],
       history: result.contents,
     };
   } catch (e) {

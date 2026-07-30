@@ -34,6 +34,29 @@ test("対話開始前は期間セレクタが表示されない", async ({ page 
   await expect(page.getByRole("button", { name: "気になる点を探す" })).not.toBeVisible();
 });
 
+test("AIが参照したデータが回答の根拠として表示される", async ({ page }) => {
+  await startChat(page);
+
+  const toolCalls = page.getByTestId("ai-tool-calls").first();
+  await expect(toolCalls.getByText("2025年12月の収支を確認")).toBeVisible();
+  await expect(toolCalls.getByText("月次の推移を確認")).toBeVisible();
+
+  // ターンごとに、そのターンで調べた内容だけが表示される
+  await page.getByRole("button", { name: "外食が増えたかも" }).click();
+  await expect(page.getByTestId("ai-tool-calls")).toHaveCount(2);
+  await expect(page.getByTestId("ai-tool-calls").nth(1)).toContainText("2025年12月の明細（10,000円以上）を確認");
+});
+
+test("データを調べなかったターンには根拠の表示が出ない", async ({ page }) => {
+  await startChat(page);
+  await page.getByRole("button", { name: "外食が増えたかも" }).click();
+  await page.getByRole("button", { name: "来月は減らしたい" }).click();
+
+  await expect(page.getByText("食費の予算を見直しましょう")).toBeVisible();
+  // 3ターン目はtool_callsが空のため、根拠の表示は2件のまま増えない
+  await expect(page.getByTestId("ai-tool-calls")).toHaveCount(2);
+});
+
 test("quick_replyを選ぶと対話が進む", async ({ page }) => {
   await startChat(page);
   await page.getByRole("button", { name: "外食が増えたかも" }).click();
