@@ -620,6 +620,16 @@ function mockChatTurn(modelTurnCount: number) {
       ] as AiToolCall[],
     };
   }
+  if (modelTurnCount >= 3) {
+    // 見直し案が出た後の追加質問。新たな見直し案は出さず、質問にだけ答える
+    return {
+      ai_message: "交通費の平均は月58,000円だよ。定期代が含まれているから、予算化しても無理はないはず。",
+      quick_replies: [] as string[],
+      is_final: true,
+      todo_actions: [] as TodoAction[],
+      tool_calls: [{ name: "get_summary", label: "2025年12月の収支を確認" }] as AiToolCall[],
+    };
+  }
   return {
     ai_message: "では食費の予算を見直しましょう。来月は35,000円を目安にしてみましょう。",
     quick_replies: [] as string[],
@@ -1321,6 +1331,10 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
   }
 }
 
+// 実際にGeminiを呼ぶハンドラは体感で分かるほど時間がかかる。
+// 処理中表示の挙動を再現できるよう、モックでも遅延させる
+const MOCK_DELAYS: Record<string, number> = { handleSummarizeAiInsight: 150 };
+
 function createRunProxy(
   successHandler?: (result: unknown) => void,
   failureHandler?: (error: Error) => void,
@@ -1344,7 +1358,7 @@ function createRunProxy(
           } catch (err) {
             failureHandler?.(err instanceof Error ? err : new Error(String(err)));
           }
-        }, 0);
+        }, MOCK_DELAYS[prop] ?? 0);
       };
     },
   });
