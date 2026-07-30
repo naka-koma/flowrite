@@ -125,7 +125,7 @@ test("チェックを外した分類は反映対象から外れる", async ({ pa
   await expect(advice.getByRole("button", { name: "選択した分類を反映する" })).toBeDisabled();
 });
 
-test("対話が完了すると見直し案が種別ごとに表示され、押すと予算と目標に反映される", async ({ page }) => {
+test("対話が完了すると見直し案が種別ごとに表示され、項目ごとに個別で反映できる", async ({ page }) => {
   await startChat(page);
   await page.getByRole("button", { name: "外食が増えたかも" }).click();
   await page.getByRole("button", { name: "来月は減らしたい" }).click();
@@ -140,16 +140,21 @@ test("対話が完了すると見直し案が種別ごとに表示され、押�
   await expect(advice.getByText("特別費積立", { exact: true })).toBeVisible();
   await expect(advice.getByText("家計の目標の貯蓄額に反映されます")).toBeVisible();
 
-  await page.getByRole("button", { name: "この見直し案を予算ページに適用する" }).click();
-  await expect(page.getByText("予算に反映しました")).toBeVisible();
+  // 「食費」だけを適用する。一括ではなく項目ごとに個別適用できる
+  const foodItem = advice.getByRole("listitem").filter({ hasText: "食費" });
+  await foodItem.getByRole("button", { name: "適用する" }).click();
+  await expect(foodItem.getByText("適用済み")).toBeVisible();
 
-  // 予算はカテゴリ予算に、貯蓄・積立は家計の目標に反映される
+  // 他の項目はまだ未適用のまま残っている
+  const savingsItem = advice.getByRole("listitem").filter({ hasText: "目標貯蓄額" });
+  await expect(savingsItem.getByRole("button", { name: "適用する" })).toBeVisible();
+
+  // 適用した食費だけが予算に反映され、目標側はまだ変わっていない
   await openBudget(page);
   await expect(page.getByLabel("食費の月間予算額")).toHaveValue("35,000");
 
   const goalSettings = page.getByTestId("goal-settings");
-  await expect(goalSettings.getByLabel("目標貯蓄額")).toHaveValue("100,000");
-  await expect(goalSettings.getByLabel("特別費積立")).toHaveValue("15,000");
+  await expect(goalSettings.getByLabel("目標貯蓄額")).toHaveValue("");
 });
 
 test("自由入力の返信を送信できる", async ({ page }) => {
@@ -180,16 +185,34 @@ test("見直し案が出た後も対話を続けられる", async ({ page }) => 
   await expect(page.getByLabel("AIへの返信")).toBeVisible();
 });
 
-test("見直し案を適用すると適用ボタンが消え、二重に反映できない", async ({ page }) => {
+test("項目を適用するとその項目だけ「適用済み」になり、二重に反映できない", async ({ page }) => {
   await startChat(page);
   await page.getByRole("button", { name: "外食が増えたかも" }).click();
   await page.getByRole("button", { name: "来月は減らしたい" }).click();
 
-  const applyButton = page.getByRole("button", { name: "この見直し案を予算ページに適用する" });
+  const advice = page.getByTestId("ai-advice");
+  const foodItem = advice.getByRole("listitem").filter({ hasText: "食費" });
+  const applyButton = foodItem.getByRole("button", { name: "適用する" });
   await applyButton.click();
 
-  await expect(page.getByText("予算に反映しました")).toBeVisible();
+  await expect(foodItem.getByText("適用済み")).toBeVisible();
   await expect(applyButton).not.toBeVisible();
+});
+
+test("他の項目を適用中は、別の項目の適用ボタンが押せない", async ({ page }) => {
+  await startChat(page);
+  await page.getByRole("button", { name: "外食が増えたかも" }).click();
+  await page.getByRole("button", { name: "来月は減らしたい" }).click();
+
+  const advice = page.getByTestId("ai-advice");
+  const foodItem = advice.getByRole("listitem").filter({ hasText: "食費" });
+  const savingsItem = advice.getByRole("listitem").filter({ hasText: "目標貯蓄額" });
+
+  await foodItem.getByRole("button", { name: "適用する" }).click();
+  await expect(savingsItem.getByRole("button", { name: "適用する" })).toBeDisabled();
+
+  await expect(foodItem.getByText("適用済み")).toBeVisible();
+  await expect(savingsItem.getByRole("button", { name: "適用する" })).toBeEnabled();
 });
 
 test("AIのメッセージを「覚えておく」で記憶できる", async ({ page }) => {

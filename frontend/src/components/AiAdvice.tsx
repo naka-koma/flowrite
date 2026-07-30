@@ -6,7 +6,13 @@ import { useAiChat } from "../hooks/useAiChat";
 import { useAiMemories } from "../hooks/useAiMemories";
 import { useSettings } from "../hooks/useSettings";
 import { formatAmount, maskYenAmounts } from "../lib/money";
-import type { TodoActionType } from "../types/api";
+import type { TodoAction, TodoActionType } from "../types/api";
+
+// 見直し案の各項目を一意に識別するキー。予算はcategory名、貯蓄・積立はtypeそのものが
+// 一意になる（同じ対話ターンでsavingsTargetやspecialReserveが複数出ることはないため）
+function todoActionKey(action: TodoAction, index: number): string {
+  return `${action.type}-${action.category ?? index}`;
+}
 
 // 見直し案がどこに反映されるのかを利用者に明示するためのラベル
 const TODO_ACTION_LABELS: Record<TodoActionType, string> = {
@@ -34,6 +40,11 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
   const [saveErrorIndex, setSaveErrorIndex] = useState<number | null>(null);
   // 分類の見直し案は取引ごとにチェックを外して選べるようにする
   const [checkedCategoryIds, setCheckedCategoryIds] = useState<Set<string>>(new Set());
+  // 見直し案は項目ごとに個別適用できるため、適用状況もキー単位で管理する
+  const [appliedActionKeys, setAppliedActionKeys] = useState<Set<string>>(new Set());
+  const [applyingActionKey, setApplyingActionKey] = useState<string | null>(null);
+  const [applyErrorKey, setApplyErrorKey] = useState<string | null>(null);
+  const [applyErrorMessage, setApplyErrorMessage] = useState<string | null>(null);
 
   const chat = useAiChat();
   const memories = useAiMemories();
@@ -46,6 +57,14 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
     setCheckedCategoryIds(new Set(chat.categorySuggestions.map((s) => s.id)));
     categorySuggestionsAi.reset();
   }, [chat.categorySuggestions]);
+
+  // 見直し案も同様に、新しいターンが来たら前ターンの適用状況を持ち越さない
+  useEffect(() => {
+    setAppliedActionKeys(new Set());
+    setApplyingActionKey(null);
+    setApplyErrorKey(null);
+    setApplyErrorMessage(null);
+  }, [chat.todoActions]);
 
   // 設定の相談テーマを、対話の入口に並べる候補ボタンとして使う
   const agendaTopics = (settings?.agendaTopics ?? "")
@@ -73,6 +92,10 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
     setSavingIndex(null);
     setSaveErrorIndex(null);
     setCheckedCategoryIds(new Set());
+    setAppliedActionKeys(new Set());
+    setApplyingActionKey(null);
+    setApplyErrorKey(null);
+    setApplyErrorMessage(null);
     categorySuggestionsAi.reset();
     chat.reset();
   };
@@ -103,6 +126,22 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
       setSavedMessageIndices((prev) => new Set(prev).add(index));
     } else {
       setSaveErrorIndex(index);
+    }
+  };
+
+  const handleApplyTodoAction = async (action: TodoAction, index: number) => {
+    const key = todoActionKey(action, index);
+    setApplyingActionKey(key);
+    setApplyErrorKey(null);
+
+    const result = await chat.applyTodoAction(action);
+
+    setApplyingActionKey(null);
+    if (result.success) {
+      setAppliedActionKeys((prev) => new Set(prev).add(key));
+    } else {
+      setApplyErrorKey(key);
+      setApplyErrorMessage(result.errorMessage ?? "見直し案の反映に失敗しました");
     }
   };
 
@@ -255,15 +294,40 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
           <div className="rounded-box border border-base-300 p-3">
             <p className="mb-2 text-sm font-medium">見直し案</p>
             <ul className="flex flex-col gap-2">
-              {chat.todoActions.map((action, index) => (
-                <li key={`${action.type}-${action.category ?? index}`} className="flex justify-between gap-2 text-sm">
-                  <span className="flex flex-col">
-                    <span>{action.type === "budget" ? action.category : TODO_ACTION_LABELS[action.type]}</span>
-                    <span className="text-xs text-base-content/70">{TODO_ACTION_DESCRIPTIONS[action.type]}</span>
-                  </span>
-                  <span className="shrink-0">{hideAmounts ? "***" : `${formatAmount(action.amount)}円`}</span>
-                </li>
-              ))}
+              {chat.todoActions.map((action, index) => {
+                const key = todoActionKey(action, index);
+                return (
+                  <li key={key} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="flex flex-col">
+                      <span>{action.type === "budget" ? action.category : TODO_ACTION_LABELS[action.type]}</span>
+                      <span className="text-xs text-base-content/70">{TODO_ACTION_DESCRIPTIONS[action.type]}</span>
+                      {applyErrorKey === key && (
+                        <span role="alert" className="text-xs text-error">
+                          {applyErrorMessage}
+                        </span>
+                      )}
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span>{hideAmounts ? "***" : `${formatAmount(action.amount)}円`}</span>
+                      {appliedActionKeys.has(key) ? (
+                        <span className="text-xs text-success">適用済み</span>
+                      ) : applyingActionKey === key ? (
+                        <span className="loading loading-spinner loading-xs" />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleApplyTodoAction(action, index)}
+                          // 他の項目を適用中は、書き込みの競合を避けるため受け付けない
+                          disabled={applyingActionKey !== null}
+                          className="btn btn-primary btn-xs"
+                        >
+                          適用する
+                        </button>
+                      )}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
             {chat.todoActions.some((a) => a.type === "savingsTarget") && (
               <p className="mt-2 text-xs text-base-content/70">
@@ -271,25 +335,6 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
               </p>
             )}
           </div>
-          {/* 適用済みの案にボタンを残すと二重に反映されるため、成功したら置き換える */}
-          {chat.applyState.status === "success" ? (
-            <p className="text-sm text-success">予算に反映しました</p>
-          ) : (
-            <button
-              type="button"
-              onClick={() => chat.applyTodoActions()}
-              disabled={chat.applyState.status === "loading"}
-              className="btn btn-primary btn-sm w-fit"
-            >
-              {chat.applyState.status === "loading" && <span className="loading loading-spinner loading-xs" />}
-              この見直し案を予算ページに適用する
-            </button>
-          )}
-          {chat.applyState.status === "error" && (
-            <p role="alert" className="alert alert-error">
-              エラー: {chat.applyState.errorMessage}
-            </p>
-          )}
         </div>
       )}
 

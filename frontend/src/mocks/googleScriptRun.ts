@@ -1358,7 +1358,10 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
 
 // 実際にGeminiを呼ぶハンドラは体感で分かるほど時間がかかる。
 // 処理中表示の挙動を再現できるよう、モックでも遅延させる
-const MOCK_DELAYS: Record<string, number> = { handleSummarizeAiInsight: 150 };
+const MOCK_DELAYS: Record<string, number> = {
+  handleSummarizeAiInsight: 150,
+  handleApplyAiTodoActions: 150,
+};
 
 function createRunProxy(
   successHandler?: (result: unknown) => void,
