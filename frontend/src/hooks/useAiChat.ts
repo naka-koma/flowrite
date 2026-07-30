@@ -10,7 +10,10 @@ import type {
 } from "../types/api";
 import { runScript } from "../lib/googleScriptRun";
 
-type ChatStatus = "idle" | "loading" | "success" | "error";
+// 対話中の失敗は"error"にせず、直前の状態を保持したまま"success"に留める。
+// 会話がある状態で"error"にすると、messages/quickReplies等が読めなくなり
+// 再開する手段が失われるため
+type ChatStatus = "idle" | "loading" | "success";
 type ApplyStatus = "idle" | "loading" | "success" | "error";
 
 export interface ChatMessage {
@@ -47,10 +50,18 @@ export function useAiChat() {
     errorMessage: null,
   });
 
-  const applyResponse = (userText: string | null, data: AiChatResponse) => {
+  // isInitial=trueの失敗（対話開始前）は会話が存在しないため入口へ戻す。
+  // falseの失敗（対話継続中）は直前のmessages/quickReplies等を保持したまま
+  // errorMessageだけを添え、ユーザーが同じ場所から再送できるようにする
+  const applyResponse = (userText: string | null, data: AiChatResponse, isInitial: boolean): boolean => {
     if (!data.success) {
-      setState((s) => ({ ...s, status: "error", errorMessage: data.error ?? "対話の取得に失敗しました" }));
-      return;
+      const errorMessage = data.error ?? "対話の取得に失敗しました";
+      if (isInitial) {
+        setState({ ...INITIAL_STATE, errorMessage });
+      } else {
+        setState((s) => ({ ...s, status: "success", errorMessage }));
+      }
+      return false;
     }
 
     // 対話が進むと新しい見直し案が出うるため、前ターンの適用結果は持ち越さない
@@ -69,6 +80,7 @@ export function useAiChat() {
       history: data.history,
       errorMessage: null,
     }));
+    return true;
   };
 
   // 対象期間はAIがツールで判断するため、クライアントからは相談テーマのみを渡す
@@ -78,25 +90,26 @@ export function useAiChat() {
     try {
       const params: StartAiChatParams = { agendaTopic };
       const data = await runScript<AiChatResponse>("handleStartAiChat", params);
-      applyResponse(null, data);
+      applyResponse(null, data, true);
     } catch (error) {
       const message = error instanceof Error ? error.message : "対話の取得に失敗しました";
-      setState((s) => ({ ...s, status: "error", errorMessage: message }));
+      setState({ ...INITIAL_STATE, errorMessage: message });
     }
   };
 
-  const sendReply = async (userReply: string) => {
-    setState((s) => ({ ...s, status: "loading" }));
+  const sendReply = async (userReply: string): Promise<boolean> => {
+    setState((s) => ({ ...s, status: "loading", errorMessage: null }));
 
     try {
       const data = await runScript<AiChatResponse>("handleContinueAiChat", {
         history: state.history,
         userReply,
       });
-      applyResponse(userReply, data);
+      return applyResponse(userReply, data, false);
     } catch (error) {
       const message = error instanceof Error ? error.message : "対話の取得に失敗しました";
-      setState((s) => ({ ...s, status: "error", errorMessage: message }));
+      setState((s) => ({ ...s, status: "success", errorMessage: message }));
+      return false;
     }
   };
 
