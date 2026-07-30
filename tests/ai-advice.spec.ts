@@ -195,11 +195,72 @@ test("「最初からやり直す」で入口に戻る", async ({ page }) => {
   await expect(page.getByText("今月は先月より支出が増えていますね")).not.toBeVisible();
 });
 
-test("対話の開始に失敗するとエラーメッセージが表示される", async ({ page }) => {
+test("対話の開始に失敗しても入口に留まり、再度試せる", async ({ page }) => {
   await page.addInitScript(() => {
     (window as unknown as { __MOCK_SCENARIO__: unknown }).__MOCK_SCENARIO__ = { aiChatError: true };
   });
   await startChat(page);
 
   await expect(page.getByText("エラー: GEMINI_API_KEY is not set in script properties")).toBeVisible();
+  // 会話が存在しないため「やり直す」を挟まなくても、入口の候補ボタンからそのまま再挑戦できる
+  await expect(page.getByRole("button", { name: "今月のざっくり振り返り" })).toBeVisible();
+
+  await page.evaluate(() => {
+    (window as unknown as { __MOCK_SCENARIO__: { aiChatError: boolean } }).__MOCK_SCENARIO__.aiChatError = false;
+  });
+  await page.getByRole("button", { name: "今月のざっくり振り返り" }).click();
+
+  await expect(page.getByText("今月は先月より支出が増えていますね")).toBeVisible();
+});
+
+test("対話中に返信が失敗しても会話は保持され、そのまま再送できる", async ({ page }) => {
+  await startChat(page);
+  await expect(page.getByText("今月は先月より支出が増えていますね")).toBeVisible();
+
+  await page.evaluate(() => {
+    (window as unknown as { __MOCK_SCENARIO__: { aiContinueChatError: boolean } }).__MOCK_SCENARIO__ = {
+      aiContinueChatError: true,
+    } as never;
+  });
+  await page.getByRole("button", { name: "外食が増えたかも" }).click();
+
+  await expect(page.getByText("エラー: Gemini API request failed")).toBeVisible();
+  // 失敗前のメッセージとquick_repliesは消えず、返信欄も残っている
+  await expect(page.getByText("今月は先月より支出が増えていますね")).toBeVisible();
+  await expect(page.getByRole("button", { name: "外食が増えたかも" })).toBeVisible();
+  await expect(page.getByLabel("AIへの返信")).toBeVisible();
+
+  await page.evaluate(() => {
+    (window as unknown as { __MOCK_SCENARIO__: { aiContinueChatError: boolean } }).__MOCK_SCENARIO__.aiContinueChatError =
+      false;
+  });
+  await page.getByRole("button", { name: "外食が増えたかも" }).click();
+
+  await expect(page.getByText("なるほど、外食が増えているんですね")).toBeVisible();
+  await expect(page.getByText("エラー: Gemini API request failed")).not.toBeVisible();
+});
+
+test("自由入力の送信が失敗しても入力内容は消えず、再送できる", async ({ page }) => {
+  await startChat(page);
+  await page.evaluate(() => {
+    (window as unknown as { __MOCK_SCENARIO__: { aiContinueChatError: boolean } }).__MOCK_SCENARIO__ = {
+      aiContinueChatError: true,
+    } as never;
+  });
+
+  await page.getByLabel("AIへの返信").fill("実は副業の経費が増えました");
+  await page.getByRole("button", { name: "送信" }).click();
+
+  await expect(page.getByText("エラー: Gemini API request failed")).toBeVisible();
+  // 送信に失敗したので入力内容は消えず、打ち直さずに再送できる
+  await expect(page.getByLabel("AIへの返信")).toHaveValue("実は副業の経費が増えました");
+
+  await page.evaluate(() => {
+    (window as unknown as { __MOCK_SCENARIO__: { aiContinueChatError: boolean } }).__MOCK_SCENARIO__.aiContinueChatError =
+      false;
+  });
+  await page.getByRole("button", { name: "送信" }).click();
+
+  await expect(page.getByText("実は副業の経費が増えました")).toBeVisible();
+  await expect(page.getByLabel("AIへの返信")).toHaveValue("");
 });

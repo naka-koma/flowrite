@@ -64,9 +64,12 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
     chat.reset();
   };
 
-  const handleSendReply = (text: string) => {
-    setFreeText("");
-    chat.sendReply(text);
+  const handleSendReply = async (text: string) => {
+    // 失敗時は再送できるよう、成功したときだけ入力欄を空にする
+    const ok = await chat.sendReply(text);
+    if (ok) {
+      setFreeText("");
+    }
   };
 
   const handleSendFreeText = (e: React.FormEvent) => {
@@ -95,6 +98,12 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
     return (
       <div data-testid="ai-advice">
         <p className="mb-3 text-sm text-base-content/70">何を相談しますか？</p>
+
+        {chat.errorMessage && (
+          <p role="alert" className="alert alert-error mb-3">
+            エラー: {chat.errorMessage}
+          </p>
+        )}
 
         {agendaTopics.length > 0 && (
           <div className="mb-3 flex flex-col gap-2">
@@ -199,7 +208,10 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
         </p>
       )}
 
-      {chat.status === "error" && (
+      {/* 対話継続中の失敗はstatusを"success"に保ったままerrorMessageだけを添えるため、
+          statusではなくerrorMessageの有無で表示する。メッセージ一覧・quick_replies・
+          返信欄はそのまま残るので、ここから再送できる */}
+      {chat.status === "success" && chat.errorMessage && (
         <p role="alert" className="alert alert-error mt-3">
           エラー: {chat.errorMessage}
         </p>

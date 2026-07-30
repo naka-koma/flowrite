@@ -59,6 +59,7 @@ interface MockScenario {
   aiCategorySuggestionsError?: boolean;
   aiCategorySuggestionsWithNewCategory?: boolean;
   aiChatError?: boolean;
+  aiContinueChatError?: boolean;
 }
 
 function getScenario(): MockScenario {
@@ -661,6 +662,10 @@ function mockHandleStartAiChat(body: StartAiChatParams) {
 }
 
 function mockHandleContinueAiChat(body: ContinueAiChatParams) {
+  if (getScenario().aiContinueChatError) {
+    return { success: false, error: "Gemini API request failed" };
+  }
+
   const modelTurnCount = body.history.filter((h) => h.role === "model").length;
   const turn = mockChatTurn(modelTurnCount);
   const history: ChatTurn[] = body.history.concat([
