@@ -5,6 +5,7 @@ import type {
   AiAttribute,
   AiCategorySuggestion,
   AiCategorySuggestionParams,
+  AiChatSession,
   AiMemory,
   AiToolCall,
   ApplyAiCategorySuggestionsParams,
@@ -28,6 +29,7 @@ import type {
   MonthlyCalendarParams,
   PreferenceKey,
   RenameCategoryParams,
+  SaveAiChatSessionParams,
   Settings,
   StartAiChatParams,
   SummarizeAiInsightParams,
@@ -61,6 +63,7 @@ interface MockScenario {
   aiCategorySuggestionsWithNewCategory?: boolean;
   aiChatError?: boolean;
   aiContinueChatError?: boolean;
+  aiSaveSessionError?: boolean;
 }
 
 function getScenario(): MockScenario {
@@ -695,6 +698,37 @@ function mockHandleContinueAiChat(body: ContinueAiChatParams) {
   return { success: true, ...turn, history };
 }
 
+const MOCK_AI_CHAT_SESSION_STORAGE_KEY = "__mock_ai_chat_session__";
+
+// 実際のGASではai_chat_sessionシートに永続化される（常に直近1件のみ）ため、
+// モックでもページリロードをまたいで再現できるよう sessionStorage に保存する
+function loadMockAiChatSession(): AiChatSession | null {
+  const raw = sessionStorage.getItem(MOCK_AI_CHAT_SESSION_STORAGE_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as AiChatSession;
+  } catch {
+    return null;
+  }
+}
+
+function mockHandleGetAiChatSession() {
+  return { session: loadMockAiChatSession() };
+}
+
+function mockHandleSaveAiChatSession(body: SaveAiChatSessionParams) {
+  if (getScenario().aiSaveSessionError) {
+    return { success: false, error: "セルの文字数上限を超えています" };
+  }
+  sessionStorage.setItem(MOCK_AI_CHAT_SESSION_STORAGE_KEY, JSON.stringify(body.session));
+  return { success: true };
+}
+
+function mockHandleClearAiChatSession() {
+  sessionStorage.removeItem(MOCK_AI_CHAT_SESSION_STORAGE_KEY);
+  return { success: true };
+}
+
 const MOCK_TRANSACTION_CATEGORY_ENTRIES: [string, string[]][] = [
   ["食費", ["外食", "スーパー", "コンビニ"]],
   ["交通費", ["電車", "バス", "タクシー"]],
@@ -1283,6 +1317,12 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleStartAiChat(args[0] as StartAiChatParams);
     case "handleContinueAiChat":
       return mockHandleContinueAiChat(args[0] as ContinueAiChatParams);
+    case "handleGetAiChatSession":
+      return mockHandleGetAiChatSession();
+    case "handleSaveAiChatSession":
+      return mockHandleSaveAiChatSession(args[0] as SaveAiChatSessionParams);
+    case "handleClearAiChatSession":
+      return mockHandleClearAiChatSession();
     case "handleRunMigrations":
       return mockHandleRunMigrations();
     case "handleGetSettings":

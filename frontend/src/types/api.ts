@@ -158,6 +158,44 @@ export interface AiChatResponse {
   error?: string;
 }
 
+// AIアドバイスの対話を永続化するための表示用メッセージ。
+// useAiChatのChatMessageと同じ形（role/text/toolCalls）
+export interface StoredChatMessage {
+  role: "user" | "ai";
+  text: string;
+  toolCalls?: AiToolCall[];
+}
+
+// 保存・復元する対話1件分。常に直近1件だけを上書き保存する（複数保持はしない）
+export interface AiChatSession {
+  updatedAt: string;
+  messages: StoredChatMessage[];
+  history: ChatTurn[];
+  quickReplies: string[];
+  isFinal: boolean;
+  todoActions: TodoAction[];
+  categorySuggestions: AiCategorySuggestion[];
+}
+
+export interface GetAiChatSessionResponse {
+  session: AiChatSession | null;
+  error?: string;
+}
+
+export interface SaveAiChatSessionParams {
+  session: AiChatSession;
+}
+
+export interface SaveAiChatSessionResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface ClearAiChatSessionResponse {
+  success: boolean;
+  error?: string;
+}
+
 export interface CalendarDay {
   date: string;
   day: number;
