@@ -48,6 +48,14 @@ npm run build
 npm run deploy
 ```
 
+### 検証はサブエージェントに委譲する
+
+型チェック・ビルド確認（`npx tsc --noEmit` / `npm run build`）は `build-runner` エージェントに、E2Eテスト（`npm run test:e2e`）は `test-runner` エージェントに委譲する。どちらも実行と結果報告のみを行う実行専用エージェントで、エラーが出た場合の原因調査・修正はメイン側が行う。
+
+`npm run build` / `npx tsc` / `npm run test:e2e` を自分（メインの会話）で直接Bash実行しない。変換モジュール数・全テストケース名・ビルドのコピー一覧といった冗長な出力がメインの会話履歴に残り続け、以後のやり取り（マージ検知後のデプロイなど、それ自体は軽い作業）のたびにその履歴を読み返すコストがかかる。
+
+`npm run deploy` はデプロイそのものであり検証ではないため、この委譲の対象外（メインで直接実行する）。
+
 ## GASの制約と注意事項
 
 - **単一エントリーポイント:** `doGet` はHTML配信専用。API呼び出しは `google.script.run` から `handleUpload` / `handleSummary` / `handleTrend` / `handleAiAdvice` などのグローバル関数を直接呼び出す
