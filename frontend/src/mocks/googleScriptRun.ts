@@ -3,6 +3,7 @@ import type {
   AddAiMemoryParams,
   AddCategoryParams,
   AiAttribute,
+  AiCategorySuggestion,
   AiCategorySuggestionParams,
   AiMemory,
   AiToolCall,
@@ -600,6 +601,7 @@ function mockChatTurn(modelTurnCount: number) {
       quick_replies: ["外食が増えたかも", "特に思い当たらない"],
       is_final: false,
       todo_actions: [] as TodoAction[],
+      category_suggestions: [] as AiCategorySuggestion[],
       // 実際のGASではrunAiAgent_が呼んだツールの記録が入る
       tool_calls: [
         { name: "get_summary", label: "2025年12月の収支を確認" },
@@ -616,6 +618,22 @@ function mockChatTurn(modelTurnCount: number) {
       quick_replies: ["来月は減らしたい", "このままでいい"],
       is_final: false,
       todo_actions: [] as TodoAction[],
+      // 明細を見ていて分類ミスに気づいた、という想定のサンプル
+      category_suggestions: [
+        {
+          id: "2025-12-4",
+          date: "2025/12/05",
+          content: "店舗4",
+          amount: -1148,
+          institution: "楽天カード",
+          currentCategory: "その他",
+          currentSubcategory: "雑費",
+          suggestedCategory: "食費",
+          suggestedSubcategory: "外食",
+          isNewCategory: false,
+          reason: "内容から外食と思われる",
+        },
+      ] as AiCategorySuggestion[],
       tool_calls: [
         { name: "get_transactions", label: "2025年12月の明細（10,000円以上）を確認" },
       ] as AiToolCall[],
@@ -628,6 +646,7 @@ function mockChatTurn(modelTurnCount: number) {
       quick_replies: [] as string[],
       is_final: true,
       todo_actions: [] as TodoAction[],
+      category_suggestions: [] as AiCategorySuggestion[],
       tool_calls: [{ name: "get_summary", label: "2025年12月の収支を確認" }] as AiToolCall[],
     };
   }
@@ -641,6 +660,7 @@ function mockChatTurn(modelTurnCount: number) {
       { type: "savingsTarget", amount: 100000, reason: "支出削減分をそのまま貯蓄に回すため" },
       { type: "specialReserve", amount: 15000, reason: "年末の帰省費を月割りで備えるため" },
     ] as TodoAction[],
+    category_suggestions: [] as AiCategorySuggestion[],
     // 追加でデータを見る必要がなかったターンはツール呼び出しなしになる
     tool_calls: [] as AiToolCall[],
   };

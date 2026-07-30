@@ -152,6 +152,7 @@ export interface AiChatResponse {
   quick_replies: string[];
   is_final: boolean;
   todo_actions: TodoAction[];
+  category_suggestions: AiCategorySuggestion[];
   tool_calls: AiToolCall[];
   history: ChatTurn[];
   error?: string;

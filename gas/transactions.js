@@ -134,3 +134,57 @@ function handleApplyAiCategorySuggestions(body) {
 
   return { success: true, applied, notFound };
 }
+
+// AIが対話中に出した分類の見直し案（id・提案先category/subcategory・reasonのみ）を、
+// 表示に必要な情報（現在の分類・金額・新規カテゴリかどうか）まで解決する。
+// AIの出力を信用しすぎず、実データと突き合わせて補完することで、
+// 存在しないidや古い分類情報に基づくハルシネーションを弾く
+function resolveAiCategorySuggestions_(rawSuggestions) {
+  if (!Array.isArray(rawSuggestions) || rawSuggestions.length === 0) {
+    return [];
+  }
+
+  const sheet = getRawDataSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) {
+    return [];
+  }
+
+  const data = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+  const rowById = new Map();
+  data.forEach((row) => rowById.set(row[0], row));
+
+  const { categories } = handleGetCategories();
+  const existingPairKeys = new Set();
+  Object.keys(categories).forEach((category) => {
+    categories[category].forEach((subcategory) => existingPairKeys.add(`${category} ${subcategory}`));
+  });
+
+  const tz = Session.getScriptTimeZone();
+  const resolved = [];
+
+  for (const s of rawSuggestions) {
+    const row = rowById.get(s.id);
+    if (!row) continue; // 存在しないidは無視（ハルシネーション対策）
+
+    const suggestedCategory = ((s && s.suggestedCategory) || "").trim();
+    const suggestedSubcategory = ((s && s.suggestedSubcategory) || "").trim();
+    if (!suggestedCategory || !suggestedSubcategory) continue;
+
+    resolved.push({
+      id: row[0],
+      date: Utilities.formatDate(new Date(row[1]), tz, "yyyy/MM/dd"),
+      content: row[2],
+      amount: row[3],
+      institution: row[4],
+      currentCategory: row[5],
+      currentSubcategory: row[6],
+      suggestedCategory,
+      suggestedSubcategory,
+      isNewCategory: !existingPairKeys.has(`${suggestedCategory} ${suggestedSubcategory}`),
+      reason: (s && s.reason) || "",
+    });
+  }
+
+  return resolved;
+}

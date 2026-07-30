@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openBudget } from "./helpers";
+import { openBudget, openTransactionList } from "./helpers";
 
 // 対話は入口の候補ボタンまたは自由入力から始まる（期間の選択は不要）
 async function startChat(page: import("@playwright/test").Page, topic = "今月のざっくり振り返り") {
@@ -90,6 +90,39 @@ test("ユーザーの発言はMarkdownとして描画されない", async ({ pag
   const userBubble = page.locator(".chat-bubble-primary").filter({ hasText: "これは見出しではない" });
   await expect(userBubble).toContainText("# これは見出しではない");
   await expect(userBubble.getByRole("heading")).toHaveCount(0);
+});
+
+test("対話中に見つかった分類の見直し案を選んで反映できる", async ({ page }) => {
+  await startChat(page);
+  await page.getByRole("button", { name: "外食が増えたかも" }).click();
+
+  const advice = page.getByTestId("ai-advice");
+  await expect(advice.getByText("分類の見直し案", { exact: true })).toBeVisible();
+  await expect(advice.getByText("店舗4")).toBeVisible();
+  await expect(advice.getByText("その他:雑費 → 食費:外食")).toBeVisible();
+
+  // 既定で全件チェック済みなので、そのまま反映できる
+  await advice.getByRole("button", { name: "選択した分類を反映する" }).click();
+  await expect(advice.getByText("分類を更新しました")).toBeVisible();
+
+  // 実際に取引一覧側の分類も変わっている
+  await openTransactionList(page);
+  await page.getByLabel("対象年月").selectOption("2025-12");
+  const row = page.getByRole("row").filter({ has: page.getByRole("cell", { name: "店舗4", exact: true }) });
+  await expect(row.getByLabel("大項目")).toHaveValue("食費");
+  await expect(row.getByLabel("中項目")).toHaveValue("外食");
+});
+
+test("チェックを外した分類は反映対象から外れる", async ({ page }) => {
+  await startChat(page);
+  await page.getByRole("button", { name: "外食が増えたかも" }).click();
+
+  const advice = page.getByTestId("ai-advice");
+  const checkbox = advice.getByLabel("店舗4の分類を変更する");
+  await expect(checkbox).toBeChecked();
+
+  await checkbox.uncheck();
+  await expect(advice.getByRole("button", { name: "選択した分類を反映する" })).toBeDisabled();
 });
 
 test("対話が完了すると見直し案が種別ごとに表示され、押すと予算と目標に反映される", async ({ page }) => {

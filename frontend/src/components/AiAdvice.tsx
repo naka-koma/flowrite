@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import Markdown from "react-markdown";
+import { useAiCategorySuggestions } from "../hooks/useAiCategorySuggestions";
 import { useAiChat } from "../hooks/useAiChat";
 import { useAiMemories } from "../hooks/useAiMemories";
 import { useSettings } from "../hooks/useSettings";
@@ -31,10 +32,20 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
   // 「覚えておく」はどのメッセージを処理中／失敗したのかを区別して示す
   const [savingIndex, setSavingIndex] = useState<number | null>(null);
   const [saveErrorIndex, setSaveErrorIndex] = useState<number | null>(null);
+  // 分類の見直し案は取引ごとにチェックを外して選べるようにする
+  const [checkedCategoryIds, setCheckedCategoryIds] = useState<Set<string>>(new Set());
 
   const chat = useAiChat();
   const memories = useAiMemories();
+  const categorySuggestionsAi = useAiCategorySuggestions();
   const { settings } = useSettings();
+
+  // 新しいターンの提案が来たら、チェック状態を全選択にリセットし、
+  // 前ターンの適用結果（成功/失敗表示）も持ち越さない
+  useEffect(() => {
+    setCheckedCategoryIds(new Set(chat.categorySuggestions.map((s) => s.id)));
+    categorySuggestionsAi.reset();
+  }, [chat.categorySuggestions]);
 
   // 設定の相談テーマを、対話の入口に並べる候補ボタンとして使う
   const agendaTopics = (settings?.agendaTopics ?? "")
@@ -61,6 +72,8 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
     setSavedMessageIndices(new Set());
     setSavingIndex(null);
     setSaveErrorIndex(null);
+    setCheckedCategoryIds(new Set());
+    categorySuggestionsAi.reset();
     chat.reset();
   };
 
@@ -91,6 +104,26 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
     } else {
       setSaveErrorIndex(index);
     }
+  };
+
+  const toggleCategoryChecked = (id: string) => {
+    setCheckedCategoryIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleApplyCategorySuggestions = () => {
+    const selected = chat.categorySuggestions
+      .filter((s) => checkedCategoryIds.has(s.id))
+      .map((s) => ({ id: s.id, category: s.suggestedCategory, subcategory: s.suggestedSubcategory }));
+    if (selected.length === 0) return;
+    categorySuggestionsAi.applySuggestions(selected);
   };
 
   // 対話が始まる前は入口を出す。期間はAIがツールで判断するため選ばせない
@@ -255,6 +288,58 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
           {chat.applyState.status === "error" && (
             <p role="alert" className="alert alert-error">
               エラー: {chat.applyState.errorMessage}
+            </p>
+          )}
+        </div>
+      )}
+
+      {chat.status === "success" && chat.categorySuggestions.length > 0 && (
+        <div className="mt-3 flex flex-col gap-2">
+          <div className="rounded-box border border-base-300 p-3">
+            <p className="mb-2 text-sm font-medium">分類の見直し案</p>
+            <ul className="flex flex-col gap-2">
+              {chat.categorySuggestions.map((s) => (
+                <li key={s.id} className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={checkedCategoryIds.has(s.id)}
+                    onChange={() => toggleCategoryChecked(s.id)}
+                    aria-label={`${s.content}の分類を変更する`}
+                    className="checkbox checkbox-sm mt-0.5 shrink-0"
+                  />
+                  <span className="flex flex-1 flex-col">
+                    <span className="flex justify-between gap-2">
+                      <span>{s.content}</span>
+                      <span className="shrink-0">{hideAmounts ? "***" : `${formatAmount(Math.abs(s.amount))}円`}</span>
+                    </span>
+                    <span className="text-xs text-base-content/70">
+                      {s.currentCategory}:{s.currentSubcategory} → {s.suggestedCategory}:{s.suggestedSubcategory}
+                      {s.isNewCategory && <span className="badge badge-warning badge-xs ml-1">新規</span>}
+                    </span>
+                    <span className="text-xs text-base-content/70">{s.reason}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          {categorySuggestionsAi.applyState.status === "success" ? (
+            <p className="text-sm text-success">分類を更新しました</p>
+          ) : (
+            <button
+              type="button"
+              onClick={handleApplyCategorySuggestions}
+              disabled={checkedCategoryIds.size === 0 || categorySuggestionsAi.applyState.status === "loading"}
+              className="btn btn-primary btn-sm w-fit"
+            >
+              {categorySuggestionsAi.applyState.status === "loading" && (
+                <span className="loading loading-spinner loading-xs" />
+              )}
+              選択した分類を反映する
+            </button>
+          )}
+          {categorySuggestionsAi.applyState.status === "error" && (
+            <p role="alert" className="alert alert-error">
+              エラー: {categorySuggestionsAi.applyState.errorMessage}
             </p>
           )}
         </div>

@@ -59,7 +59,8 @@ function getAiAgentTools_() {
           name: "get_transactions",
           description:
             "指定した月の取引明細を取得する。使途不明金の中身を確認するなど、" +
-            "カテゴリ単位の集計では分からない具体的な支出を調べたいときに使う。",
+            "カテゴリ単位の集計では分からない具体的な支出を調べたいときに使う。" +
+            "結果に含まれるidは、明らかに分類が誤っている取引を見つけた際にcategory_suggestionsで指し示すのに使う。",
           parameters: {
             type: "OBJECT",
             properties: {
@@ -89,7 +90,9 @@ function getAiAgentTools_() {
             "ユーザーに回答する。必要なデータが揃ったら必ずこの関数を呼ぶこと。" +
             "推測で答えず、根拠となるデータは先に他のツールで取得すること。" +
             "予算や目標の変更（todo_actions）を提案する場合は、respond_to_userを呼ぶ前に" +
-            "必ずget_decision_historyで対象カテゴリ・項目の変更履歴を確認すること。",
+            "必ずget_decision_historyで対象カテゴリ・項目の変更履歴を確認すること。" +
+            "get_transactionsで見た取引の分類が明らかに誤っていると気づいた場合は、" +
+            "category_suggestionsで指摘してよい。確信が持てない場合は含めないこと。",
           parameters: {
             type: "OBJECT",
             properties: CHAT_RESPONSE_SCHEMA.properties,
@@ -157,6 +160,7 @@ function buildTransactionsToolResult_(args) {
   transactions.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
   const totalCount = transactions.length;
   const trimmed = transactions.slice(0, AI_AGENT_MAX_TRANSACTIONS).map((t) => ({
+    id: t.id,
     date: t.date,
     content: t.content,
     amount: Math.abs(t.amount),
