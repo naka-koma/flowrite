@@ -17,8 +17,8 @@ const CHAT_RESPONSE_SCHEMA = {
     ai_message: {
       type: "STRING",
       description:
-        "ユーザーへの問いかけ文（柔らかい標準語、タメ口）。要点が複数ある場合は見出し・箇条書きなどのMarkdown記法で構造化してよい。" +
-        "改行はエスケープせず実際の改行文字を使うこと。冗長にならないよう、長くても400文字程度に収めること。",
+        "ユーザーへの問いかけ文（柔らかい標準語、タメ口）。要点が複数ある場合は見出し・箇条書き・表などのMarkdown記法（GFM）で構造化してよい。" +
+        "改行や*・#などのMarkdown記号はエスケープせず、実際の改行文字・記号をそのまま使うこと。冗長にならないよう、長くても400文字程度に収めること。",
     },
     quick_replies: {
       type: "ARRAY",
@@ -174,14 +174,18 @@ function runGeminiChat_(apiKey, contents, responseSchema) {
   return { success: true, parsed, rawText };
 }
 
-// Geminiが構造化出力のJSON文字列内で改行を二重エスケープして返すことがあり、
-// JSON.parse後にバックスラッシュと n の2文字が残る。表示・メモリ・ログの
-// すべてに一貫して効くよう、GAS側で実際の改行文字に戻す
+// Geminiが構造化出力のJSON文字列内で改行やMarkdown記号を二重エスケープして返すことがあり、
+// JSON.parse後にバックスラッシュと文字がそのまま残る（例: "\*\*食費\*\*"）。表示・メモリ・ログの
+// すべてに一貫して効くよう、GAS側で実際の改行文字・記号に戻す
 function normalizeAiText_(text) {
   if (typeof text !== "string") {
     return text;
   }
-  return text.replace(/\\r\\n/g, "\n").replace(/\\n/g, "\n").replace(/\\t/g, "\t");
+  return text
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\\t/g, "\t")
+    .replace(/\\([*_`#\-[\]()>~|])/g, "$1");
 }
 
 function formatYen_(amount) {

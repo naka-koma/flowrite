@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Search } from "lucide-react";
 import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useAiCategorySuggestions } from "../hooks/useAiCategorySuggestions";
 import { useAiChat } from "../hooks/useAiChat";
 import { useAiMemories } from "../hooks/useAiMemories";
@@ -295,7 +296,7 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
             {/* AIの応答は見出し・箇条書きを含むMarkdownで返るため描画する。ユーザーの発言はプレーンテキストのまま */}
             {message.role === "ai" ? (
               <div className="chat-bubble ai-advice-markdown">
-                <Markdown>{maskText(message.text)}</Markdown>
+                <Markdown remarkPlugins={[remarkGfm]}>{maskText(message.text)}</Markdown>
               </div>
             ) : (
               <div className="chat-bubble chat-bubble-primary whitespace-pre-wrap">{maskText(message.text)}</div>
@@ -470,14 +471,16 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
             </div>
           )}
 
-          <form onSubmit={handleSendFreeText} className="flex gap-2">
-            <input
-              type="text"
+          <form onSubmit={handleSendFreeText} className="flex items-end gap-2">
+            {/* textareaはEnterで改行でき、フォームを誤って送信しない
+                （input type="text"と異なりEnterでsubmitイベントが発火しない） */}
+            <textarea
               aria-label="AIへの返信"
               value={freeText}
               onChange={(e) => setFreeText(e.target.value)}
               placeholder="気になったことを聞いてみる"
-              className="input input-bordered input-sm flex-1"
+              rows={2}
+              className="textarea textarea-bordered textarea-sm flex-1 resize-none"
             />
             <button type="submit" disabled={!freeText.trim()} className="btn btn-primary btn-sm">
               送信
