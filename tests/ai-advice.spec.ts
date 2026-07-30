@@ -84,8 +84,7 @@ test("AIの応答がMarkdownとして描画され、改行が文字として残�
 test("ユーザーの発言はMarkdownとして描画されない", async ({ page }) => {
   await startChat(page);
 
-  await page.getByRole("button", { name: "その他を入力" }).click();
-  await page.getByLabel("自由入力の返信").fill("# これは見出しではない");
+  await page.getByLabel("AIへの返信").fill("# これは見出しではない");
   await page.getByRole("button", { name: "送信" }).click();
 
   const userBubble = page.locator(".chat-bubble-primary").filter({ hasText: "これは見出しではない" });
@@ -120,19 +119,44 @@ test("対話が完了すると見直し案が種別ごとに表示され、押�
   await expect(goalSettings.getByLabel("特別費積立")).toHaveValue("15,000");
 });
 
-test("「その他を入力」で自由入力の返信を送信できる", async ({ page }) => {
+test("自由入力の返信を送信できる", async ({ page }) => {
   await startChat(page);
 
-  await expect(page.getByRole("button", { name: "その他を入力" })).toBeVisible();
-  await expect(page.getByLabel("自由入力の返信")).not.toBeVisible();
-
-  await page.getByRole("button", { name: "その他を入力" }).click();
-  await page.getByLabel("自由入力の返信").fill("実は副業の経費が増えました");
+  await page.getByLabel("AIへの返信").fill("実は副業の経費が増えました");
   await page.getByRole("button", { name: "送信" }).click();
 
   await expect(page.getByText("実は副業の経費が増えました")).toBeVisible();
   await expect(page.getByText("なるほど、外食が増えているんですね")).toBeVisible();
-  await expect(page.getByLabel("自由入力の返信")).not.toBeVisible();
+  // 送信後は入力欄が空に戻り、続けて質問できる
+  await expect(page.getByLabel("AIへの返信")).toHaveValue("");
+});
+
+test("見直し案が出た後も対話を続けられる", async ({ page }) => {
+  await startChat(page);
+  await page.getByRole("button", { name: "外食が増えたかも" }).click();
+  await page.getByRole("button", { name: "来月は減らしたい" }).click();
+
+  await expect(page.getByText("見直し案", { exact: true })).toBeVisible();
+  // 結論が出た後も返信欄が残っている
+  await expect(page.getByLabel("AIへの返信")).toBeVisible();
+
+  await page.getByLabel("AIへの返信").fill("交通費の平均はいくら？");
+  await page.getByRole("button", { name: "送信" }).click();
+
+  await expect(page.getByText("交通費の平均は月58,000円だよ")).toBeVisible();
+  await expect(page.getByLabel("AIへの返信")).toBeVisible();
+});
+
+test("見直し案を適用すると適用ボタンが消え、二重に反映できない", async ({ page }) => {
+  await startChat(page);
+  await page.getByRole("button", { name: "外食が増えたかも" }).click();
+  await page.getByRole("button", { name: "来月は減らしたい" }).click();
+
+  const applyButton = page.getByRole("button", { name: "この見直し案を予算ページに適用する" });
+  await applyButton.click();
+
+  await expect(page.getByText("予算に反映しました")).toBeVisible();
+  await expect(applyButton).not.toBeVisible();
 });
 
 test("AIのメッセージを「覚えておく」で記憶できる", async ({ page }) => {
@@ -142,6 +166,23 @@ test("AIのメッセージを「覚えておく」で記憶できる", async ({ 
   await page.getByRole("button", { name: "覚えておく" }).click();
 
   await expect(page.getByText("記憶しました")).toBeVisible();
+});
+
+test("「覚えておく」を押すと処理中であることが分かる", async ({ page }) => {
+  await startChat(page);
+  await page.getByRole("button", { name: "外食が増えたかも" }).click();
+  await expect(page.getByText("なるほど、外食が増えているんですね")).toBeVisible();
+
+  // 2件目のAIメッセージを記憶する
+  await page.getByRole("button", { name: "覚えておく" }).nth(1).click();
+
+  // 要約のためのサーバー往復が入るため、その間は処理中と分かる
+  await expect(page.getByText("記憶しています...")).toBeVisible();
+  // 押したメッセージだけが処理中になり、1件目は「覚えておく」のまま
+  await expect(page.getByRole("button", { name: "覚えておく" })).toHaveCount(1);
+
+  await expect(page.getByText("記憶しました")).toBeVisible();
+  await expect(page.getByText("記憶しています...")).not.toBeVisible();
 });
 
 test("「最初からやり直す」で入口に戻る", async ({ page }) => {

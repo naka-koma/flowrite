@@ -53,6 +53,9 @@ export function useAiChat() {
       return;
     }
 
+    // 対話が進むと新しい見直し案が出うるため、前ターンの適用結果は持ち越さない
+    setApplyState({ status: "idle", errorMessage: null });
+
     setState((s) => ({
       status: "success",
       messages: [

@@ -26,9 +26,11 @@ interface AiAdviceProps {
 
 export function AiAdvice({ hideAmounts }: AiAdviceProps) {
   const [inputText, setInputText] = useState("");
-  const [showFreeTextInput, setShowFreeTextInput] = useState(false);
   const [freeText, setFreeText] = useState("");
   const [savedMessageIndices, setSavedMessageIndices] = useState<Set<number>>(new Set());
+  // 「覚えておく」はどのメッセージを処理中／失敗したのかを区別して示す
+  const [savingIndex, setSavingIndex] = useState<number | null>(null);
+  const [saveErrorIndex, setSaveErrorIndex] = useState<number | null>(null);
 
   const chat = useAiChat();
   const memories = useAiMemories();
@@ -55,14 +57,14 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
 
   const handleReset = () => {
     setInputText("");
-    setShowFreeTextInput(false);
     setFreeText("");
     setSavedMessageIndices(new Set());
+    setSavingIndex(null);
+    setSaveErrorIndex(null);
     chat.reset();
   };
 
   const handleSendReply = (text: string) => {
-    setShowFreeTextInput(false);
     setFreeText("");
     chat.sendReply(text);
   };
@@ -75,9 +77,16 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
   };
 
   const handleSaveMemory = async (index: number, text: string) => {
+    setSavingIndex(index);
+    setSaveErrorIndex(null);
+
     const ok = await memories.addMemoryFromRawText(text);
+
+    setSavingIndex(null);
     if (ok) {
       setSavedMessageIndices((prev) => new Set(prev).add(index));
+    } else {
+      setSaveErrorIndex(index);
     }
   };
 
@@ -150,18 +159,32 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
               <div className="chat-bubble chat-bubble-primary whitespace-pre-wrap">{maskText(message.text)}</div>
             )}
             {message.role === "ai" && (
-              <div className="chat-footer">
+              <div className="chat-footer flex items-center gap-2">
                 {savedMessageIndices.has(index) ? (
                   <span className="text-xs text-success">記憶しました</span>
+                ) : savingIndex === index ? (
+                  // 要約と保存で2回のサーバー往復が発生するため、処理中であることを明示する
+                  <span className="flex items-center gap-1 text-xs text-base-content/70">
+                    <span className="loading loading-spinner loading-xs" />
+                    記憶しています...
+                  </span>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleSaveMemory(index, message.text)}
-                    disabled={memories.mutateState.status === "loading"}
-                    className="btn btn-ghost btn-xs"
-                  >
-                    覚えておく
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleSaveMemory(index, message.text)}
+                      // 他のメッセージを保存中は、書き込みの競合を避けるため受け付けない
+                      disabled={savingIndex !== null}
+                      className="btn btn-ghost btn-xs"
+                    >
+                      覚えておく
+                    </button>
+                    {saveErrorIndex === index && (
+                      <span role="alert" className="text-xs text-error">
+                        {memories.mutateState.errorMessage ?? "記憶に失敗しました"}
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -180,44 +203,6 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
         <p role="alert" className="alert alert-error mt-3">
           エラー: {chat.errorMessage}
         </p>
-      )}
-
-      {chat.status === "success" && !chat.isFinal && (
-        <div className="mt-3 flex flex-col gap-2">
-          <div className="flex flex-wrap gap-2">
-            {chat.quickReplies.map((reply) => (
-              <button
-                key={reply}
-                type="button"
-                onClick={() => handleSendReply(reply)}
-                className="btn btn-outline btn-sm"
-              >
-                {reply}
-              </button>
-            ))}
-            {!showFreeTextInput && (
-              <button type="button" onClick={() => setShowFreeTextInput(true)} className="btn btn-ghost btn-sm">
-                その他を入力
-              </button>
-            )}
-          </div>
-
-          {showFreeTextInput && (
-            <form onSubmit={handleSendFreeText} className="flex gap-2">
-              <input
-                type="text"
-                aria-label="自由入力の返信"
-                value={freeText}
-                onChange={(e) => setFreeText(e.target.value)}
-                className="input input-bordered input-sm flex-1"
-                autoFocus
-              />
-              <button type="submit" disabled={!freeText.trim()} className="btn btn-primary btn-sm">
-                送信
-              </button>
-            </form>
-          )}
-        </div>
       )}
 
       {chat.status === "success" && chat.isFinal && chat.todoActions.length > 0 && (
@@ -241,21 +226,59 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
               </p>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => chat.applyTodoActions()}
-            disabled={chat.applyState.status === "loading"}
-            className="btn btn-primary btn-sm w-fit"
-          >
-            {chat.applyState.status === "loading" && <span className="loading loading-spinner loading-xs" />}
-            この見直し案を予算ページに適用する
-          </button>
-          {chat.applyState.status === "success" && <p className="text-sm text-success">予算に反映しました</p>}
+          {/* 適用済みの案にボタンを残すと二重に反映されるため、成功したら置き換える */}
+          {chat.applyState.status === "success" ? (
+            <p className="text-sm text-success">予算に反映しました</p>
+          ) : (
+            <button
+              type="button"
+              onClick={() => chat.applyTodoActions()}
+              disabled={chat.applyState.status === "loading"}
+              className="btn btn-primary btn-sm w-fit"
+            >
+              {chat.applyState.status === "loading" && <span className="loading loading-spinner loading-xs" />}
+              この見直し案を予算ページに適用する
+            </button>
+          )}
           {chat.applyState.status === "error" && (
             <p role="alert" className="alert alert-error">
               エラー: {chat.applyState.errorMessage}
             </p>
           )}
+        </div>
+      )}
+
+      {/* 見直し案が出た後も掘り下げられるよう、返信欄は常に出しておく */}
+      {chat.status === "success" && (
+        <div className="mt-3 flex flex-col gap-2">
+          {chat.quickReplies.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {chat.quickReplies.map((reply) => (
+                <button
+                  key={reply}
+                  type="button"
+                  onClick={() => handleSendReply(reply)}
+                  className="btn btn-outline btn-sm"
+                >
+                  {reply}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <form onSubmit={handleSendFreeText} className="flex gap-2">
+            <input
+              type="text"
+              aria-label="AIへの返信"
+              value={freeText}
+              onChange={(e) => setFreeText(e.target.value)}
+              placeholder="気になったことを聞いてみる"
+              className="input input-bordered input-sm flex-1"
+            />
+            <button type="submit" disabled={!freeText.trim()} className="btn btn-primary btn-sm">
+              送信
+            </button>
+          </form>
         </div>
       )}
     </div>
