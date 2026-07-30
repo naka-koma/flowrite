@@ -17,7 +17,8 @@ function handleGetBudgets() {
   const values = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
   const budgets = values
     .filter((row) => row[0])
-    .map((row) => ({ category: row[0], monthlyBudget: row[1] }));
+    // セルが空・非数値の場合にNumber(row[1])がNaNになりうるため、0にフォールバックする
+    .map((row) => ({ category: row[0], monthlyBudget: Number(row[1]) || 0 }));
 
   return { budgets };
 }
