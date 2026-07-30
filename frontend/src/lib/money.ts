@@ -1,5 +1,8 @@
+// スプレッドシートのセルが空・非数値だった場合や、バックエンドの型が崩れて
+// undefined/NaNが渡ってきた場合でも画面全体をクラッシュさせないよう、
+// 数値でなければ0として扱う
 export function formatAmount(amount: number): string {
-  return amount.toLocaleString("ja-JP");
+  return (Number.isFinite(amount) ? amount : 0).toLocaleString("ja-JP");
 }
 
 export function formatYen(amount: number): string {
