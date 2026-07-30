@@ -69,8 +69,11 @@ function handleGetGoals() {
   return Object.assign({}, goals, { resolvedSavingsTarget, spendableTotal });
 }
 
+// sourceとreasonは変更履歴（decisionsシート）への記録用。
+// 複数項目をまとめて受け取るため、更新前後を突き合わせて実際に変わったものだけを記録する
 function handleUpdateGoals(body) {
   const params = body || {};
+  const before = handleGetGoals();
 
   if (params.monthlyIncome !== undefined) {
     const monthlyIncome = Number(params.monthlyIncome);
@@ -111,5 +114,7 @@ function handleUpdateGoals(body) {
     setGoal_("specialReserveAmount", specialReserveAmount);
   }
 
-  return { success: true, goals: handleGetGoals() };
+  const after = handleGetGoals();
+  recordGoalDecisions_(before, after, params.source || "manual", params.reason || "");
+  return { success: true, goals: after };
 }

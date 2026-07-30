@@ -72,6 +72,18 @@ function getAiAgentTools_() {
           },
         },
         {
+          name: "get_decision_history",
+          description:
+            "過去に予算や目標をいつ・なぜ・いくらから変更したかの履歴を取得する。" +
+            "以前の見直しが効いたのかを検証したいときや、同じ提案を繰り返さないために使う。",
+          parameters: {
+            type: "OBJECT",
+            properties: {
+              limit: { type: "INTEGER", description: "取得する件数。省略時は20件。" },
+            },
+          },
+        },
+        {
           name: "respond_to_user",
           description:
             "ユーザーに回答する。必要なデータが揃ったら必ずこの関数を呼ぶこと。" +
@@ -196,6 +208,10 @@ function executeAiTool_(name, args) {
       return buildTransactionsToolResult_(params);
     }
 
+    if (name === "get_decision_history") {
+      return handleGetDecisions({ limit: params.limit });
+    }
+
     return { error: `unknown tool: ${name}` };
   } catch (e) {
     Logger.log(`executeAiTool_ error (${name}): ${e.message}`);
@@ -221,6 +237,10 @@ function describeToolCall_(name, args) {
 
   if (name === "get_budget_variance") {
     return `${a.year}年${a.month}月の予算対比を確認`;
+  }
+
+  if (name === "get_decision_history") {
+    return "予算・目標の変更履歴を確認";
   }
 
   if (name === "get_transactions") {
