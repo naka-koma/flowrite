@@ -54,7 +54,10 @@ const CHAT_RESPONSE_SCHEMA = {
       description:
         "is_finalがtrueの場合に設定される、来月に向けた見直し案の配列。" +
         "貯蓄や積立はカテゴリ別の支出予算ではないため、type=budgetで提案してはいけない。" +
-        "貯蓄はsavingsTarget、不定期支出への積立はspecialReserveを使うこと。",
+        "貯蓄はsavingsTarget、不定期支出への積立はspecialReserveを使うこと。" +
+        "提案する前に必ずget_decision_historyで変更履歴を確認し、対象のカテゴリ・項目が" +
+        "直近で既に見直されている場合は、その事実（いつ・いくらに変更したか）を踏まえて話すこと。" +
+        "新しい根拠（支出額が再び変化した等）がない限り、同じ見直しを繰り返し提案してはいけない。",
     },
   },
   required: ["ai_message", "quick_replies", "is_final"],
@@ -388,7 +391,10 @@ function handleStartAiChat(body) {
       buildGoalsSection_(),
       buildTodaySection_(),
       `# 相談テーマ\n${agendaTopic}`,
-      "回答する前に、相談テーマに関係するデータを必ずツールで取得してください。推測で答えてはいけません。",
+      "回答する前に、相談テーマに関係するデータを必ずツールで取得してください。推測で答えてはいけません。\n" +
+        "予算や目標の変更を提案する前には、get_decision_historyで過去の変更履歴を必ず確認してください。" +
+        "対象のカテゴリ・項目が直近で既に見直されている場合、新しい根拠（支出額が再び変化した等）がない限り、" +
+        "同じ見直しを繰り返し提案しないでください。既に変更済みであることをユーザーに伝えるだけに留めてください。",
     ].filter((s) => s);
     const initialPrompt = sections.join("\n\n");
 

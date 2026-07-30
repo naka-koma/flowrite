@@ -87,7 +87,9 @@ function getAiAgentTools_() {
           name: "respond_to_user",
           description:
             "ユーザーに回答する。必要なデータが揃ったら必ずこの関数を呼ぶこと。" +
-            "推測で答えず、根拠となるデータは先に他のツールで取得すること。",
+            "推測で答えず、根拠となるデータは先に他のツールで取得すること。" +
+            "予算や目標の変更（todo_actions）を提案する場合は、respond_to_userを呼ぶ前に" +
+            "必ずget_decision_historyで対象カテゴリ・項目の変更履歴を確認すること。",
           parameters: {
             type: "OBJECT",
             properties: CHAT_RESPONSE_SCHEMA.properties,
