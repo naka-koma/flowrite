@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type {
   AiChatResponse,
+  AiToolCall,
   ApplyTodoActionsParams,
   ApplyTodoActionsResponse,
   ChatTurn,
@@ -15,6 +16,8 @@ type ApplyStatus = "idle" | "loading" | "success" | "error";
 export interface ChatMessage {
   role: "user" | "ai";
   text: string;
+  // AIの発言のみ。そのターンで参照したデータを回答の根拠として保持する
+  toolCalls?: AiToolCall[];
 }
 
 interface ChatState {
@@ -55,7 +58,7 @@ export function useAiChat() {
       messages: [
         ...s.messages,
         ...(userText ? [{ role: "user" as const, text: userText }] : []),
-        { role: "ai" as const, text: data.ai_message },
+        { role: "ai" as const, text: data.ai_message, toolCalls: data.tool_calls ?? [] },
       ],
       quickReplies: data.quick_replies,
       isFinal: data.is_final,

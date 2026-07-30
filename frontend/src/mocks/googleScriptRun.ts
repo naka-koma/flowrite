@@ -5,6 +5,7 @@ import type {
   AiAttribute,
   AiCategorySuggestionParams,
   AiMemory,
+  AiToolCall,
   ApplyAiCategorySuggestionsParams,
   ApplyTodoActionsParams,
   Budget,
@@ -596,6 +597,11 @@ function mockChatTurn(modelTurnCount: number) {
       quick_replies: ["外食が増えたかも", "特に思い当たらない"],
       is_final: false,
       todo_actions: [] as TodoAction[],
+      // 実際のGASではrunAiAgent_が呼んだツールの記録が入る
+      tool_calls: [
+        { name: "get_summary", label: "2025年12月の収支を確認" },
+        { name: "get_trend", label: "月次の推移を確認" },
+      ] as AiToolCall[],
     };
   }
   if (modelTurnCount === 1) {
@@ -607,6 +613,9 @@ function mockChatTurn(modelTurnCount: number) {
       quick_replies: ["来月は減らしたい", "このままでいい"],
       is_final: false,
       todo_actions: [] as TodoAction[],
+      tool_calls: [
+        { name: "get_transactions", label: "2025年12月の明細（10,000円以上）を確認" },
+      ] as AiToolCall[],
     };
   }
   return {
@@ -619,6 +628,8 @@ function mockChatTurn(modelTurnCount: number) {
       { type: "savingsTarget", amount: 100000 },
       { type: "specialReserve", amount: 15000 },
     ] as TodoAction[],
+    // 追加でデータを見る必要がなかったターンはツール呼び出しなしになる
+    tool_calls: [] as AiToolCall[],
   };
 }
 

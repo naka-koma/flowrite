@@ -111,12 +111,20 @@ export interface ContinueAiChatParams {
   userReply: string;
 }
 
+// AIがそのターンで参照したデータ。回答の根拠として画面に表示する。
+// labelは表示用の日本語で、GAS側が引数から組み立てる
+export interface AiToolCall {
+  name: string;
+  label: string;
+}
+
 export interface AiChatResponse {
   success: boolean;
   ai_message: string;
   quick_replies: string[];
   is_final: boolean;
   todo_actions: TodoAction[];
+  tool_calls: AiToolCall[];
   history: ChatTurn[];
   error?: string;
 }
