@@ -44,8 +44,14 @@ test("AIの見直し案を適用すると、理由付きでAI提案として記�
   await page.getByRole("button", { name: "今月のざっくり振り返り" }).click();
   await page.getByRole("button", { name: "外食が増えたかも" }).click();
   await page.getByRole("button", { name: "来月は減らしたい" }).click();
-  await page.getByRole("button", { name: "この見直し案を予算ページに適用する" }).click();
-  await expect(page.getByText("予算に反映しました")).toBeVisible();
+
+  // 見直し案は項目ごとに個別適用するため、3件とも順番に適用する
+  const advice = page.getByTestId("ai-advice");
+  for (const label of ["食費", "目標貯蓄額", "特別費積立"]) {
+    const item = advice.getByRole("listitem").filter({ hasText: label });
+    await item.getByRole("button", { name: "適用する" }).click();
+    await expect(item.getByText("適用済み")).toBeVisible();
+  }
 
   await openBudget(page);
   const history = page.getByTestId("decision-history");

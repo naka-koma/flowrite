@@ -15,7 +15,13 @@ import { runScript } from "../lib/googleScriptRun";
 // 会話がある状態で"error"にすると、messages/quickReplies等が読めなくなり
 // 再開する手段が失われるため
 type ChatStatus = "idle" | "loading" | "success";
-type ApplyStatus = "idle" | "loading" | "success" | "error";
+
+// 見直し案の適用結果。項目ごとの状態は呼び出し元（AiAdvice）が管理するため、
+// ここでは1回の適用呼び出しの成否だけを返す
+interface ApplyTodoActionResult {
+  success: boolean;
+  errorMessage?: string;
+}
 
 export interface ChatMessage {
   role: "user" | "ai";
@@ -48,10 +54,6 @@ const INITIAL_STATE: ChatState = {
 
 export function useAiChat() {
   const [state, setState] = useState<ChatState>(INITIAL_STATE);
-  const [applyState, setApplyState] = useState<{ status: ApplyStatus; errorMessage: string | null }>({
-    status: "idle",
-    errorMessage: null,
-  });
 
   // isInitial=trueの失敗（対話開始前）は会話が存在しないため入口へ戻す。
   // falseの失敗（対話継続中）は直前のmessages/quickReplies等を保持したまま
@@ -66,9 +68,6 @@ export function useAiChat() {
       }
       return false;
     }
-
-    // 対話が進むと新しい見直し案が出うるため、前ターンの適用結果は持ち越さない
-    setApplyState({ status: "idle", errorMessage: null });
 
     setState((s) => ({
       status: "success",
@@ -119,30 +118,25 @@ export function useAiChat() {
 
   const reset = () => {
     setState(INITIAL_STATE);
-    setApplyState({ status: "idle", errorMessage: null });
   };
 
-  // 見直し案はカテゴリ予算と家計の目標の両方に跨るため、GAS側で一括して反映する
-  const applyTodoActions = async () => {
-    setApplyState({ status: "loading", errorMessage: null });
-
+  // 見直し案を1件ずつ適用する。以前は配列をまとめて渡していたが、
+  // 項目ごとに個別に反映できるよう単一のアクションを受け取る形に変えた（#194）。
+  // handleApplyAiTodoActionsは元々1件ずつ処理する実装のため、バックエンド側の変更は不要
+  const applyTodoAction = async (action: TodoAction): Promise<ApplyTodoActionResult> => {
     try {
-      const params: ApplyTodoActionsParams = { actions: state.todoActions };
+      const params: ApplyTodoActionsParams = { actions: [action] };
       const data = await runScript<ApplyTodoActionsResponse>("handleApplyAiTodoActions", params);
 
       if (!data.success) {
-        setApplyState({ status: "error", errorMessage: data.error ?? "見直し案の反映に失敗しました" });
-        return false;
+        return { success: false, errorMessage: data.error ?? "見直し案の反映に失敗しました" };
       }
-
-      setApplyState({ status: "success", errorMessage: null });
-      return true;
+      return { success: true };
     } catch (error) {
       const message = error instanceof Error ? error.message : "見直し案の反映に失敗しました";
-      setApplyState({ status: "error", errorMessage: message });
-      return false;
+      return { success: false, errorMessage: message };
     }
   };
 
-  return { ...state, applyState, startChat, sendReply, applyTodoActions, reset };
+  return { ...state, startChat, sendReply, applyTodoAction, reset };
 }
