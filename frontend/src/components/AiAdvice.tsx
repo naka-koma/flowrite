@@ -165,6 +165,19 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
     categorySuggestionsAi.applySuggestions(selected);
   };
 
+  // 起動直後、保存済みの対話がないか確認している間の表示。
+  // 入口画面をチラつかせないよう、確認が終わるまではこちらを出す
+  if (chat.status === "restoring") {
+    return (
+      <div data-testid="ai-advice">
+        <p className="flex items-center gap-2 text-sm text-base-content/70">
+          <span className="loading loading-spinner loading-sm" />
+          読み込んでいます...
+        </p>
+      </div>
+    );
+  }
+
   // 対話が始まる前は入口を出す。期間はAIがツールで判断するため選ばせない
   if (chat.status === "idle") {
     return (
