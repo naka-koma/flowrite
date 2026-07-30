@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Search } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, ChevronUp, Search } from "lucide-react";
 import Markdown from "react-markdown";
 import { useAiCategorySuggestions } from "../hooks/useAiCategorySuggestions";
 import { useAiChat } from "../hooks/useAiChat";
@@ -13,6 +13,9 @@ import type { TodoAction, TodoActionType } from "../types/api";
 function todoActionKey(action: TodoAction, index: number): string {
   return `${action.type}-${action.category ?? index}`;
 }
+
+// 折りたたんだときに常に表示しておく直近のメッセージ数（2往復分）
+const COLLAPSE_VISIBLE_COUNT = 4;
 
 // 見直し案がどこに反映されるのかを利用者に明示するためのラベル
 const TODO_ACTION_LABELS: Record<TodoActionType, string> = {
@@ -45,6 +48,11 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
   const [applyingActionKey, setApplyingActionKey] = useState<string | null>(null);
   const [applyErrorKey, setApplyErrorKey] = useState<string | null>(null);
   const [applyErrorMessage, setApplyErrorMessage] = useState<string | null>(null);
+  // 履歴が長いとスクロールに時間がかかるため、直近のやり取りだけを表示できるようにする
+  const [historyCollapsed, setHistoryCollapsed] = useState(false);
+  // 復元直後（またはこのページを開いた最初のターン）にだけ、長い履歴を自動で折りたたむ。
+  // 一度判定したら、対話が伸びていく途中で勝手に折りたたまれることはない
+  const didAutoCollapseRef = useRef(false);
 
   const chat = useAiChat();
   const memories = useAiMemories();
@@ -65,6 +73,17 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
     setApplyErrorKey(null);
     setApplyErrorMessage(null);
   }, [chat.todoActions]);
+
+  // 対話が復元された直後（このコンポーネントで最初にsuccessになった時点）に、
+  // 既に長い履歴であれば自動で折りたたむ。新しい対話は1件ずつしか増えないため
+  // この最初の判定でCOLLAPSE_VISIBLE_COUNTを超えることはなく、誤って畳まれない
+  useEffect(() => {
+    if (didAutoCollapseRef.current || chat.status !== "success") return;
+    didAutoCollapseRef.current = true;
+    if (chat.messages.length > COLLAPSE_VISIBLE_COUNT) {
+      setHistoryCollapsed(true);
+    }
+  }, [chat.status, chat.messages.length]);
 
   // 設定の相談テーマを、対話の入口に並べる候補ボタンとして使う
   const agendaTopics = (settings?.agendaTopics ?? "")
@@ -96,6 +115,8 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
     setApplyingActionKey(null);
     setApplyErrorKey(null);
     setApplyErrorMessage(null);
+    setHistoryCollapsed(false);
+    didAutoCollapseRef.current = false;
     categorySuggestionsAi.reset();
     chat.reset();
   };
@@ -230,8 +251,35 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
         </button>
       </div>
 
+      {chat.messages.length > COLLAPSE_VISIBLE_COUNT && (
+        <button
+          type="button"
+          onClick={() => setHistoryCollapsed((c) => !c)}
+          data-testid="chat-history-toggle"
+          className="btn btn-ghost btn-xs mb-2 self-start"
+        >
+          {historyCollapsed ? (
+            <>
+              <ChevronDown aria-hidden="true" className="size-3" />
+              過去のやり取りを表示する（{chat.messages.length - COLLAPSE_VISIBLE_COUNT}件）
+            </>
+          ) : (
+            <>
+              <ChevronUp aria-hidden="true" className="size-3" />
+              過去のやり取りを折りたたむ
+            </>
+          )}
+        </button>
+      )}
+
       <div className="flex flex-col gap-3">
-        {chat.messages.map((message, index) => (
+        {chat.messages
+          .slice(historyCollapsed ? -COLLAPSE_VISIBLE_COUNT : 0)
+          .map((message, i) => {
+            // 折りたたみ時は配列の先頭を切り詰めているため、「覚えておく」の状態管理に
+            // 使う本来のインデックスをオフセットして復元する
+            const index = historyCollapsed ? chat.messages.length - COLLAPSE_VISIBLE_COUNT + i : i;
+            return (
           <div key={index} className={`chat ${message.role === "ai" ? "chat-start" : "chat-end"}`}>
             {/* 回答の根拠として、AIがそのターンで参照したデータを控えめに示す */}
             {message.toolCalls && message.toolCalls.length > 0 && (
@@ -283,7 +331,8 @@ export function AiAdvice({ hideAmounts }: AiAdviceProps) {
               </div>
             )}
           </div>
-        ))}
+            );
+          })}
       </div>
 
       {chat.status === "loading" && (
