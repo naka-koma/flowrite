@@ -284,6 +284,26 @@ body {
   border-radius: 0.25rem;
   padding: 0.1rem 0.35rem;
 }
+/* remark-gfmで解釈される表。table自体にdisplay:blockを当てるとブラウザがtable/th等の
+   暗黙のARIAロールを外してしまうため、スクロールはラッパー側で行う */
+.ai-advice-markdown table {
+  margin: 0.5rem 0;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.ai-advice-markdown :has(> table) {
+  overflow-x: auto;
+}
+.ai-advice-markdown th,
+.ai-advice-markdown td {
+  border: 1px solid var(--color-base-300);
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+}
+.ai-advice-markdown th {
+  background-color: var(--color-base-200);
+  font-weight: 600;
+}
 /* チャットバブル内に収めるため、先頭・末尾要素の余白は打ち消す */
 .ai-advice-markdown > :first-child {
   margin-top: 0;

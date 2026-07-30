@@ -74,11 +74,29 @@ test("AIの応答がMarkdownとして描画され、改行が文字として残�
   // 見出し・箇条書き・強調がプレーンテキストではなく要素として描画される
   await expect(bubble.getByRole("heading", { name: "気になった点" })).toBeVisible();
   await expect(bubble.getByRole("listitem")).toHaveCount(2);
-  await expect(bubble.getByText("食費全体")).toHaveJSProperty("tagName", "STRONG");
+  await expect(bubble.locator("strong", { hasText: "食費全体" })).toBeVisible();
 
   // エスケープされた改行が文字として表示されていない
   await expect(bubble).not.toContainText("\\n");
   await expect(bubble).not.toContainText("##");
+
+  // GFMの表がtable要素として描画される
+  const table = bubble.locator("table");
+  await expect(table).toBeVisible();
+  await expect(table.locator("th", { hasText: "今月" })).toBeVisible();
+  await expect(table.locator("td", { hasText: "30,000円" })).toBeVisible();
+});
+
+test("ユーザーへの返信は複数行の改行を含めて送信できる", async ({ page }) => {
+  await startChat(page);
+
+  const textarea = page.getByLabel("AIへの返信");
+  await textarea.fill("1行目\n2行目");
+  await page.getByRole("button", { name: "送信" }).click();
+
+  const userBubble = page.locator(".chat-bubble-primary").filter({ hasText: "1行目" });
+  await expect(userBubble).toBeVisible();
+  await expect(userBubble).toHaveJSProperty("innerText", "1行目\n2行目");
 });
 
 test("ユーザーの発言はMarkdownとして描画されない", async ({ page }) => {
