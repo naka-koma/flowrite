@@ -11,6 +11,16 @@ const AI_AGENT_MAX_TOOL_ROUNDS = 5;
 // 明細取得ツールが一度に返す取引の上限。プロンプトが肥大化しないよう抑える
 const AI_AGENT_MAX_TRANSACTIONS = 40;
 
+// 定期支出検出ツールのデフォルト・上限値
+const RECURRING_EXPENSES_DEFAULT_MONTHS = 6;
+const RECURRING_EXPENSES_MAX_MONTHS = 24;
+const RECURRING_EXPENSES_DEFAULT_MIN_OCCURRENCES = 3;
+// プロンプトが肥大化しないよう、出現月数が多い順に上位のみ返す
+const AI_AGENT_MAX_RECURRING_GROUPS = 20;
+// 金額のばらつきがこの割合（変動係数）を超える場合、たまたま同じ店で買い物しただけの
+// 可能性が高いとみなし、定期支出として誤検出しないよう除外する（取りこぼす方向に倒す）
+const RECURRING_EXPENSES_MAX_COEFFICIENT_OF_VARIATION = 0.4;
+
 // ツール宣言はCHAT_RESPONSE_SCHEMA（gemini.js）を参照するため、
 // ファイルの読み込み順に依存しないよう関数内で組み立てる
 function getAiAgentTools_() {
@@ -70,6 +80,25 @@ function getAiAgentTools_() {
               minAmount: { type: "INTEGER", description: "この金額以上の支出のみに絞る（絶対値・円）。" },
             },
             required: ["year", "month"],
+          },
+        },
+        {
+          name: "find_recurring_expenses",
+          description:
+            "複数月にまたがって繰り返し出ている支出（サブスクや固定費の疑いがあるもの）を検出する。" +
+            "get_transactionsは単月しか見られないため、契約したまま使っていないサービスや" +
+            "解約忘れのサブスクを探すには、こちらを使うこと。" +
+            "「使途不明金をあぶり出したい」「固定費の歪みをチェックして」といった相談では、" +
+            "対話の早い段階でこれを呼ぶことを検討すること。",
+          parameters: {
+            type: "OBJECT",
+            properties: {
+              months: { type: "INTEGER", description: "何ヶ月遡って調べるか。省略時は6、最大24。" },
+              minOccurrences: {
+                type: "INTEGER",
+                description: "繰り返しとみなす最低出現月数。省略時は3。",
+              },
+            },
           },
         },
         {
@@ -180,6 +209,112 @@ function buildTransactionsToolResult_(args) {
   };
 }
 
+// MoneyForwardの明細は同じサービスでも表記が揺れる（末尾に日付・番号が付く、
+// カード会社によって区切り記号が違う等）ため、数字・記号・空白を落として比較する。
+// 正規化しすぎると無関係な支出を誤って同一視するため、最小限の除去に留める
+function normalizeExpenseContent_(content) {
+  return String(content)
+    .replace(/[0-9０-９]/g, "")
+    .replace(/[\s　\-ー－_/.,:：()（）、]/g, "")
+    .trim();
+}
+
+function formatMonthLabel_(date) {
+  return `${date.getFullYear()}年${date.getMonth() + 1}月`;
+}
+
+// raw_dataを1回だけ読み、正規化した内容ごとにグルーピングして
+// 複数月にまたがる定期支出（サブスク・固定費の疑い）を検出する
+function buildRecurringExpensesResult_(args) {
+  const months = Math.min(
+    Math.max(Number(args.months) || RECURRING_EXPENSES_DEFAULT_MONTHS, 1),
+    RECURRING_EXPENSES_MAX_MONTHS,
+  );
+  const minOccurrences = Math.max(Number(args.minOccurrences) || RECURRING_EXPENSES_DEFAULT_MIN_OCCURRENCES, 2);
+
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
+
+  const sheet = getRawDataSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) {
+    return { monthsScanned: months, recurringExpenses: [] };
+  }
+
+  const data = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+  const { costTypes } = handleGetCategories();
+
+  // 正規化した内容をキーに、月ごとの出現をまとめる
+  const groups = new Map();
+
+  for (const row of data) {
+    const isTarget = row[9];
+    const isTransfer = row[8];
+    if (isTarget !== 1 || isTransfer === 1) continue;
+
+    const amount = row[3];
+    if (amount >= 0) continue; // 支出のみ対象
+
+    const date = new Date(row[1]);
+    if (date < start) continue;
+
+    const content = row[2];
+    const normalized = normalizeExpenseContent_(content);
+    // 正規化後に短すぎる文字列（記号・数字だけの内容など）は無関係な支出を
+    // まとめてしまう誤検出の元になるため対象外にする
+    if (normalized.length < 2) continue;
+
+    if (!groups.has(normalized)) {
+      groups.set(normalized, { sampleContent: content, category: row[5], subcategory: row[6], entries: [] });
+    }
+    groups.get(normalized).entries.push({
+      monthKey: `${date.getFullYear()}-${date.getMonth() + 1}`,
+      monthDate: new Date(date.getFullYear(), date.getMonth(), 1),
+      amount: Math.abs(amount),
+    });
+  }
+
+  const recurringExpenses = [];
+
+  for (const group of groups.values()) {
+    const monthKeys = new Set(group.entries.map((e) => e.monthKey));
+    if (monthKeys.size < minOccurrences) continue;
+
+    const amounts = group.entries.map((e) => e.amount);
+    const avgAmount = amounts.reduce((sum, a) => sum + a, 0) / amounts.length;
+    const variance = amounts.reduce((sum, a) => sum + (a - avgAmount) ** 2, 0) / amounts.length;
+    const coefficientOfVariation = avgAmount > 0 ? Math.sqrt(variance) / avgAmount : 0;
+
+    // 金額のばらつきが大きい場合は定期支出ではなく偶然の重複とみなし、除外する
+    if (coefficientOfVariation > RECURRING_EXPENSES_MAX_COEFFICIENT_OF_VARIATION) continue;
+
+    const sortedEntries = group.entries.slice().sort((a, b) => a.monthDate - b.monthDate);
+    const firstEntry = sortedEntries[0];
+    const lastEntry = sortedEntries[sortedEntries.length - 1];
+
+    recurringExpenses.push({
+      content: group.sampleContent,
+      category: group.category,
+      subcategory: group.subcategory,
+      costType: costTypes[group.category] === "fixed" ? "固定費" : "変動費",
+      occurrenceMonths: monthKeys.size,
+      averageAmount: Math.round(avgAmount),
+      latestAmount: lastEntry.amount,
+      firstMonth: formatMonthLabel_(firstEntry.monthDate),
+      lastMonth: formatMonthLabel_(lastEntry.monthDate),
+    });
+  }
+
+  // 出現月数が多い順（＝より確実に定期支出とみなせる順）に並べ、上位のみ返す
+  recurringExpenses.sort((a, b) => b.occurrenceMonths - a.occurrenceMonths);
+
+  return {
+    monthsScanned: months,
+    totalGroups: recurringExpenses.length,
+    recurringExpenses: recurringExpenses.slice(0, AI_AGENT_MAX_RECURRING_GROUPS),
+  };
+}
+
 // ツール名から実処理へ振り分ける。エラーはthrowせずレスポンスに含め、
 // モデルが状況を理解して別のツールを試せるようにする
 function executeAiTool_(name, args) {
@@ -218,6 +353,10 @@ function executeAiTool_(name, args) {
       return handleGetDecisions({ limit: params.limit });
     }
 
+    if (name === "find_recurring_expenses") {
+      return buildRecurringExpensesResult_(params);
+    }
+
     return { error: `unknown tool: ${name}` };
   } catch (e) {
     Logger.log(`executeAiTool_ error (${name}): ${e.message}`);
@@ -247,6 +386,11 @@ function describeToolCall_(name, args) {
 
   if (name === "get_decision_history") {
     return "予算・目標の変更履歴を確認";
+  }
+
+  if (name === "find_recurring_expenses") {
+    const months = a.months || RECURRING_EXPENSES_DEFAULT_MONTHS;
+    return `直近${months}ヶ月の繰り返し支出を確認`;
   }
 
   if (name === "get_transactions") {
