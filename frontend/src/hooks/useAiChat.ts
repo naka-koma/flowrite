@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type {
+  AiCategorySuggestion,
   AiChatResponse,
   AiToolCall,
   ApplyTodoActionsParams,
@@ -29,6 +30,7 @@ interface ChatState {
   quickReplies: string[];
   isFinal: boolean;
   todoActions: TodoAction[];
+  categorySuggestions: AiCategorySuggestion[];
   history: ChatTurn[];
   errorMessage: string | null;
 }
@@ -39,6 +41,7 @@ const INITIAL_STATE: ChatState = {
   quickReplies: [],
   isFinal: false,
   todoActions: [],
+  categorySuggestions: [],
   history: [],
   errorMessage: null,
 };
@@ -77,6 +80,7 @@ export function useAiChat() {
       quickReplies: data.quick_replies,
       isFinal: data.is_final,
       todoActions: data.todo_actions,
+      categorySuggestions: data.category_suggestions,
       history: data.history,
       errorMessage: null,
     }));

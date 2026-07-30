@@ -59,6 +59,22 @@ const CHAT_RESPONSE_SCHEMA = {
         "直近で既に見直されている場合は、その事実（いつ・いくらに変更したか）を踏まえて話すこと。" +
         "新しい根拠（支出額が再び変化した等）がない限り、同じ見直しを繰り返し提案してはいけない。",
     },
+    category_suggestions: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          id: { type: "STRING", description: "get_transactionsの結果に含まれる取引のid。" },
+          suggestedCategory: { type: "STRING", description: "提案する大項目。" },
+          suggestedSubcategory: { type: "STRING", description: "提案する中項目。" },
+          reason: { type: "STRING", description: "分類を変えるべきだと考えた理由。20文字程度。" },
+        },
+        required: ["id", "suggestedCategory", "suggestedSubcategory", "reason"],
+      },
+      description:
+        "対話中にget_transactionsで確認した取引のうち、分類が明らかに誤っていると気づいたものがあれば提案する。" +
+        "確信が持てない場合は含めないこと。idはget_transactionsの結果からそのまま使うこと。",
+    },
   },
   required: ["ai_message", "quick_replies", "is_final"],
 };
@@ -406,6 +422,7 @@ function handleStartAiChat(body) {
 
     const { quick_replies, is_final, todo_actions } = result.parsed;
     const ai_message = normalizeAiText_(result.parsed.ai_message);
+    const category_suggestions = resolveAiCategorySuggestions_(result.parsed.category_suggestions);
 
     getAiLogSheet().appendRow([new Date().toISOString(), initialPrompt, ai_message]);
 
@@ -415,6 +432,7 @@ function handleStartAiChat(body) {
       quick_replies: quick_replies || [],
       is_final: !!is_final,
       todo_actions: todo_actions || [],
+      category_suggestions,
       tool_calls: result.toolCalls || [],
       history: result.contents,
     };
@@ -449,6 +467,7 @@ function handleContinueAiChat(body) {
 
     const { quick_replies, is_final, todo_actions } = result.parsed;
     const ai_message = normalizeAiText_(result.parsed.ai_message);
+    const category_suggestions = resolveAiCategorySuggestions_(result.parsed.category_suggestions);
 
     getAiLogSheet().appendRow([new Date().toISOString(), userReply, ai_message]);
 
@@ -458,6 +477,7 @@ function handleContinueAiChat(body) {
       quick_replies: quick_replies || [],
       is_final: !!is_final,
       todo_actions: todo_actions || [],
+      category_suggestions,
       tool_calls: result.toolCalls || [],
       history: result.contents,
     };
