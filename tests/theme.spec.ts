@@ -1,14 +1,14 @@
 import { test, expect } from "@playwright/test";
 import { openSettings } from "./helpers";
 
-test("設定画面からダッシュボードに戻れる", async ({ page }) => {
+test("設定画面からレポート画面に戻れる", async ({ page }) => {
   await page.goto("/");
 
   await openSettings(page);
   await expect(page.getByRole("heading", { name: "設定", exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "ダッシュボードに戻る" }).click();
-  await expect(page.getByText("合計支出: 150,000")).toBeVisible();
+  await page.getByRole("button", { name: "戻る" }).click();
+  await expect(page.getByText("支出: 150,000")).toBeVisible();
 });
 
 test("初期状態はミント・クラリティテーマが適用される", async ({ page }) => {

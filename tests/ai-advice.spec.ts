@@ -1,9 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { openBudget, openTransactionList } from "./helpers";
+import { openAiScreen, openBudget, openTransactionList } from "./helpers";
 
 // 対話は入口の候補ボタンまたは自由入力から始まる（期間の選択は不要）
 async function startChat(page: import("@playwright/test").Page, topic = "今月のざっくり振り返り") {
   await page.goto("/");
+  await openAiScreen(page);
   await page.getByRole("button", { name: topic }).click();
 }
 
@@ -17,6 +18,7 @@ test("相談テーマを選ぶと対話が始まり、最初のAIメッセージ
 
 test("自由入力からも対話を始められる", async ({ page }) => {
   await page.goto("/");
+  await openAiScreen(page);
 
   const advice = page.getByTestId("ai-advice");
   await expect(advice.getByLabel("相談したいこと")).toBeVisible();
@@ -28,6 +30,7 @@ test("自由入力からも対話を始められる", async ({ page }) => {
 
 test("対話開始前は期間セレクタが表示されない", async ({ page }) => {
   await page.goto("/");
+  await openAiScreen(page);
 
   await expect(page.getByLabel("AIアドバイス対象年月")).not.toBeVisible();
   await expect(page.getByLabel("AIアドバイス対象年")).not.toBeVisible();

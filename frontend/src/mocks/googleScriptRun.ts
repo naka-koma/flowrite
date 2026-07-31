@@ -575,13 +575,13 @@ function mockHandleConsolidateAiMemoryInsights() {
   return { success: true, changed: true, memories: newMemories };
 }
 
-const MOCK_PREFERENCE_KEYS: PreferenceKey[] = ["theme", "dashboardLayout", "trendVisibleCount"];
+const MOCK_PREFERENCE_KEYS: PreferenceKey[] = ["theme", "trendVisibleCount"];
 const MOCK_PREFERENCE_STORAGE_PREFIX = "__mock_preference_";
 
 // 実際のGASではUserPropertiesに永続化されるため、モックでも
 // ページリロードをまたいで再現できるよう sessionStorage に保存する
 function mockHandleGetPreferences() {
-  const preferences: Record<PreferenceKey, string> = { theme: "", dashboardLayout: "", trendVisibleCount: "" };
+  const preferences: Record<PreferenceKey, string> = { theme: "", trendVisibleCount: "" };
   MOCK_PREFERENCE_KEYS.forEach((key) => {
     preferences[key] = sessionStorage.getItem(`${MOCK_PREFERENCE_STORAGE_PREFIX}${key}`) ?? "";
   });

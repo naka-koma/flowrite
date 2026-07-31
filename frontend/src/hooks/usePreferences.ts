@@ -1,37 +1,13 @@
 import { useEffect, useState } from "react";
-import { arrayMove } from "@dnd-kit/sortable";
 import type { PreferenceKey, PreferencesResponse, UpdatePreferenceResponse } from "../types/api";
 import { runScript } from "../lib/googleScriptRun";
 import { DEFAULT_THEME, isTheme, type Theme } from "./useTheme";
-import {
-  DEFAULT_SECTIONS,
-  isValidSection,
-  normalizeSections,
-  type DashboardSection,
-  type DashboardSectionId,
-} from "./useDashboardLayout";
 import { DEFAULT_TREND_VISIBLE_COUNT, clampTrendVisibleCount } from "./useTrendDisplayCount";
 
 type PreferencesStatus = "loading" | "ready";
 
 function parseTheme(raw: string): Theme {
   return isTheme(raw) ? raw : DEFAULT_THEME;
-}
-
-function parseDashboardSections(raw: string): DashboardSection[] {
-  if (!raw) return DEFAULT_SECTIONS;
-
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return DEFAULT_SECTIONS;
-
-    const valid = parsed.filter(isValidSection);
-    if (valid.length === 0) return DEFAULT_SECTIONS;
-
-    return normalizeSections(valid);
-  } catch {
-    return DEFAULT_SECTIONS;
-  }
 }
 
 function parseTrendVisibleCount(raw: string): number {
@@ -49,7 +25,6 @@ function persist(key: PreferenceKey, value: string) {
 export function usePreferences() {
   const [status, setStatus] = useState<PreferencesStatus>("loading");
   const [theme, setThemeState] = useState<Theme>(DEFAULT_THEME);
-  const [dashboardSections, setDashboardSections] = useState<DashboardSection[]>(DEFAULT_SECTIONS);
   const [trendVisibleCount, setTrendVisibleCountState] = useState<number>(DEFAULT_TREND_VISIBLE_COUNT);
 
   useEffect(() => {
@@ -63,7 +38,6 @@ export function usePreferences() {
       .then((data) => {
         if (cancelled) return;
         setThemeState(parseTheme(data.theme));
-        setDashboardSections(parseDashboardSections(data.dashboardLayout));
         setTrendVisibleCountState(parseTrendVisibleCount(data.trendVisibleCount));
         setStatus("ready");
       })
@@ -83,48 +57,6 @@ export function usePreferences() {
     persist("theme", next);
   };
 
-  const toggleDashboardSection = (id: DashboardSectionId) => {
-    setDashboardSections((prev) => {
-      const next = prev.map((s) => (s.id === id ? { ...s, visible: !s.visible } : s));
-      persist("dashboardLayout", JSON.stringify(next));
-      return next;
-    });
-  };
-
-  const moveDashboardSection = (id: DashboardSectionId, direction: "up" | "down") => {
-    setDashboardSections((prev) => {
-      const index = prev.findIndex((s) => s.id === id);
-      const targetIndex = direction === "up" ? index - 1 : index + 1;
-      if (index < 0 || targetIndex < 0 || targetIndex >= prev.length) return prev;
-
-      const next = [...prev];
-      const current = next[index]!;
-      const target = next[targetIndex]!;
-      next[index] = target;
-      next[targetIndex] = current;
-      persist("dashboardLayout", JSON.stringify(next));
-      return next;
-    });
-  };
-
-  // D&D並び替え用。ドラッグしたセクション(activeId)を、ドロップ先のセクション(overId)の位置に移動する
-  const reorderDashboardSections = (activeId: DashboardSectionId, overId: DashboardSectionId) => {
-    setDashboardSections((prev) => {
-      const oldIndex = prev.findIndex((s) => s.id === activeId);
-      const newIndex = prev.findIndex((s) => s.id === overId);
-      if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return prev;
-
-      const next = arrayMove(prev, oldIndex, newIndex);
-      persist("dashboardLayout", JSON.stringify(next));
-      return next;
-    });
-  };
-
-  const resetDashboardLayout = () => {
-    setDashboardSections(DEFAULT_SECTIONS);
-    persist("dashboardLayout", JSON.stringify(DEFAULT_SECTIONS));
-  };
-
   const setTrendVisibleCount = (value: number) => {
     const clamped = clampTrendVisibleCount(value);
     setTrendVisibleCountState(clamped);
@@ -135,11 +67,6 @@ export function usePreferences() {
     status,
     theme,
     setTheme,
-    dashboardSections,
-    toggleDashboardSection,
-    moveDashboardSection,
-    reorderDashboardSections,
-    resetDashboardLayout,
     trendVisibleCount,
     setTrendVisibleCount,
   };

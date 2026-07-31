@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openBudget } from "./helpers";
+import { openAiScreen, openBudget } from "./helpers";
 
 test("変更履歴は最初は空で、予算を設定すると記録される", async ({ page }) => {
   await page.goto("/");
@@ -40,6 +40,7 @@ test("同じ値で保存し直しても履歴は増えない", async ({ page }) 
 
 test("AIの見直し案を適用すると、理由付きでAI提案として記録される", async ({ page }) => {
   await page.goto("/");
+  await openAiScreen(page);
 
   await page.getByRole("button", { name: "今月のざっくり振り返り" }).click();
   await page.getByRole("button", { name: "外食が増えたかも" }).click();

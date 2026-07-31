@@ -1,89 +1,116 @@
 import { useState } from "react";
 import { MonthSelector } from "./MonthSelector";
+import { YearSelector } from "./YearSelector";
 import { TrendChart } from "./TrendChart";
 import { PeriodComparison } from "./PeriodComparison";
 import { CategoryBreakdown } from "./CategoryBreakdown";
 import { MonthlyCalendar } from "./MonthlyCalendar";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { BudgetVarianceSection } from "./BudgetVarianceSection";
-import { PageHeader } from "./PageHeader";
 import { SectionCard } from "./SectionCard";
 import { useSummary } from "../hooks/useSummary";
 import { useTrend } from "../hooks/useTrend";
 import { formatAmount } from "../lib/money";
+import type { SummaryParams, SummaryUnit } from "../types/api";
+
+const REPORT_UNITS: SummaryUnit[] = ["month", "year", "all"];
+const UNIT_LABELS: Record<SummaryUnit, string> = { month: "月", year: "年", week: "週", all: "全期間" };
 
 interface ReportScreenProps {
   hideAmounts: boolean;
   trendVisibleCount: number;
-  onBack: () => void;
 }
 
-export function ReportScreen({ hideAmounts, trendVisibleCount, onBack }: ReportScreenProps) {
+export function ReportScreen({ hideAmounts, trendVisibleCount }: ReportScreenProps) {
   const now = new Date();
+  const [unit, setUnit] = useState<SummaryUnit>("month");
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
+  const [summaryYear, setSummaryYear] = useState(now.getFullYear());
 
-  const summary = useSummary({ unit: "month", year, month });
-  const trend = useTrend("month");
+  const summaryParams: SummaryParams =
+    unit === "year" ? { unit: "year", year: summaryYear } : unit === "all" ? { unit: "all" } : { unit: "month", year, month };
+
+  const summary = useSummary(summaryParams);
+  const trend = useTrend(unit);
 
   const amountText = (amount: number) => (hideAmounts ? "***" : formatAmount(amount));
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="レポート" onBack={onBack} />
+      <h1 className="text-xl font-bold">レポート</h1>
 
-      <SectionCard>
-          <MonthSelector
-            year={year}
-            month={month}
-            onChange={(newYear, newMonth) => {
-              setYear(newYear);
-              setMonth(newMonth);
-            }}
-          />
+      <SectionCard testId="period-selector">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <select
+            aria-label="期間の単位"
+            value={unit}
+            onChange={(e) => setUnit(e.target.value as SummaryUnit)}
+            className="select select-bordered select-sm"
+          >
+            {REPORT_UNITS.map((u) => (
+              <option key={u} value={u}>
+                {UNIT_LABELS[u]}
+              </option>
+            ))}
+          </select>
 
-          {summary.status === "loading" && (
-            <p className="flex items-center gap-2">
-              <span className="loading loading-spinner loading-sm" />
-              読み込み中...
-            </p>
+          {unit === "month" && (
+            <MonthSelector
+              year={year}
+              month={month}
+              onChange={(newYear, newMonth) => {
+                setYear(newYear);
+                setMonth(newMonth);
+              }}
+              compact
+            />
           )}
+          {unit === "year" && <YearSelector year={summaryYear} onChange={setSummaryYear} compact />}
+        </div>
 
-          {summary.errorMessage && (
-            <p role="alert" className="alert alert-error">
-              エラー: {summary.errorMessage}
+        {summary.status === "loading" && (
+          <p className="flex items-center gap-2">
+            <span className="loading loading-spinner loading-sm" />
+            読み込み中...
+          </p>
+        )}
+
+        {summary.errorMessage && (
+          <p role="alert" className="alert alert-error">
+            エラー: {summary.errorMessage}
+          </p>
+        )}
+
+        {summary.data && (
+          <>
+            <p data-testid="period-label" className="mb-2 text-sm text-base-content/70">
+              {summary.data.label}
             </p>
-          )}
-
-          {summary.data && (
-            <>
-              <p data-testid="report-period-label" className="mb-2 text-sm text-base-content/70">
-                {summary.data.label}
+            <div className="mb-4 flex gap-6">
+              <p>
+                収入: <span className="font-semibold text-success">{amountText(summary.data.totalIncome)}</span>
               </p>
-              <div className="mb-4 flex gap-6">
-                <p>
-                  収入: <span className="font-semibold text-success">{amountText(summary.data.totalIncome)}</span>
-                </p>
-                <p>
-                  支出: <span className="font-semibold text-error">{amountText(summary.data.totalExpense)}</span>
-                </p>
-                <p>
-                  収支:{" "}
-                  <span className="font-semibold">
-                    {amountText(summary.data.totalIncome - summary.data.totalExpense)}
-                  </span>
-                </p>
-              </div>
+              <p>
+                支出: <span className="font-semibold text-error">{amountText(summary.data.totalExpense)}</span>
+              </p>
+              <p>
+                収支:{" "}
+                <span className="font-semibold">
+                  {amountText(summary.data.totalIncome - summary.data.totalExpense)}
+                </span>
+              </p>
+            </div>
 
-              {summary.data.comparison && (
-                <PeriodComparison
-                  previousMonth={summary.data.comparison.previousMonth}
-                  previousYear={summary.data.comparison.previousYear}
-                  hideAmounts={hideAmounts}
-                />
-              )}
-            </>
-          )}
+            {summary.data.comparison && (
+              <PeriodComparison
+                previousMonth={summary.data.comparison.previousMonth}
+                previousYear={summary.data.comparison.previousYear}
+                hideAmounts={hideAmounts}
+              />
+            )}
+          </>
+        )}
       </SectionCard>
 
       <CollapsibleSection title="全体推移">
@@ -96,19 +123,23 @@ export function ReportScreen({ hideAmounts, trendVisibleCount, onBack }: ReportS
         />
       </CollapsibleSection>
 
-      <CollapsibleSection title="カレンダー">
-        <MonthlyCalendar year={year} month={month} hideAmounts={hideAmounts} />
-      </CollapsibleSection>
+      {unit === "month" && (
+        <>
+          <CollapsibleSection title="カレンダー">
+            <MonthlyCalendar year={year} month={month} hideAmounts={hideAmounts} />
+          </CollapsibleSection>
 
-      <CollapsibleSection title="予算対比">
-        <BudgetVarianceSection year={year} month={month} hideAmounts={hideAmounts} />
-      </CollapsibleSection>
+          <CollapsibleSection title="予算対比">
+            <BudgetVarianceSection year={year} month={month} hideAmounts={hideAmounts} />
+          </CollapsibleSection>
+        </>
+      )}
 
       <CollapsibleSection title="収入内訳">
         <CategoryBreakdown
           categories={summary.data?.incomeCategories ?? []}
           hideAmounts={hideAmounts}
-          emptyMessage="この月の収入データはありません"
+          emptyMessage="この期間の収入データはありません"
         />
       </CollapsibleSection>
 
@@ -116,7 +147,7 @@ export function ReportScreen({ hideAmounts, trendVisibleCount, onBack }: ReportS
         <CategoryBreakdown
           categories={summary.data?.categories ?? []}
           hideAmounts={hideAmounts}
-          emptyMessage="この月の支出データはありません"
+          emptyMessage="この期間の支出データはありません"
         />
       </CollapsibleSection>
     </div>
