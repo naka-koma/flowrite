@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAiCategorySuggestions } from "../hooks/useAiCategorySuggestions";
 import { useAiMemories } from "../hooks/useAiMemories";
 import { formatAmount } from "../lib/money";
@@ -26,6 +26,37 @@ const SCOPE_LABELS: Record<AiCategorySuggestionScope, string> = {
 
 function categoryFilterKey(category: string, subcategory: string): string {
   return `${category} ${subcategory}`;
+}
+
+interface CategoryGroupCheckboxProps {
+  category: string;
+  checkedCount: number;
+  total: number;
+  onChange: (checked: boolean) => void;
+}
+
+// 大項目単位のチェックボックス。配下の中項目が一部だけ選択されている場合はindeterminate表示にする
+function CategoryGroupCheckbox({ category, checkedCount, total, onChange }: CategoryGroupCheckboxProps) {
+  const ref = useRef<HTMLInputElement>(null);
+  const allChecked = total > 0 && checkedCount === total;
+  const someChecked = checkedCount > 0 && !allChecked;
+
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.indeterminate = someChecked;
+    }
+  }, [someChecked]);
+
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      aria-label={`${category}をすべて選択`}
+      checked={allChecked}
+      onChange={(e) => onChange(e.target.checked)}
+      className="checkbox checkbox-xs"
+    />
+  );
 }
 
 export function AiCategorySuggestions({
@@ -69,6 +100,33 @@ export function AiCategorySuggestions({
       }
       return next;
     });
+  };
+
+  const toggleCategoryGroup = (category: string, subcategories: string[], checked: boolean) => {
+    setCategoryFilter((prev) => {
+      const next = new Map(prev);
+      subcategories.forEach((subcategory) => {
+        const key = categoryFilterKey(category, subcategory);
+        if (checked) {
+          next.set(key, { category, subcategory });
+        } else {
+          next.delete(key);
+        }
+      });
+      return next;
+    });
+  };
+
+  const allCategoryPairs = Object.entries(categoryMaster).flatMap(([category, subcategories]) =>
+    subcategories.map((subcategory) => ({ category, subcategory })),
+  );
+
+  const toggleAllCategoryFilters = (checked: boolean) => {
+    setCategoryFilter(
+      checked
+        ? new Map(allCategoryPairs.map((p) => [categoryFilterKey(p.category, p.subcategory), p]))
+        : new Map(),
+    );
   };
 
   const handleFetch = () => {
@@ -200,29 +258,52 @@ export function AiCategorySuggestions({
       {filtersOpen && (
         <div className="mb-3 flex flex-col gap-3 rounded-box border border-base-300 p-3">
           <div>
-            <p className="mb-1 text-sm font-medium">大項目・中項目</p>
+            <div className="mb-1 flex items-center justify-between">
+              <p className="text-sm font-medium">大項目・中項目</p>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => toggleAllCategoryFilters(true)} className="btn btn-ghost btn-xs">
+                  すべて選択
+                </button>
+                <button type="button" onClick={() => toggleAllCategoryFilters(false)} className="btn btn-ghost btn-xs">
+                  すべて解除
+                </button>
+              </div>
+            </div>
             <div className="max-h-48 overflow-y-auto">
-              {Object.entries(categoryMaster).map(([category, subcategories]) => (
-                <div key={category} className="mb-2">
-                  <p className="text-sm font-semibold">{category}</p>
-                  <div className="ml-4 flex flex-wrap gap-3">
-                    {subcategories.map((subcategory) => {
-                      const key = categoryFilterKey(category, subcategory);
-                      return (
-                        <label key={key} className="flex items-center gap-1 text-sm">
-                          <input
-                            type="checkbox"
-                            checked={categoryFilter.has(key)}
-                            onChange={() => toggleCategoryFilter(category, subcategory)}
-                            className="checkbox checkbox-xs"
-                          />
-                          {subcategory}
-                        </label>
-                      );
-                    })}
+              {Object.entries(categoryMaster).map(([category, subcategories]) => {
+                const checkedCount = subcategories.filter((subcategory) =>
+                  categoryFilter.has(categoryFilterKey(category, subcategory)),
+                ).length;
+                return (
+                  <div key={category} className="mb-2">
+                    <label className="flex items-center gap-1 text-sm font-semibold">
+                      <CategoryGroupCheckbox
+                        category={category}
+                        checkedCount={checkedCount}
+                        total={subcategories.length}
+                        onChange={(checked) => toggleCategoryGroup(category, subcategories, checked)}
+                      />
+                      {category}
+                    </label>
+                    <div className="ml-4 flex flex-wrap gap-3">
+                      {subcategories.map((subcategory) => {
+                        const key = categoryFilterKey(category, subcategory);
+                        return (
+                          <label key={key} className="flex items-center gap-1 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={categoryFilter.has(key)}
+                              onChange={() => toggleCategoryFilter(category, subcategory)}
+                              className="checkbox checkbox-xs"
+                            />
+                            {subcategory}
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
