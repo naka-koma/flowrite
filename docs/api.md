@@ -375,7 +375,7 @@ AIアドバイスウィザードの③ステップ。②で選んだ「気にな
 - `categoryLocked`が`true`の行は提案対象から除外する
 - 各フィルタ（`categoryFilter`/`institutionKeyword`/`contentKeyword`/`amountMin`・`amountMax`）は`scope`の絞り込み結果に対してAND条件で適用される
 - `amountMin`が`amountMax`より大きい場合は`{ "success": false, "error": "amountMin must not be greater than amountMax" }`を返す
-- 対象件数が150件を超える場合は`{ "success": false, "error": "対象件数が多すぎます（150件が上限です）。「未分類のみ」を選ぶか、月を分けて実行してください" }`を返す（分割実行はせず、スコープ・フィルタの絞り込みをユーザーに促す）
+- 対象件数が上限（デフォルト300件。GASスクリプトプロパティ`MAX_AI_CATEGORY_TARGET_ROWS`で上書き可能）を超える場合は`{ "success": false, "error": "対象件数が多すぎます（<上限>件が上限です）。「未分類のみ」を選ぶか、月を分けて実行してください" }`を返す（分割実行はせず、スコープ・フィルタの絞り込みをユーザーに促す）
 - 対象を25件ずつのバッチに分けてGemini APIへ逐次リクエストする。いずれかのバッチが失敗した場合、その時点で処理を打ち切りエラーを返す
 - Geminiが返した`id`が対象行に存在しない場合、その提案は無視する
 - Geminiは既存の`categories`シートにない大項目・中項目も提案できる。`isNewCategory`は、その提案が既存カテゴリマスタに存在しない組み合わせかどうかを表す。`raw_data`・`categories`シートはこの時点では一切変更しない（新規カテゴリの登録は`handleAddCategory`を別途呼ぶ必要がある）

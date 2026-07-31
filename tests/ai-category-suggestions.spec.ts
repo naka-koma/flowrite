@@ -105,6 +105,67 @@ test("大項目・中項目で絞り込むと該当ペアの提案のみ返る",
   await expect(matchingRows).toHaveCount(totalRows);
 });
 
+test("大項目チェックボックスで配下の中項目を一括選択できる", async ({ page }) => {
+  const panel = await openAiSuggestions(page);
+  await panel.getByRole("radio", { name: "選択中の年月の全件" }).check();
+  await panel.getByRole("button", { name: /絞り込み条件/ }).click();
+
+  await panel.getByRole("checkbox", { name: "娯楽をすべて選択" }).check();
+  await expect(panel.locator("label").filter({ hasText: "映画" }).getByRole("checkbox")).toBeChecked();
+  await expect(panel.locator("label").filter({ hasText: "書籍" }).getByRole("checkbox")).toBeChecked();
+
+  await panel.getByRole("button", { name: "提案を取得" }).click();
+
+  const totalRows = await panel.locator("tbody tr").count();
+  expect(totalRows).toBeGreaterThan(0);
+  const matchingRows = panel.getByRole("row").filter({ hasText: "娯楽" });
+  await expect(matchingRows).toHaveCount(totalRows);
+});
+
+test("大項目チェックボックスで配下の中項目を一括解除できる", async ({ page }) => {
+  const panel = await openAiSuggestions(page);
+  await panel.getByRole("button", { name: /絞り込み条件/ }).click();
+
+  await panel.getByRole("checkbox", { name: "娯楽をすべて選択" }).check();
+  await panel.getByRole("checkbox", { name: "娯楽をすべて選択" }).uncheck();
+
+  await expect(panel.locator("label").filter({ hasText: "映画" }).getByRole("checkbox")).not.toBeChecked();
+  await expect(panel.locator("label").filter({ hasText: "書籍" }).getByRole("checkbox")).not.toBeChecked();
+});
+
+test("中項目を一部だけ選択すると大項目チェックボックスが中間状態になる", async ({ page }) => {
+  const panel = await openAiSuggestions(page);
+  await panel.getByRole("button", { name: /絞り込み条件/ }).click();
+
+  await panel.locator("label").filter({ hasText: "映画" }).getByRole("checkbox").check();
+
+  const groupCheckbox = panel.getByRole("checkbox", { name: "娯楽をすべて選択" });
+  await expect(groupCheckbox).not.toBeChecked();
+  const indeterminate = await groupCheckbox.evaluate((el) => (el as HTMLInputElement).indeterminate);
+  expect(indeterminate).toBe(true);
+
+  await panel.locator("label").filter({ hasText: "書籍" }).getByRole("checkbox").check();
+  await expect(groupCheckbox).toBeChecked();
+});
+
+test("すべて選択/すべて解除ボタンで全大項目・中項目を一括切り替えできる", async ({ page }) => {
+  const panel = await openAiSuggestions(page);
+  await panel.getByRole("radio", { name: "選択中の年月の全件" }).check();
+  await panel.getByRole("button", { name: /絞り込み条件/ }).click();
+
+  await panel.getByRole("button", { name: "すべて選択" }).click();
+  await expect(panel.getByRole("checkbox", { name: "娯楽をすべて選択" })).toBeChecked();
+  await expect(panel.getByRole("checkbox", { name: "食費をすべて選択" })).toBeChecked();
+
+  await panel.getByRole("button", { name: "提案を取得" }).click();
+  const totalRows = await panel.locator("tbody tr").count();
+  expect(totalRows).toBeGreaterThan(0);
+
+  await panel.getByRole("button", { name: "すべて解除" }).click();
+  await expect(panel.getByRole("checkbox", { name: "娯楽をすべて選択" })).not.toBeChecked();
+  await expect(panel.getByRole("checkbox", { name: "食費をすべて選択" })).not.toBeChecked();
+});
+
 test("金融機関キーワードで絞り込むと部分一致した行のみ返る", async ({ page }) => {
   const panel = await openAiSuggestions(page);
   await panel.getByRole("radio", { name: "選択中の年月の全件" }).check();

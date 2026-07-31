@@ -566,9 +566,16 @@ const CATEGORY_SUGGESTION_RESPONSE_SCHEMA = {
 // 1バッチあたりGeminiに渡す取引件数
 const CATEGORY_SUGGESTION_BATCH_SIZE = 25;
 
-// 1回のhandleGetAiCategorySuggestions呼び出しで処理する対象件数の上限。
-// GASの実行時間制限（6分）に対する安全策として、分割実行はせず超過時はユーザーにスコープ絞り込みを促す
-const MAX_AI_CATEGORY_TARGET_ROWS = 150;
+// 1回のhandleGetAiCategorySuggestions呼び出しで処理する対象件数の上限のデフォルト値。
+// GASの実行時間制限（6分）に対する安全策として、分割実行はせず超過時はユーザーにスコープ絞り込みを促す。
+// スクリプトプロパティ MAX_AI_CATEGORY_TARGET_ROWS で上書きできる
+const DEFAULT_MAX_AI_CATEGORY_TARGET_ROWS = 300;
+
+function resolveMaxAiCategoryTargetRows_() {
+  const raw = PropertiesService.getScriptProperties().getProperty("MAX_AI_CATEGORY_TARGET_ROWS");
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_AI_CATEGORY_TARGET_ROWS;
+}
 
 function buildCategoryPairsText_(categories) {
   const lines = [];
@@ -678,10 +685,11 @@ function handleGetAiCategorySuggestions(body) {
       return { success: true, suggestions: [], targetCount: 0 };
     }
 
-    if (targets.length > MAX_AI_CATEGORY_TARGET_ROWS) {
+    const maxTargetRows = resolveMaxAiCategoryTargetRows_();
+    if (targets.length > maxTargetRows) {
       return {
         success: false,
-        error: `対象件数が多すぎます（${MAX_AI_CATEGORY_TARGET_ROWS}件が上限です）。「未分類のみ」を選ぶか、月を分けて実行してください`,
+        error: `対象件数が多すぎます（${maxTargetRows}件が上限です）。「未分類のみ」を選ぶか、月を分けて実行してください`,
       };
     }
 
