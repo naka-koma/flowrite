@@ -53,11 +53,11 @@ test("データなしの月では空メッセージが表示される", async ({
   await expect(page.getByText("この月の取引はありません")).toBeVisible();
 });
 
-test("戻るボタンでダッシュボードに戻れる", async ({ page }) => {
+test("戻るボタンでレポート画面に戻れる", async ({ page }) => {
   await page.goto("/");
   await openTransactionList(page);
 
-  await page.getByRole("button", { name: "ダッシュボードに戻る" }).click();
+  await page.getByRole("button", { name: "戻る" }).click();
   await expect(page.getByRole("heading", { name: "取引一覧" })).not.toBeVisible();
 });
 

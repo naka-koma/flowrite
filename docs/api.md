@@ -615,19 +615,18 @@ AIアドバイスのプロンプト・使用モデル・相談テーマ設定を
 
 ## `handleGetPreferences()`
 
-テーマ・ホーム画面レイアウト・トレンド表示件数を`PropertiesService.getUserProperties()`（実行しているGoogleアカウント単位）から取得する。引数なし。
+テーマ・トレンド表示件数を`PropertiesService.getUserProperties()`（実行しているGoogleアカウント単位）から取得する。引数なし。
 
 **戻り値**
 ```js
 {
   "theme": "mint-clarity",
-  "dashboardLayout": "[{\"id\":\"upload\",\"visible\":true}, ...]",
   "trendVisibleCount": "12"
 }
 ```
 
 **注意**
-- 各値は文字列で保存・返却される（`dashboardLayout`はJSON文字列）。フロントエンド側でパース・バリデーションを行う
+- 各値は文字列で保存・返却される
 - 未設定のキーは空文字を返す。フロントエンド側でデフォルト値にフォールバックする
 - ブラウザのlocalStorageと異なり、Safari WebApp化した場合のITP等の影響を受けない
 
@@ -647,7 +646,7 @@ AIアドバイスのプロンプト・使用モデル・相談テーマ設定を
 
 | プロパティ | 型 | 説明 |
 |---|---|---|
-| key | `"theme" \| "dashboardLayout" \| "trendVisibleCount"` | 保存先キー |
+| key | `"theme" \| "trendVisibleCount"` | 保存先キー |
 | value | string | 保存する値 |
 
 **戻り値**

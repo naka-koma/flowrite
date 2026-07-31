@@ -1,130 +1,43 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import logoUrl from "./assets/favicon-32.png";
-import { UploadForm } from "./components/UploadForm";
-import { MonthSelector } from "./components/MonthSelector";
-import { YearSelector } from "./components/YearSelector";
-import { WeekSelector } from "./components/WeekSelector";
-import { SummaryTable } from "./components/SummaryTable";
-import { TrendChart } from "./components/TrendChart";
-import { AiAdvice } from "./components/AiAdvice";
+import { UploadModal } from "./components/UploadModal";
 import { SettingsScreen } from "./components/SettingsScreen";
 import { ReportScreen } from "./components/ReportScreen";
 import { TransactionScreen } from "./components/TransactionScreen";
 import { BudgetScreen } from "./components/BudgetScreen";
 import { AiScreen } from "./components/AiScreen";
 import { LoadingScreen } from "./components/LoadingScreen";
-import { useSummary } from "./hooks/useSummary";
-import { useTrend } from "./hooks/useTrend";
 import { THEMES, type Theme } from "./hooks/useTheme";
 import { useAmountVisibility } from "./hooks/useAmountVisibility";
 import { usePreferences } from "./hooks/usePreferences";
-import type { DashboardSectionId } from "./hooks/useDashboardLayout";
-import { formatISODate, getMondayOfWeek } from "./lib/week";
-import { SECTION_HEADING_CLASS } from "./lib/ui";
-import type { SummaryParams, SummaryUnit } from "./types/api";
-
-const DASHBOARD_UNITS: SummaryUnit[] = ["month", "year", "week"];
-const UNIT_LABELS: Record<SummaryUnit, string> = { month: "月", year: "年", week: "週", all: "全期間" };
 
 export function App() {
-  const now = new Date();
-  const [screen, setScreen] = useState<"dashboard" | "settings" | "report" | "transactions" | "budget" | "ai">(
-    "dashboard",
-  );
+  const [screen, setScreen] = useState<"report" | "settings" | "transactions" | "budget" | "ai">("report");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const {
     status: preferencesStatus,
     theme,
     setTheme,
-    dashboardSections,
-    toggleDashboardSection,
-    moveDashboardSection,
-    reorderDashboardSections,
-    resetDashboardLayout,
     trendVisibleCount,
     setTrendVisibleCount,
   } = usePreferences();
   const { hideAmounts, toggleHideAmounts } = useAmountVisibility();
-  const [unit, setUnit] = useState<SummaryUnit>("month");
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [summaryYear, setSummaryYear] = useState(now.getFullYear());
-  const [weekStart, setWeekStart] = useState(formatISODate(getMondayOfWeek(now)));
-
-  const summaryParams: SummaryParams =
-    unit === "year"
-      ? { unit: "year", year: summaryYear }
-      : unit === "week"
-        ? { unit: "week", weekStart }
-        : { unit: "month", year, month };
-
-  const summary = useSummary(summaryParams);
-  const trend = useTrend(unit);
 
   if (preferencesStatus === "loading") {
     return <LoadingScreen />;
   }
 
-  function navigate(next: "dashboard" | "settings" | "report" | "transactions" | "budget" | "ai") {
+  function navigate(next: "report" | "settings" | "transactions" | "budget" | "ai") {
     setScreen(next);
     setMenuOpen(false);
   }
 
-  function renderDashboardSection(id: DashboardSectionId) {
-    switch (id) {
-      case "upload":
-        return (
-          <section key={id} className="card bg-base-100">
-            <div className="card-body p-4 sm:p-6">
-              <UploadForm />
-            </div>
-          </section>
-        );
-      case "summary":
-        return (
-          <section key={id} className="card bg-base-100">
-            <div className="card-body p-4 sm:p-6">
-              <h2 className={SECTION_HEADING_CLASS}>サマリー</h2>
-              <SummaryTable
-                data={summary.data}
-                errorMessage={summary.errorMessage}
-                isLoading={summary.status === "loading"}
-                hideAmounts={hideAmounts}
-              />
-            </div>
-          </section>
-        );
-      case "trend":
-        return (
-          <section key={id} className="card bg-base-100">
-            <div className="card-body p-4 sm:p-6">
-              <h2 className={SECTION_HEADING_CLASS}>トレンド</h2>
-              <TrendChart
-                data={trend.data}
-                errorMessage={trend.errorMessage}
-                isLoading={trend.status === "loading"}
-                hideAmounts={hideAmounts}
-                visibleCount={trendVisibleCount}
-              />
-            </div>
-          </section>
-        );
-      case "aiAdvice":
-        return (
-          <section key={id} className="card bg-base-100">
-            <div className="card-body p-4 sm:p-6">
-              <h2 className={SECTION_HEADING_CLASS}>AIアドバイス</h2>
-              <AiAdvice hideAmounts={hideAmounts} />
-            </div>
-          </section>
-        );
-      default:
-        return null;
-    }
+  function openUpload() {
+    setUploadOpen(true);
+    setMenuOpen(false);
   }
-
-  const visibleDashboardSections = dashboardSections.filter((s) => s.visible);
 
   return (
     <div className="drawer lg:drawer-open">
@@ -187,69 +100,16 @@ export function App() {
               onChangeTheme={setTheme}
               trendVisibleCount={trendVisibleCount}
               onChangeTrendVisibleCount={setTrendVisibleCount}
-              dashboardSections={dashboardSections}
-              onToggleDashboardSection={toggleDashboardSection}
-              onMoveDashboardSection={moveDashboardSection}
-              onReorderDashboardSections={reorderDashboardSections}
-              onResetDashboardLayout={resetDashboardLayout}
-              onBack={() => navigate("dashboard")}
-            />
-          ) : screen === "report" ? (
-            <ReportScreen
-              hideAmounts={hideAmounts}
-              trendVisibleCount={trendVisibleCount}
-              onBack={() => navigate("dashboard")}
+              onBack={() => navigate("report")}
             />
           ) : screen === "transactions" ? (
-            <TransactionScreen hideAmounts={hideAmounts} onBack={() => navigate("dashboard")} />
+            <TransactionScreen hideAmounts={hideAmounts} onBack={() => navigate("report")} />
           ) : screen === "budget" ? (
-            <BudgetScreen hideAmounts={hideAmounts} onBack={() => navigate("dashboard")} />
+            <BudgetScreen hideAmounts={hideAmounts} onBack={() => navigate("report")} />
           ) : screen === "ai" ? (
-            <AiScreen hideAmounts={hideAmounts} onBack={() => navigate("dashboard")} />
+            <AiScreen hideAmounts={hideAmounts} onBack={() => navigate("report")} />
           ) : (
-            <div className="flex flex-col gap-6">
-              <section className="card bg-base-100" data-testid="period-selector">
-                <div className="card-body p-4 sm:p-6">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-lg font-semibold">期間</h2>
-                    <select
-                      aria-label="期間の単位"
-                      value={unit}
-                      onChange={(e) => setUnit(e.target.value as SummaryUnit)}
-                      className="select select-bordered select-sm"
-                    >
-                      {DASHBOARD_UNITS.map((u) => (
-                        <option key={u} value={u}>
-                          {UNIT_LABELS[u]}
-                        </option>
-                      ))}
-                    </select>
-
-                    {unit === "month" && (
-                      <MonthSelector
-                        year={year}
-                        month={month}
-                        onChange={(newYear, newMonth) => {
-                          setYear(newYear);
-                          setMonth(newMonth);
-                        }}
-                        compact
-                      />
-                    )}
-                    {unit === "year" && <YearSelector year={summaryYear} onChange={setSummaryYear} compact />}
-                    {unit === "week" && <WeekSelector weekStart={weekStart} onChange={setWeekStart} compact />}
-                  </div>
-                </div>
-              </section>
-
-              {visibleDashboardSections.length === 0 ? (
-                <p className="text-base-content/70">
-                  表示するセクションがありません。設定画面の「ホーム画面」から表示するセクションを選んでください。
-                </p>
-              ) : (
-                visibleDashboardSections.map((section) => renderDashboardSection(section.id))
-              )}
-            </div>
+            <ReportScreen hideAmounts={hideAmounts} trendVisibleCount={trendVisibleCount} />
           )}
         </div>
       </div>
@@ -262,11 +122,6 @@ export function App() {
               <img src={logoUrl} alt="" className="h-7 w-7 rounded" />
               <h1 className="text-xl font-bold">flowrite</h1>
             </div>
-          </li>
-          <li>
-            <button type="button" onClick={() => navigate("dashboard")}>
-              ホーム
-            </button>
           </li>
           <li>
             <button type="button" onClick={() => navigate("report")}>
@@ -289,12 +144,19 @@ export function App() {
             </button>
           </li>
           <li>
+            <button type="button" onClick={openUpload}>
+              CSVアップロード
+            </button>
+          </li>
+          <li>
             <button type="button" onClick={() => navigate("settings")}>
               設定
             </button>
           </li>
         </ul>
       </div>
+
+      {uploadOpen && <UploadModal onClose={() => setUploadOpen(false)} />}
     </div>
   );
 }

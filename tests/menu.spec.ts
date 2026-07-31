@@ -11,7 +11,7 @@ test.describe("広い画面幅", () => {
     await page.getByRole("button", { name: "設定" }).click();
     await expect(page.getByRole("heading", { name: "設定", exact: true })).toBeVisible();
 
-    await page.getByRole("button", { name: "ホーム" }).click();
+    await page.getByRole("button", { name: "レポート" }).click();
     await expect(page.getByRole("heading", { name: "設定", exact: true })).not.toBeVisible();
   });
 });
@@ -19,7 +19,7 @@ test.describe("広い画面幅", () => {
 test.describe("モバイル幅", () => {
   test.use({ viewport: { width: 375, height: 800 } });
 
-  test("ハンバーガーメニューから設定画面とホームに遷移できる", async ({ page }) => {
+  test("ハンバーガーメニューから設定画面とレポート画面に遷移できる", async ({ page }) => {
     await page.goto("/");
 
     await page.getByRole("button", { name: "メニューを開く" }).click();
@@ -27,7 +27,7 @@ test.describe("モバイル幅", () => {
     await expect(page.getByRole("heading", { name: "設定", exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "メニューを開く" }).click();
-    await page.getByRole("button", { name: "ホーム" }).click();
+    await page.getByRole("button", { name: "レポート" }).click();
     await expect(page.getByRole("heading", { name: "設定", exact: true })).not.toBeVisible();
   });
 

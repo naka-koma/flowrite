@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openSettings } from "./helpers";
 
 test("ページが正しく表示される", async ({ page }) => {
   await page.goto("/");
@@ -32,7 +33,7 @@ test("広い画面幅ではサイドバーが常時表示される", async ({ pa
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
 
-  await expect(page.getByRole("button", { name: "ホーム" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "レポート" })).toBeVisible();
   await expect(page.getByRole("button", { name: "設定" })).toBeVisible();
 });
 
@@ -41,7 +42,7 @@ test("スマホ幅でも横スクロールが発生しない", async ({ page }) 
   await page.goto("/");
 
   await expect(page.getByRole("button", { name: "メニューを開く" })).toBeVisible();
-  await expect(page.locator(".recharts-pie")).toBeVisible();
+  await expect(page.locator(".recharts-pie").first()).toBeVisible();
 
   const { scrollWidth, clientWidth } = await page.evaluate(() => ({
     scrollWidth: document.documentElement.scrollWidth,
@@ -52,8 +53,9 @@ test("スマホ幅でも横スクロールが発生しない", async ({ page }) 
 
 test("各セクションの見出しとBodyの間に区切り線が入り、スタイルが統一されている", async ({ page }) => {
   await page.goto("/");
+  await openSettings(page);
 
-  const sectionHeadings = ["CSVアップロード", "サマリー", "トレンド", "AIアドバイス"];
+  const sectionHeadings = ["テーマ", "表示設定", "カテゴリ", "管理", "バージョン情報"];
 
   for (const name of sectionHeadings) {
     const heading = page.getByRole("heading", { name, exact: true });

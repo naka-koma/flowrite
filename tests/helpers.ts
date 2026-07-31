@@ -1,14 +1,24 @@
 import type { Locator, Page } from "@playwright/test";
 
-// ホーム画面の「期間」カード（AIアドバイス内の独立ピッカーと同じラベルを使うため、
+// レポート画面の「期間」カード（AIアドバイス内の独立ピッカーと同じラベルを使うため、
 // タブ・セレクタの問い合わせはこのスコープ内で行う）
 export function periodSelector(page: Page): Locator {
   return page.getByTestId("period-selector");
 }
 
-// ホーム画面の「期間」カードの単位（月/年/週）を切り替える
-export async function selectPeriodUnit(page: Page, unit: "month" | "year" | "week"): Promise<void> {
+// レポート画面の「期間」カードの単位（月/年/全期間）を切り替える
+export async function selectPeriodUnit(page: Page, unit: "month" | "year" | "all"): Promise<void> {
   await periodSelector(page).getByLabel("期間の単位").selectOption(unit);
+}
+
+// 広い画面幅ではサイドバーが常時表示され、ハンバーガーボタンは表示されない。
+// 画面幅に関わらずCSVアップロードのモーダルを開けるようにする
+export async function openUpload(page: Page): Promise<void> {
+  const menuButton = page.getByRole("button", { name: "メニューを開く" });
+  if (await menuButton.isVisible()) {
+    await menuButton.click();
+  }
+  await page.getByRole("button", { name: "CSVアップロード", exact: true }).click();
 }
 
 // 広い画面幅ではサイドバーが常時表示され、ハンバーガーボタンは表示されない。

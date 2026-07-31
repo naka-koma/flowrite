@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openAiScreen } from "./helpers";
 
 async function sendFreeText(page: import("@playwright/test").Page, text: string) {
   await page.getByLabel("AIへの返信").fill(text);
@@ -7,6 +8,7 @@ async function sendFreeText(page: import("@playwright/test").Page, text: string)
 
 test("短い対話では折りたたみトグルが表示されない", async ({ page }) => {
   await page.goto("/");
+  await openAiScreen(page);
   await page.getByRole("button", { name: "今月のざっくり振り返り" }).click();
   await expect(page.getByText("今月は先月より支出が増えていますね")).toBeVisible();
 
@@ -15,6 +17,7 @@ test("短い対話では折りたたみトグルが表示されない", async ({
 
 test("対話中に手動で過去のやり取りを折りたたみ・再表示できる", async ({ page }) => {
   await page.goto("/");
+  await openAiScreen(page);
   await page.getByRole("button", { name: "今月のざっくり振り返り" }).click();
   await page.getByRole("button", { name: "外食が増えたかも" }).click();
   await page.getByRole("button", { name: "来月は減らしたい" }).click();
@@ -40,6 +43,7 @@ test("対話中に手動で過去のやり取りを折りたたみ・再表示�
 
 test("長い履歴を復元した直後は自動で折りたたまれる", async ({ page }) => {
   await page.goto("/");
+  await openAiScreen(page);
   await page.getByRole("button", { name: "今月のざっくり振り返り" }).click();
   await page.getByRole("button", { name: "外食が増えたかも" }).click();
   await page.getByRole("button", { name: "来月は減らしたい" }).click();
@@ -52,6 +56,7 @@ test("長い履歴を復元した直後は自動で折りたたまれる", async
   await expect(page.getByTestId("chat-history-toggle")).toBeVisible();
 
   await page.reload();
+  await openAiScreen(page);
 
   // 復元直後は自動で折りたたまれ、最初のメッセージは見えない
   const advice = page.getByTestId("ai-advice");

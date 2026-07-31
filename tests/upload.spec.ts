@@ -2,9 +2,11 @@ import { test, expect } from "@playwright/test";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { openUpload } from "./helpers";
 
 test("CSVファイルを選択してアップロードすると結果が表示される", async ({ page }) => {
   await page.goto("/");
+  await openUpload(page);
 
   await page
     .getByLabel("CSVファイル")
@@ -13,7 +15,7 @@ test("CSVファイルを選択してアップロードすると結果が表示�
       mimeType: "text/csv",
       buffer: Buffer.from("計算対象,日付,内容\n1,2025/12/01,テスト\n"),
     });
-  await page.getByRole("button", { name: "アップロード" }).click();
+  await page.getByRole("button", { name: "アップロード", exact: true }).click();
 
   await expect(page.getByText("追加件数: 12")).toBeVisible();
   await expect(page.getByText("スキップ件数: 3")).toBeVisible();
@@ -36,6 +38,7 @@ function makeCsvDir(files: Record<string, string>): string {
 
 test("フォルダを選択すると中のCSVがまとめて読み込まれ、選択中の一覧が表示される", async ({ page }) => {
   await page.goto("/");
+  await openUpload(page);
 
   const dir = makeCsvDir({
     "収入・支出詳細_2026-02-01_2026-02-28.csv": CSV_CONTENT,
@@ -49,12 +52,13 @@ test("フォルダを選択すると中のCSVがまとめて読み込まれ、�
   // ファイル名順に並ぶ
   await expect(selected.getByRole("listitem").first()).toHaveText("収入・支出詳細_2026-01-01_2026-01-31.csv");
 
-  await page.getByRole("button", { name: "アップロード" }).click();
+  await page.getByRole("button", { name: "アップロード", exact: true }).click();
   await expect(page.getByText("追加件数: 36")).toBeVisible();
 });
 
 test("フォルダ内のCSV以外のファイルは除外される", async ({ page }) => {
   await page.goto("/");
+  await openUpload(page);
 
   const dir = makeCsvDir({
     "収入・支出詳細_2026-01-01_2026-01-31.csv": CSV_CONTENT,
@@ -70,6 +74,7 @@ test("フォルダ内のCSV以外のファイルは除外される", async ({ pa
 
 test("ドラッグ&ドロップでCSVを追加できる", async ({ page }) => {
   await page.goto("/");
+  await openUpload(page);
 
   const dataTransfer = await page.evaluateHandle(() => {
     const dt = new DataTransfer();
@@ -86,6 +91,7 @@ test("ドラッグ&ドロップでCSVを追加できる", async ({ page }) => {
 
 test("選択を追加すると累積し、クリアで空になる", async ({ page }) => {
   await page.goto("/");
+  await openUpload(page);
 
   await page.getByLabel("CSVファイル").setInputFiles([csv("a.csv")]);
   await expect(page.getByTestId("selected-csv-files").getByText("選択中: 1件")).toBeVisible();
@@ -100,17 +106,19 @@ test("選択を追加すると累積し、クリアで空になる", async ({ pa
 
   await page.getByRole("button", { name: "クリア" }).click();
   await expect(page.getByTestId("selected-csv-files")).not.toBeVisible();
-  await expect(page.getByRole("button", { name: "アップロード" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "アップロード", exact: true })).toBeDisabled();
 });
 
 test("カテゴリ・メモの上書きチェックボックスはデフォルトでオンになっている", async ({ page }) => {
   await page.goto("/");
+  await openUpload(page);
 
   await expect(page.getByLabel("カテゴリ・メモをCSVの内容で上書きする")).toBeChecked();
 });
 
 test("上書きチェックボックスをオフにしてもアップロードできる", async ({ page }) => {
   await page.goto("/");
+  await openUpload(page);
 
   await page.getByLabel("カテゴリ・メモをCSVの内容で上書きする").uncheck();
   await page
@@ -120,7 +128,7 @@ test("上書きチェックボックスをオフにしてもアップロード�
       mimeType: "text/csv",
       buffer: Buffer.from("計算対象,日付,内容\n1,2025/12/01,テスト\n"),
     });
-  await page.getByRole("button", { name: "アップロード" }).click();
+  await page.getByRole("button", { name: "アップロード", exact: true }).click();
 
   await expect(page.getByText("追加件数: 12")).toBeVisible();
   await expect(page.getByText("スキップ件数: 3")).toBeVisible();
@@ -128,6 +136,7 @@ test("上書きチェックボックスをオフにしてもアップロード�
 
 test("エラーレスポンス時にエラーメッセージが表示される", async ({ page }) => {
   await page.goto("/");
+  await openUpload(page);
 
   await page
     .getByLabel("CSVファイル")
@@ -136,13 +145,14 @@ test("エラーレスポンス時にエラーメッセージが表示される",
       mimeType: "text/csv",
       buffer: Buffer.from("INVALID"),
     });
-  await page.getByRole("button", { name: "アップロード" }).click();
+  await page.getByRole("button", { name: "アップロード", exact: true }).click();
 
   await expect(page.getByRole("alert")).toContainText("CSVの形式が正しくありません");
 });
 
 test("複数のCSVファイルを一括アップロードすると合計件数が表示される", async ({ page }) => {
   await page.goto("/");
+  await openUpload(page);
 
   await page.getByLabel("CSVファイル").setInputFiles([
     {
@@ -156,7 +166,7 @@ test("複数のCSVファイルを一括アップロードすると合計件数�
       buffer: Buffer.from("計算対象,日付,内容\n1,2025/12/01,テスト\n"),
     },
   ]);
-  await page.getByRole("button", { name: "アップロード" }).click();
+  await page.getByRole("button", { name: "アップロード", exact: true }).click();
 
   await expect(page.getByText("追加件数: 24")).toBeVisible();
   await expect(page.getByText("スキップ件数: 6")).toBeVisible();
@@ -166,6 +176,7 @@ test("複数のCSVファイルを一括アップロードすると合計件数�
 
 test("複数ファイルの一部でエラーが発生しても他のファイルの処理は継続する", async ({ page }) => {
   await page.goto("/");
+  await openUpload(page);
 
   await page.getByLabel("CSVファイル").setInputFiles([
     {
@@ -179,7 +190,7 @@ test("複数ファイルの一部でエラーが発生しても他のファイ�
       buffer: Buffer.from("INVALID"),
     },
   ]);
-  await page.getByRole("button", { name: "アップロード" }).click();
+  await page.getByRole("button", { name: "アップロード", exact: true }).click();
 
   // 成功したファイル分の集計は表示される
   await expect(page.getByText("追加件数: 12")).toBeVisible();

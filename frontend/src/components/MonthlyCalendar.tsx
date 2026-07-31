@@ -47,7 +47,7 @@ export function MonthlyCalendar({ year, month, hideAmounts }: MonthlyCalendarPro
             </p>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 text-center text-sm">
+          <div className="grid grid-cols-7 gap-1 text-center text-sm" data-testid="monthly-calendar-grid">
             {WEEKDAY_LABELS.map((label) => (
               <div key={label} className="py-1 font-medium text-base-content/70">
                 {label}

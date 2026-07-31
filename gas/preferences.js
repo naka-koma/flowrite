@@ -1,6 +1,6 @@
 // ブラウザのlocalStorageはSafari WebApp化した場合のITP等の影響で正しく動かないことがあるため、
-// テーマ・ホーム画面レイアウト・トレンド表示件数はUserProperties（Googleアカウント単位）に保存する
-const USER_PREFERENCE_KEYS = ["theme", "dashboardLayout", "trendVisibleCount"];
+// テーマ・トレンド表示件数はUserProperties（Googleアカウント単位）に保存する
+const USER_PREFERENCE_KEYS = ["theme", "trendVisibleCount"];
 
 function handleGetPreferences() {
   const props = PropertiesService.getUserProperties();

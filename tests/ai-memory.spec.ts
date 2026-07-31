@@ -3,6 +3,7 @@ import { openAiScreen, openTransactionList } from "./helpers";
 
 test("AIアドバイスで「覚えておく」を押すと、AIページのメモリに気づきが追加される", async ({ page }) => {
   await page.goto("/");
+  await openAiScreen(page);
 
   await page.getByRole("button", { name: "今月のざっくり振り返り" }).click();
   await expect(page.getByText("今月は先月より支出が増えていますね")).toBeVisible();
@@ -10,6 +11,9 @@ test("AIアドバイスで「覚えておく」を押すと、AIページのメ�
   await page.getByRole("button", { name: "覚えておく" }).click();
   await expect(page.getByText("記憶しました")).toBeVisible();
 
+  // AiAdviceとAiMemorySettingsは同一画面上に別々にマウントされており、メモリ追加は
+  // 相手のuseAiMemoriesの状態を自動更新しないため、再取得のためリロードして開き直す
+  await page.reload();
   await openAiScreen(page);
   const insightsSection = page.getByTestId("ai-memory-insights");
   await expect(insightsSection.getByText("今月は先月より支出が増えていますね", { exact: false })).toBeVisible();
@@ -17,11 +21,15 @@ test("AIアドバイスで「覚えておく」を押すと、AIページのメ�
 
 test("メモリを削除できる（2段階確認）", async ({ page }) => {
   await page.goto("/");
+  await openAiScreen(page);
 
   await page.getByRole("button", { name: "今月のざっくり振り返り" }).click();
   await page.getByRole("button", { name: "覚えておく" }).click();
   await expect(page.getByText("記憶しました")).toBeVisible();
 
+  // AiAdviceとAiMemorySettingsは同一画面上に別々にマウントされており、メモリ追加は
+  // 相手のuseAiMemoriesの状態を自動更新しないため、再取得のためリロードして開き直す
+  await page.reload();
   await openAiScreen(page);
   const insightsSection = page.getByTestId("ai-memory-insights");
   await expect(insightsSection.getByText("今月は先月より支出が増えていますね", { exact: false })).toBeVisible();
@@ -37,6 +45,7 @@ test("メモリを削除できる（2段階確認）", async ({ page }) => {
 
 test("メモリを整理すると、複数の気づきが1件にまとめられる", async ({ page }) => {
   await page.goto("/");
+  await openAiScreen(page);
 
   await page.getByRole("button", { name: "今月のざっくり振り返り" }).click();
   await expect(page.getByText("今月は先月より支出が増えていますね")).toBeVisible();
@@ -48,6 +57,9 @@ test("メモリを整理すると、複数の気づきが1件にまとめられ�
   await page.getByRole("button", { name: "覚えておく" }).click();
   await expect(page.getByText("記憶しました")).toHaveCount(2);
 
+  // AiAdviceとAiMemorySettingsは同一画面上に別々にマウントされており、メモリ追加は
+  // 相手のuseAiMemoriesの状態を自動更新しないため、再取得のためリロードして開き直す
+  await page.reload();
   await openAiScreen(page);
   const insightsSection = page.getByTestId("ai-memory-insights");
   await expect(insightsSection.getByRole("listitem")).toHaveCount(2);
@@ -61,11 +73,15 @@ test("メモリを整理すると、複数の気づきが1件にまとめられ�
 
 test("気づきが1件以下の場合は「整理する」ボタンが無効化される", async ({ page }) => {
   await page.goto("/");
+  await openAiScreen(page);
 
   await page.getByRole("button", { name: "今月のざっくり振り返り" }).click();
   await page.getByRole("button", { name: "覚えておく" }).click();
   await expect(page.getByText("記憶しました")).toBeVisible();
 
+  // AiAdviceとAiMemorySettingsは同一画面上に別々にマウントされており、メモリ追加は
+  // 相手のuseAiMemoriesの状態を自動更新しないため、再取得のためリロードして開き直す
+  await page.reload();
   await openAiScreen(page);
   const insightsSection = page.getByTestId("ai-memory-insights");
   await expect(insightsSection.getByRole("button", { name: "整理する" })).toBeDisabled();
