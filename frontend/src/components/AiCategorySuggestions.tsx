@@ -28,6 +28,11 @@ function categoryFilterKey(category: string, subcategory: string): string {
   return `${category} ${subcategory}`;
 }
 
+// 提案が現在の分類から変わっているかどうか
+function isSuggestionChanged(s: AiCategorySuggestion): boolean {
+  return s.suggestedCategory !== s.currentCategory || s.suggestedSubcategory !== s.currentSubcategory;
+}
+
 interface CategoryGroupCheckboxProps {
   category: string;
   checkedCount: number;
@@ -68,6 +73,7 @@ export function AiCategorySuggestions({
   addCategory,
 }: AiCategorySuggestionsProps) {
   const [scope, setScope] = useState<AiCategorySuggestionScope>("uncategorized");
+  const [showChangedOnly, setShowChangedOnly] = useState(false);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [memorizeIds, setMemorizeIds] = useState<Set<string>>(new Set());
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -81,6 +87,7 @@ export function AiCategorySuggestions({
   const [pendingNewCategoryConfirm, setPendingNewCategoryConfirm] = useState<AiCategorySuggestion[] | null>(null);
   const ai = useAiCategorySuggestions();
   const { addMemory } = useAiMemories();
+  const visibleSuggestions = showChangedOnly ? ai.suggestions.filter(isSuggestionChanged) : ai.suggestions;
 
   useEffect(() => {
     if (ai.status === "success") {
@@ -161,7 +168,7 @@ export function AiCategorySuggestions({
   };
 
   const toggleAll = (checked: boolean) => {
-    setCheckedIds(checked ? new Set(ai.suggestions.map((s) => s.id)) : new Set());
+    setCheckedIds(checked ? new Set(visibleSuggestions.map((s) => s.id)) : new Set());
     if (!checked) {
       setMemorizeIds(new Set());
     }
@@ -222,7 +229,8 @@ export function AiCategorySuggestions({
     }
   };
 
-  const allChecked = ai.suggestions.length > 0 && checkedIds.size === ai.suggestions.length;
+  const allChecked =
+    visibleSuggestions.length > 0 && visibleSuggestions.every((s) => checkedIds.has(s.id));
 
   return (
     <div data-testid="ai-category-suggestions" className="mb-4 rounded-box border border-base-300 p-4">
@@ -362,17 +370,29 @@ export function AiCategorySuggestions({
 
       {ai.status === "success" && ai.suggestions.length > 0 && (
         <>
-          <div className="mb-2 flex items-center justify-between">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                aria-label="すべて選択"
-                checked={allChecked}
-                onChange={(e) => toggleAll(e.target.checked)}
-                className="checkbox checkbox-sm"
-              />
-              すべて選択
-            </label>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  aria-label="すべて選択"
+                  checked={allChecked}
+                  onChange={(e) => toggleAll(e.target.checked)}
+                  className="checkbox checkbox-sm"
+                />
+                すべて選択
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  aria-label="変更ありのみ表示"
+                  checked={showChangedOnly}
+                  onChange={(e) => setShowChangedOnly(e.target.checked)}
+                  className="checkbox checkbox-sm"
+                />
+                変更ありのみ表示
+              </label>
+            </div>
             <button
               type="button"
               onClick={handleApply}
@@ -384,6 +404,9 @@ export function AiCategorySuggestions({
             </button>
           </div>
 
+          {visibleSuggestions.length === 0 ? (
+            <p className="text-base-content/70">現在の分類と異なる提案はありません</p>
+          ) : (
           <div className="overflow-x-auto">
             <table className="table table-sm">
               <thead>
@@ -400,45 +423,49 @@ export function AiCategorySuggestions({
                 </tr>
               </thead>
               <tbody>
-                {ai.suggestions.map((s) => (
-                  <tr key={s.id}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        aria-label={`${s.content}の提案を選択`}
-                        checked={checkedIds.has(s.id)}
-                        onChange={() => toggleChecked(s.id)}
-                        className="checkbox checkbox-sm"
-                      />
-                    </td>
-                    <td>{s.date}</td>
-                    <td>{s.content}</td>
-                    <td>{hideAmounts ? "***" : formatAmount(s.amount)}</td>
-                    <td>{s.institution}</td>
-                    <td>
-                      {s.currentCategory || "未分類"}
-                      {s.currentSubcategory ? ` / ${s.currentSubcategory}` : ""}
-                    </td>
-                    <td>
-                      {s.suggestedCategory} / {s.suggestedSubcategory}
-                      {s.isNewCategory && <span className="badge badge-warning badge-sm ml-2">未登録</span>}
-                    </td>
-                    <td className="text-sm text-base-content/70">{s.reason}</td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        aria-label={`${s.content}のパターンを記憶する`}
-                        checked={memorizeIds.has(s.id)}
-                        disabled={!checkedIds.has(s.id)}
-                        onChange={() => toggleMemorize(s.id)}
-                        className="checkbox checkbox-sm"
-                      />
-                    </td>
-                  </tr>
-                ))}
+                {visibleSuggestions.map((s) => {
+                  const changed = isSuggestionChanged(s);
+                  return (
+                    <tr key={s.id} className={changed ? "bg-warning/10" : ""}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          aria-label={`${s.content}の提案を選択`}
+                          checked={checkedIds.has(s.id)}
+                          onChange={() => toggleChecked(s.id)}
+                          className="checkbox checkbox-sm"
+                        />
+                      </td>
+                      <td>{s.date}</td>
+                      <td>{s.content}</td>
+                      <td>{hideAmounts ? "***" : formatAmount(s.amount)}</td>
+                      <td>{s.institution}</td>
+                      <td>
+                        {s.currentCategory || "未分類"}
+                        {s.currentSubcategory ? ` / ${s.currentSubcategory}` : ""}
+                      </td>
+                      <td className={changed ? "font-semibold" : ""}>
+                        {s.suggestedCategory} / {s.suggestedSubcategory}
+                        {s.isNewCategory && <span className="badge badge-warning badge-sm ml-2">未登録</span>}
+                      </td>
+                      <td className="text-sm text-base-content/70">{s.reason}</td>
+                      <td>
+                        <input
+                          type="checkbox"
+                          aria-label={`${s.content}のパターンを記憶する`}
+                          checked={memorizeIds.has(s.id)}
+                          disabled={!checkedIds.has(s.id)}
+                          onChange={() => toggleMemorize(s.id)}
+                          className="checkbox checkbox-sm"
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+          )}
 
           {pendingNewCategoryConfirm && (
             <div role="alert" className="alert alert-warning mt-2 flex-col items-start">

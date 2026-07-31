@@ -31,6 +31,37 @@ test("提案取得後はデフォルトで全件チェック済みになって�
   }
 });
 
+test("変更ありのみ表示をオンにすると、現在の分類と同じ提案が除外される", async ({ page }) => {
+  const panel = await openAiSuggestions(page);
+  await panel.getByRole("button", { name: "提案を取得" }).click();
+  await expect(panel.getByRole("columnheader", { name: "提案分類" })).toBeVisible();
+
+  const rowsBefore = await panel.locator("tbody tr").count();
+  await expect(panel.getByRole("row").filter({ hasText: "店舗2" })).toBeVisible();
+
+  await panel.getByLabel("変更ありのみ表示").check();
+
+  await expect(panel.locator("tbody tr")).toHaveCount(rowsBefore - 1);
+  await expect(panel.getByRole("row").filter({ hasText: "店舗2" })).not.toBeVisible();
+
+  await panel.getByLabel("変更ありのみ表示").uncheck();
+  await expect(panel.locator("tbody tr")).toHaveCount(rowsBefore);
+});
+
+test("現在の分類と異なる提案の行は強調表示される", async ({ page }) => {
+  const panel = await openAiSuggestions(page);
+  await panel.getByRole("button", { name: "提案を取得" }).click();
+  await expect(panel.getByRole("columnheader", { name: "提案分類" })).toBeVisible();
+
+  const changedRow = panel.getByRole("row").filter({ hasText: "店舗0" });
+  const unchangedRow = panel.getByRole("row").filter({ hasText: "店舗2" });
+
+  await expect(changedRow).toHaveClass(/bg-warning/);
+  await expect(unchangedRow).toBeVisible();
+  const unchangedClass = await unchangedRow.getAttribute("class");
+  expect(unchangedClass ?? "").not.toContain("bg-warning");
+});
+
 test("一部の提案だけ選択して適用すると、選択した行のみ分類が変わる", async ({ page }) => {
   const panel = await openAiSuggestions(page);
   await panel.getByRole("button", { name: "提案を取得" }).click();
@@ -98,6 +129,7 @@ test("大項目・中項目で絞り込むと該当ペアの提案のみ返る",
   await panel.getByRole("button", { name: /絞り込み条件/ }).click();
   await panel.locator("label").filter({ hasText: "映画" }).getByRole("checkbox").check();
   await panel.getByRole("button", { name: "提案を取得" }).click();
+  await expect(panel.getByRole("columnheader", { name: "提案分類" })).toBeVisible();
 
   const totalRows = await panel.locator("tbody tr").count();
   expect(totalRows).toBeGreaterThan(0);
@@ -115,6 +147,7 @@ test("大項目チェックボックスで配下の中項目を一括選択で�
   await expect(panel.locator("label").filter({ hasText: "書籍" }).getByRole("checkbox")).toBeChecked();
 
   await panel.getByRole("button", { name: "提案を取得" }).click();
+  await expect(panel.getByRole("columnheader", { name: "提案分類" })).toBeVisible();
 
   const totalRows = await panel.locator("tbody tr").count();
   expect(totalRows).toBeGreaterThan(0);
@@ -158,6 +191,7 @@ test("すべて選択/すべて解除ボタンで全大項目・中項目を一�
   await expect(panel.getByRole("checkbox", { name: "食費をすべて選択" })).toBeChecked();
 
   await panel.getByRole("button", { name: "提案を取得" }).click();
+  await expect(panel.getByRole("columnheader", { name: "提案分類" })).toBeVisible();
   const totalRows = await panel.locator("tbody tr").count();
   expect(totalRows).toBeGreaterThan(0);
 
@@ -172,6 +206,7 @@ test("金融機関キーワードで絞り込むと部分一致した行のみ�
   await panel.getByRole("button", { name: /絞り込み条件/ }).click();
   await panel.getByLabel("金融機関").fill("楽天カード");
   await panel.getByRole("button", { name: "提案を取得" }).click();
+  await expect(panel.getByRole("columnheader", { name: "提案分類" })).toBeVisible();
 
   const totalRows = await panel.locator("tbody tr").count();
   expect(totalRows).toBeGreaterThan(0);
@@ -186,6 +221,7 @@ test("支出額の範囲で絞り込むと範囲内の金額のみ返る", async
   await panel.getByLabel("支出額(下限)").fill("2000");
   await panel.getByLabel("支出額(上限)").fill("2200");
   await panel.getByRole("button", { name: "提案を取得" }).click();
+  await expect(panel.getByRole("columnheader", { name: "提案分類" })).toBeVisible();
 
   const amountCells = panel.locator("tbody tr td:nth-child(4)");
   const count = await amountCells.count();
