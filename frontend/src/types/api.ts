@@ -628,3 +628,27 @@ export interface GetBudgetVarianceResponse {
   entries: BudgetVarianceEntry[];
   error?: string;
 }
+
+// マネーフォワードME側での該当取引の特定に使う項目（date/content/amount/institution）と
+// 書き込む値（category/subcategory）のみを持つ
+export interface MfSyncDiffRow {
+  date: string;
+  content: string;
+  amount: number;
+  institution: string;
+  category: string;
+  subcategory: string;
+}
+
+export interface MfSyncDiffResponse {
+  success: boolean;
+  rows: MfSyncDiffRow[];
+  checkpoint: string;
+  error?: string;
+}
+
+export interface CompleteMfSyncResponse {
+  success: boolean;
+  syncedAt: string;
+  error?: string;
+}

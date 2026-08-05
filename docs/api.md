@@ -970,6 +970,44 @@ AIアドバイスのプロンプト・使用モデル・相談テーマ設定を
 
 ---
 
+## `handleGetMfSyncDiff()`
+
+マネーフォワードME側の家計簿への書き戻し対象（前回`handleCompleteMfSync`を実行した時点以降にカテゴリ等が変更された取引）を抽出する。実際のマネーフォワードME側への書き込み処理は行わない。引数なし。
+
+**戻り値**
+```js
+{
+  "success": true,
+  "rows": [
+    { "date": "2025/12/03", "content": "スーパー", "amount": -3000, "institution": "楽天カード", "category": "食費", "subcategory": "スーパー" }
+  ],
+  "checkpoint": "2025-12-01T00:00:00.000Z"
+}
+```
+
+**注意**
+- `rows`は`settings`シートの`lastMfSyncAt`（チェックポイント）より`updatedAt`が後の行のみを対象にする。`lastMfSyncAt`が未設定の場合は`raw_data`の全行が対象になる
+- `rows`は日付昇順で返す
+- 各行は、マネーフォワードME画面上で該当取引を特定するための項目（date/content/amount/institution）と、書き込む値（category/subcategory）のみを持つ。memoやid、isTransferなどその他の列は含まない
+- `checkpoint`は今回の抽出に使ったチェックポイントの値をそのまま返す（未設定の場合は空文字）
+
+---
+
+## `handleCompleteMfSync()`
+
+マネーフォワードME側への書き戻し作業が完了したことを記録する。`settings`シートの`lastMfSyncAt`を現在時刻で更新する。引数なし。
+
+**戻り値**
+```js
+{ "success": true, "syncedAt": "2025-12-10T09:00:00.000Z" }
+```
+
+**注意**
+- 呼び出し後は、次回の`handleGetMfSyncDiff`がこの時刻以降に`updatedAt`が更新された行のみを対象にする
+- `raw_data`自体は変更しない（チェックポイントの更新のみ）
+
+---
+
 ## `handleRunMigrations()`
 
 未適用のスプレッドシートマイグレーション（`gas/migration.js` の `MIGRATIONS` 配列）を順に実行する。引数なし。

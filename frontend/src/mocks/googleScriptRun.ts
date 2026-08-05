@@ -26,6 +26,7 @@ import type {
   Goals,
   SavingsTargetMode,
   UpdateGoalsParams,
+  MfSyncDiffRow,
   MonthlyCalendarParams,
   PreferenceKey,
   RenameCategoryParams,
@@ -64,6 +65,7 @@ interface MockScenario {
   aiChatError?: boolean;
   aiContinueChatError?: boolean;
   aiSaveSessionError?: boolean;
+  mfSyncEmpty?: boolean;
 }
 
 function getScenario(): MockScenario {
@@ -1304,6 +1306,74 @@ function mockHandleGetVersion() {
   return { version: "v-dev (mock)" };
 }
 
+// マネーフォワード書き戻し差分のモックデータ。実際のraw_dataと違い固定のupdatedAtを持たせ、
+// チェックポイント（sessionStorage）との比較だけで「前回記録以降の変更」を再現する
+interface MockMfSyncRow extends MfSyncDiffRow {
+  updatedAt: string;
+}
+
+const MOCK_MF_SYNC_ROWS: MockMfSyncRow[] = [
+  {
+    date: "2026/07/03",
+    content: "スーパー",
+    amount: -3000,
+    institution: "楽天カード",
+    category: "食費",
+    subcategory: "食料品",
+    updatedAt: "2026-07-10T00:00:00.000Z",
+  },
+  {
+    date: "2026/07/05",
+    content: "カフェ",
+    amount: -800,
+    institution: "楽天カード",
+    category: "食費",
+    subcategory: "外食",
+    updatedAt: "2026-07-12T00:00:00.000Z",
+  },
+  {
+    date: "2026/07/08",
+    content: "書店",
+    amount: -1500,
+    institution: "住信SBIネット銀行",
+    category: "娯楽",
+    subcategory: "書籍",
+    updatedAt: "2026-07-15T00:00:00.000Z",
+  },
+];
+
+const MOCK_MF_SYNC_CHECKPOINT_KEY = "__mock_mf_sync_checkpoint__";
+
+function loadMockMfSyncCheckpoint(): string {
+  return sessionStorage.getItem(MOCK_MF_SYNC_CHECKPOINT_KEY) ?? "";
+}
+
+function mockHandleGetMfSyncDiff() {
+  if (getScenario().mfSyncEmpty) {
+    return { success: true, rows: [], checkpoint: "" };
+  }
+
+  const checkpoint = loadMockMfSyncCheckpoint();
+  const rows = MOCK_MF_SYNC_ROWS.filter((r) => !checkpoint || r.updatedAt > checkpoint)
+    .map((r) => ({
+      date: r.date,
+      content: r.content,
+      amount: r.amount,
+      institution: r.institution,
+      category: r.category,
+      subcategory: r.subcategory,
+    }))
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+
+  return { success: true, rows, checkpoint };
+}
+
+function mockHandleCompleteMfSync() {
+  const syncedAt = new Date().toISOString();
+  sessionStorage.setItem(MOCK_MF_SYNC_CHECKPOINT_KEY, syncedAt);
+  return { success: true, syncedAt };
+}
+
 function callMockFunction(functionName: string, args: unknown[]): unknown {
   switch (functionName) {
     case "handleUpload":
@@ -1392,6 +1462,10 @@ function callMockFunction(functionName: string, args: unknown[]): unknown {
       return mockHandleGetDecisions(args[0] as GetDecisionsParams);
     case "handleGetVersion":
       return mockHandleGetVersion();
+    case "handleGetMfSyncDiff":
+      return mockHandleGetMfSyncDiff();
+    case "handleCompleteMfSync":
+      return mockHandleCompleteMfSync();
     default:
       throw new Error(`Unknown function: ${functionName}`);
   }
