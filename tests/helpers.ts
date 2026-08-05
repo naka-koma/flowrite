@@ -71,3 +71,13 @@ export async function openAiScreen(page: Page): Promise<void> {
   await page.getByRole("button", { name: "AI", exact: true }).click();
 }
 
+// 広い画面幅ではサイドバーが常時表示され、ハンバーガーボタンは表示されない。
+// 画面幅に関わらずMF書き戻し画面へ遷移できるようにする
+export async function openMfSync(page: Page): Promise<void> {
+  const menuButton = page.getByRole("button", { name: "メニューを開く" });
+  if (await menuButton.isVisible()) {
+    await menuButton.click();
+  }
+  await page.getByRole("button", { name: "MF書き戻し", exact: true }).click();
+}
+

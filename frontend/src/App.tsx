@@ -7,13 +7,14 @@ import { ReportScreen } from "./components/ReportScreen";
 import { TransactionScreen } from "./components/TransactionScreen";
 import { BudgetScreen } from "./components/BudgetScreen";
 import { AiScreen } from "./components/AiScreen";
+import { MfSyncScreen } from "./components/MfSyncScreen";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { THEMES, type Theme } from "./hooks/useTheme";
 import { useAmountVisibility } from "./hooks/useAmountVisibility";
 import { usePreferences } from "./hooks/usePreferences";
 
 export function App() {
-  const [screen, setScreen] = useState<"report" | "settings" | "transactions" | "budget" | "ai">("report");
+  const [screen, setScreen] = useState<"report" | "settings" | "transactions" | "budget" | "ai" | "mfSync">("report");
   const [menuOpen, setMenuOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const {
@@ -29,7 +30,7 @@ export function App() {
     return <LoadingScreen />;
   }
 
-  function navigate(next: "report" | "settings" | "transactions" | "budget" | "ai") {
+  function navigate(next: "report" | "settings" | "transactions" | "budget" | "ai" | "mfSync") {
     setScreen(next);
     setMenuOpen(false);
   }
@@ -108,6 +109,8 @@ export function App() {
             <BudgetScreen hideAmounts={hideAmounts} onBack={() => navigate("report")} />
           ) : screen === "ai" ? (
             <AiScreen hideAmounts={hideAmounts} onBack={() => navigate("report")} />
+          ) : screen === "mfSync" ? (
+            <MfSyncScreen hideAmounts={hideAmounts} onBack={() => navigate("report")} />
           ) : (
             <ReportScreen hideAmounts={hideAmounts} trendVisibleCount={trendVisibleCount} />
           )}
@@ -146,6 +149,11 @@ export function App() {
           <li>
             <button type="button" onClick={openUpload}>
               CSVアップロード
+            </button>
+          </li>
+          <li>
+            <button type="button" onClick={() => navigate("mfSync")}>
+              MF書き戻し
             </button>
           </li>
           <li>
