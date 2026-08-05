@@ -986,7 +986,8 @@ AIアドバイスのプロンプト・使用モデル・相談テーマ設定を
 ```
 
 **注意**
-- `rows`は`settings`シートの`lastMfSyncAt`（チェックポイント）より`updatedAt`が後の行のみを対象にする。`lastMfSyncAt`が未設定の場合は`raw_data`の全行が対象になる
+- `rows`は`categoryLocked`が`true`（AI分類提案の適用・取引一覧画面での手動編集のいずれかで実際にカテゴリが変更された行のみtrueになる）かつ、`settings`シートの`lastMfSyncAt`（チェックポイント）より`updatedAt`が後の行のみを対象にする
+  - `categoryLocked`の条件がないと、`lastMfSyncAt`未設定時（初回実行時）に一度も手動で分類していない取引までraw_data全件が対象になってしまう（CSV取込時にも`updatedAt`が`importedAt`と同時にセットされるため）
 - `rows`は日付昇順で返す
 - 各行は、マネーフォワードME画面上で該当取引を特定するための項目（date/content/amount/institution）と、書き込む値（category/subcategory）のみを持つ。memoやid、isTransferなどその他の列は含まない
 - `checkpoint`は今回の抽出に使ったチェックポイントの値をそのまま返す（未設定の場合は空文字）
