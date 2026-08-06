@@ -14,6 +14,7 @@ const MF_SYNC_CHECKPOINT_KEY = "lastMfSyncAt";
 // （CSV取込時にもupdatedAtがimportedAtと同時にセットされるため）
 function handleGetMfSyncDiff() {
   const checkpoint = getSettingsMap_()[MF_SYNC_CHECKPOINT_KEY] || "";
+  const checkpointTime = checkpoint ? new Date(checkpoint).getTime() : 0;
 
   const sheet = getRawDataSheet();
   const lastRow = sheet.getLastRow();
@@ -22,18 +23,27 @@ function handleGetMfSyncDiff() {
   }
 
   const data = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+  const tz = Session.getScriptTimeZone();
 
   const rows = data
-    .filter((row) => row[12] === true && (!checkpoint || row[11] > checkpoint)) // M列: categoryLocked, L列: updatedAt（ISO 8601文字列同士の比較で時系列順が保たれる）
+    // M列: categoryLocked, L列: updatedAt。
+    // 日付風の文字列を書き込んだセルはスプレッドシート側で実際のDate型に自動変換されることがあるため、
+    // row[11]をnew Date()で明示的に解釈してから比較する（文字列同士の単純比較には頼らない）
+    .filter((row) => row[12] === true && new Date(row[11]).getTime() > checkpointTime)
     .map((row) => ({
-      date: row[1],
-      content: row[2],
-      amount: row[3],
-      institution: row[4],
-      category: row[5],
-      subcategory: row[6],
+      // row[1]（日付）も同様にDate型化されている場合があるため、常に文字列へ整形して返す。
+      // google.script.runは配列内に複数のDateオブジェクトが混在すると応答のシリアライズに失敗し
+      // クライアント側でnullが返ってくることがあるため、返却する値は必ずプリミティブに揃える
+      date: Utilities.formatDate(new Date(row[1]), tz, "yyyy/MM/dd"),
+      content: String(row[2]),
+      amount: Number(row[3]),
+      institution: String(row[4]),
+      category: String(row[5]),
+      subcategory: String(row[6]),
     }))
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+
+  Logger.log(`handleGetMfSyncDiff: checkpoint=${checkpoint} rows=${rows.length}`);
 
   return { success: true, rows, checkpoint };
 }
