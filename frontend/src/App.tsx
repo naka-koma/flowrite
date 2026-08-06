@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import logoUrl from "./assets/favicon-32.png";
 import { UploadModal } from "./components/UploadModal";
 import { SettingsScreen } from "./components/SettingsScreen";
@@ -12,9 +13,11 @@ import { LoadingScreen } from "./components/LoadingScreen";
 import { THEMES, type Theme } from "./hooks/useTheme";
 import { useAmountVisibility } from "./hooks/useAmountVisibility";
 import { usePreferences } from "./hooks/usePreferences";
+import { useGoBack } from "./hooks/useGoBack";
 
 export function App() {
-  const [screen, setScreen] = useState<"report" | "settings" | "transactions" | "budget" | "ai" | "mfSync">("report");
+  const navigate = useNavigate();
+  const goBack = useGoBack("/");
   const [menuOpen, setMenuOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const {
@@ -30,8 +33,8 @@ export function App() {
     return <LoadingScreen />;
   }
 
-  function navigate(next: "report" | "settings" | "transactions" | "budget" | "ai" | "mfSync") {
-    setScreen(next);
+  function goTo(path: string) {
+    navigate(path);
     setMenuOpen(false);
   }
 
@@ -95,25 +98,24 @@ export function App() {
         </header>
 
         <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
-          {screen === "settings" ? (
-            <SettingsScreen
-              theme={theme}
-              onChangeTheme={setTheme}
-              trendVisibleCount={trendVisibleCount}
-              onChangeTrendVisibleCount={setTrendVisibleCount}
-              onBack={() => navigate("report")}
-            />
-          ) : screen === "transactions" ? (
-            <TransactionScreen hideAmounts={hideAmounts} onBack={() => navigate("report")} />
-          ) : screen === "budget" ? (
-            <BudgetScreen hideAmounts={hideAmounts} onBack={() => navigate("report")} />
-          ) : screen === "ai" ? (
-            <AiScreen hideAmounts={hideAmounts} onBack={() => navigate("report")} />
-          ) : screen === "mfSync" ? (
-            <MfSyncScreen hideAmounts={hideAmounts} onBack={() => navigate("report")} />
-          ) : (
-            <ReportScreen hideAmounts={hideAmounts} trendVisibleCount={trendVisibleCount} />
-          )}
+          <Routes>
+            <Route path="/settings" element={
+              <SettingsScreen
+                theme={theme}
+                onChangeTheme={setTheme}
+                trendVisibleCount={trendVisibleCount}
+                onChangeTrendVisibleCount={setTrendVisibleCount}
+                onBack={goBack}
+              />
+            } />
+            <Route path="/transactions" element={<TransactionScreen hideAmounts={hideAmounts} onBack={goBack} />} />
+            <Route path="/budget" element={<BudgetScreen hideAmounts={hideAmounts} onBack={goBack} />} />
+            <Route path="/ai" element={<AiScreen hideAmounts={hideAmounts} onBack={goBack} />} />
+            <Route path="/mf-sync" element={<MfSyncScreen hideAmounts={hideAmounts} onBack={goBack} />} />
+            <Route path="/" element={<ReportScreen hideAmounts={hideAmounts} trendVisibleCount={trendVisibleCount} />} />
+            {/* 未知のハッシュで直接読み込まれた場合はレポート画面にフォールバックする */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </div>
       </div>
 
@@ -127,22 +129,22 @@ export function App() {
             </div>
           </li>
           <li>
-            <button type="button" onClick={() => navigate("report")}>
+            <button type="button" onClick={() => goTo("/")}>
               レポート
             </button>
           </li>
           <li>
-            <button type="button" onClick={() => navigate("transactions")}>
+            <button type="button" onClick={() => goTo("/transactions")}>
               取引一覧
             </button>
           </li>
           <li>
-            <button type="button" onClick={() => navigate("budget")}>
+            <button type="button" onClick={() => goTo("/budget")}>
               予算
             </button>
           </li>
           <li>
-            <button type="button" onClick={() => navigate("ai")}>
+            <button type="button" onClick={() => goTo("/ai")}>
               AI
             </button>
           </li>
@@ -152,12 +154,12 @@ export function App() {
             </button>
           </li>
           <li>
-            <button type="button" onClick={() => navigate("mfSync")}>
+            <button type="button" onClick={() => goTo("/mf-sync")}>
               MF書き戻し
             </button>
           </li>
           <li>
-            <button type="button" onClick={() => navigate("settings")}>
+            <button type="button" onClick={() => goTo("/settings")}>
               設定
             </button>
           </li>
