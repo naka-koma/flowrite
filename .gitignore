@@ -31,3 +31,9 @@ test-results/
 # OS
 .DS_Store
 Thumbs.db
+
+# migration-poc（Issue #218）: 生成物は再生成可能なためコミットしない
+migration-poc/**/.wrangler/
+migration-poc/**/sample*.csv
+migration-poc/**/seed.sql
+migration-poc/**/.mf
