@@ -2,11 +2,13 @@
 
 [Issue #217](https://github.com/naka-koma/flowrite/issues/217) / [Issue #218](https://github.com/naka-koma/flowrite/issues/218) の検証結果。検証コードは `migration-poc/` 配下。
 
+**注記: DB・ホスティング先はまだ何も決定していない。** 以下の検証でCloudflare（Workers/D1）を使っている箇所があるが、これは「アカウント登録不要でローカル完結できて検証が手軽だった」という理由だけで選んでいる。検証したSQLは標準的なもの（`GROUP BY`/`CASE WHEN`等）で、PostgreSQLなど他のSQL DBでもほぼそのまま通用する内容である。#217の「特定サービスへのロックインを避ける」方針の通り、D1を採用候補として推す意図はない。
+
 ## 結論（サマリー）
 
 - **CPUバウンドな処理（CSVパース）は、行数が多いとWorkers無料枠のCPU時間制限(10ms/リクエスト)を超える。** ただしCSVパースをサーバーではなくブラウザ側で行う設計に変えれば、この制約自体を回避できる（Workersが受け取るのは構造化済みJSONになる）
 - Shift-JISデコードはworkerd（Cloudflare Workersのローカル実行ランタイム）上で問題なく動作する
-- D1（SQLite互換）で、既存の集計ロジック（`handleSummary`/`handleTrend`相当）は素直なSQLで書ける
+- SQL（検証はD1のSQLiteエミュレーションで実施。PostgreSQL等でも同様に書ける想定）で、既存の集計ロジック（`handleSummary`/`handleTrend`相当）は素直に書ける
 - 移行先はCloudflare一択ではなく、複数の観点で比較検討する必要がある（詳細は下記）
 
 ## 1. 移行先候補の比較
@@ -47,11 +49,11 @@
 
 workerd上で `new TextDecoder("shift_jis")` によるデコードが正しく行えることを確認した（`振込手数料`を含むテストバイト列で往復一致を確認）。ブラウザ（Chrome/Safari等）の`TextDecoder`もWHATWG Encoding Standardに準拠しており同様にShift-JISに対応しているため、**CSVパース自体をクライアントサイドに移しても、Shift-JISデコードで問題が出る可能性は低い**。
 
-## 4. D1 + SQLでの集計クエリの確認
+## 4. SQLでの集計クエリの確認
 
 検証コード: `migration-poc/sql-queries/`
 
-`raw_data`相当のテーブルをSQLite（D1ローカルエミュレーション）に作成し、5,000行のダミーデータを投入して、`handleSummary`/`handleTrend`相当のクエリを実行した。
+**DBは未決定。** ローカルで手軽に試せたためD1のSQLiteエミュレーションを使ったが、ここでの主眼は「D1が使えるか」ではなく「集計ロジックをSQLへ素直に移せるか」の確認である。`raw_data`相当のテーブルを作成し、5,000行のダミーデータを投入して、`handleSummary`/`handleTrend`相当のクエリを実行した。
 
 - カテゴリ別支出内訳（`query-monthly-category-breakdown.sql`）: 正常に動作
 - 月次合計（`query-monthly-totals.sql`）: 正常に動作
@@ -59,9 +61,9 @@ workerd上で `new TextDecoder("shift_jis")` によるデコードが正しく�
 
 いずれも標準的な`GROUP BY`/`CASE WHEN`で表現でき、GASの`getValues()`を全件読み込んでJS側でループ集計していた現行実装より、素直かつ高速になる見込み。
 
-### 副次的な発見: D1の1ステートメント長制限
+### 副次的な発見: SQLiteの1ステートメント長制限
 
-5,000行を1つの`INSERT`文にまとめようとしたところ `SQLITE_TOOBIG` エラーが発生した。**バルクインサートは200〜数百行単位のチャンクに分割する必要がある**（Phase 3のデータ移行スクリプト設計に反映する）。
+5,000行を1つの`INSERT`文にまとめようとしたところ `SQLITE_TOOBIG` エラーが発生した（SQLite固有の制限。PostgreSQL等を選んだ場合はこの制限自体は当てはまらないが、一括insertを分割すること自体は一般的に推奨されるプラクティス）。**DBの種類によらず、バルクインサートは200〜数百行単位のチャンクに分割する前提で設計する**（Phase 3のデータ移行スクリプト設計に反映する）。
 
 ## Phase 2以降への申し送り事項
 
