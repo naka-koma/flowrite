@@ -189,6 +189,7 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("flowrite管理")
     .addItem("マイグレーション実行", "runMigrationsFromMenu")
+    .addItem("全データエクスポート（DB移行用）", "exportAllDataFromMenu")
     .addToUi();
 }
 
