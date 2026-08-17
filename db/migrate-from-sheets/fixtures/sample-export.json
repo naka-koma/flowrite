@@ -1,0 +1,90 @@
+{
+  "rawData": [
+    {
+      "id": "mf-1",
+      "date": "2026/06/03",
+      "content": "スーパー",
+      "amount": -3000,
+      "institution": "楽天カード",
+      "category": "食費",
+      "subcategory": "スーパー",
+      "memo": "",
+      "isTransfer": 0,
+      "isTarget": 1,
+      "importedAt": "2026-06-03T00:00:00.000Z",
+      "updatedAt": "2026-06-04T00:00:00.000Z",
+      "categoryLocked": true
+    },
+    {
+      "id": "mf-2",
+      "date": "2026/06/10",
+      "content": "給与振込",
+      "amount": 300000,
+      "institution": "住信SBIネット銀行",
+      "category": "給与",
+      "subcategory": "給与",
+      "memo": "",
+      "isTransfer": 0,
+      "isTarget": 1,
+      "importedAt": "2026-06-10T00:00:00.000Z",
+      "updatedAt": "2026-06-10T00:00:00.000Z",
+      "categoryLocked": "FALSE"
+    },
+    {
+      "id": "mf-3",
+      "date": "2026-06-15",
+      "content": "口座振替",
+      "amount": -50000,
+      "institution": "楽天カード",
+      "category": "",
+      "subcategory": "",
+      "memo": "",
+      "isTransfer": 1,
+      "isTarget": 1,
+      "importedAt": "2026-06-15T00:00:00.000Z",
+      "updatedAt": "2026-06-15T00:00:00.000Z",
+      "categoryLocked": ""
+    }
+  ],
+  "settings": [{ "key": "model", "value": "gemini-3.5-flash" }],
+  "categories": [
+    { "category": "食費", "subcategory": "スーパー", "costType": "variable" },
+    { "category": "住居", "subcategory": "家賃", "costType": "fixed" }
+  ],
+  "budgets": [{ "category": "食費", "monthlyBudget": 30000 }],
+  "aiAttributes": [{ "id": "361b4181-b957-4230-97ae-f7d6d056a52e", "key": "ワークスタイル", "value": "在宅リモートワーク中心" }],
+  "aiMemory": [
+    {
+      "id": "1840e599-b4bf-4610-8fba-b756485fa972",
+      "type": "categoryPattern",
+      "content": "スターバックス",
+      "category": "食費",
+      "subcategory": "外食",
+      "createdAt": "2026-07-01T09:00:00.000Z"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "ded0bf7d-8484-4e66-bc9b-2051744c9094",
+      "changedAt": "2026-07-01T09:00:00.000Z",
+      "source": "ai",
+      "type": "budget",
+      "target": "食費",
+      "beforeAmount": 25000,
+      "afterAmount": 30000,
+      "reason": "外食の頻度が増えたため"
+    }
+  ],
+  "goals": [{ "key": "monthlyIncome", "value": "350000" }],
+  "aiChatSession": [
+    {
+      "updatedAt": "2026-07-10T12:00:00.000Z",
+      "messagesJson": "[]",
+      "historyJson": "[{\"role\":\"user\",\"parts\":[{\"text\":\"hello\"}]}]",
+      "quickRepliesJson": "[\"外食が増えたかも\"]",
+      "isFinal": false,
+      "todoActionsJson": "[]",
+      "categorySuggestionsJson": "[]"
+    }
+  ]
+}
