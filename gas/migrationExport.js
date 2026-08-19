@@ -4,17 +4,41 @@
 // スプレッドシートのカスタムメニュー「flowrite管理 > 全データエクスポート」から実行する。
 // Web画面（google.script.run）からは呼ばない想定のため、handleXxx命名にはしていない。
 
-// 1シート分をヘッダー行をキーにしたオブジェクト配列へ変換する
-function sheetToObjects_(sheet) {
+// シート名 -> [エクスポートJSONのキー名, 列の並び順（gas/spreadsheet.jsの
+// 各getXxxSheet()が実際に作成するヘッダーと同じ順序）]。
+// ヘッダー行のセル値をそのまま読む実装だと、ヘッダーが空・表記ゆれ等の場合に
+// 列を正しく特定できない（実際に categoryLocked 列のヘッダーが空になっており
+// 該当列が一切エクスポートされない事例があった）ため、列の並びを決め打ちして読む
+const SHEET_EXPORT_DEFS = [
+  [
+    "raw_data",
+    "rawData",
+    ["id", "date", "content", "amount", "institution", "category", "subcategory", "memo", "isTransfer", "isTarget", "importedAt", "updatedAt", "categoryLocked"],
+  ],
+  ["settings", "settings", ["key", "value"]],
+  ["categories", "categories", ["category", "subcategory", "costType"]],
+  ["budgets", "budgets", ["category", "monthlyBudget"]],
+  ["ai_attributes", "aiAttributes", ["id", "key", "value"]],
+  ["ai_memory", "aiMemory", ["id", "type", "content", "category", "subcategory", "createdAt"]],
+  ["decisions", "decisions", ["id", "changedAt", "source", "type", "target", "beforeAmount", "afterAmount", "reason"]],
+  ["goals", "goals", ["key", "value"]],
+  [
+    "ai_chat_session",
+    "aiChatSession",
+    ["updatedAt", "messagesJson", "historyJson", "quickRepliesJson", "isFinal", "todoActionsJson", "categorySuggestionsJson"],
+  ],
+];
+
+// 1シート分を、決め打ちの列定義に沿ってオブジェクト配列へ変換する（ヘッダー行は無視する）
+function sheetToObjects_(sheet, columns) {
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) return [];
 
-  const lastCol = sheet.getLastColumn();
-  const [header, ...rows] = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  const rows = sheet.getRange(2, 1, lastRow - 1, columns.length).getValues();
 
   return rows.map((row) => {
     const obj = {};
-    header.forEach((key, i) => {
+    columns.forEach((key, i) => {
       obj[key] = row[i];
     });
     return obj;
@@ -24,23 +48,10 @@ function sheetToObjects_(sheet) {
 function exportAllDataAsObject_() {
   const ss = getSpreadsheet();
 
-  // シート名 -> エクスポートJSONのキー名（db/schema.tsのテーブル名に合わせる）
-  const sheetKeyMap = {
-    raw_data: "rawData",
-    settings: "settings",
-    categories: "categories",
-    budgets: "budgets",
-    ai_attributes: "aiAttributes",
-    ai_memory: "aiMemory",
-    decisions: "decisions",
-    goals: "goals",
-    ai_chat_session: "aiChatSession",
-  };
-
   const result = {};
-  Object.keys(sheetKeyMap).forEach((sheetName) => {
+  SHEET_EXPORT_DEFS.forEach(([sheetName, jsonKey, columns]) => {
     const sheet = ss.getSheetByName(sheetName);
-    result[sheetKeyMap[sheetName]] = sheet ? sheetToObjects_(sheet) : [];
+    result[jsonKey] = sheet ? sheetToObjects_(sheet, columns) : [];
   });
 
   return result;
