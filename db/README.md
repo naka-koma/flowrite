@@ -8,6 +8,8 @@
 - `drizzle.config.ts` — drizzle-kitの設定
 - `migrations/` — `schema.ts`から生成したSQLマイグレーション（`npm run db:generate`で生成、手動編集しない）
 - `verify-local.mts` — ローカル検証スクリプト。PGlite（WASM版Postgres）にマイグレーションを適用し、代表的なクエリ（月次集計・`categoryLocked`絞り込み・jsonb・複合主キー制約）が正しく動くかを確認する。実DBへの接続は不要
+- `migrate-from-sheets/` — 既存スプレッドシートからのデータ移行スクリプト（[Issue #223](https://github.com/naka-koma/flowrite/issues/223)、詳細は同ディレクトリのREADME参照）
+- `tools/check-db.mts`（`npm run db:check`） — 実DBの中身を素早く確認するユーティリティ。スプレッドシートを目視確認できなくなる代わり
 
 ## 使い方
 
@@ -17,6 +19,9 @@ npm run db:generate
 
 # ローカルで動作確認する（PGlite、アカウント登録不要）
 npm run db:verify
+
+# 実DBの中身を確認する
+DATABASE_URL="postgres://..." npm run db:check
 ```
 
 ## 型の方針
