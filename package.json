@@ -16,7 +16,8 @@
     "db:verify": "tsx db/verify-local.mts",
     "db:migrate:verify": "tsx db/migrate-from-sheets/verify.mts",
     "db:migrate:run": "tsx db/migrate-from-sheets/run.mts",
-    "db:check": "tsx db/tools/check-db.mts"
+    "db:check": "tsx db/tools/check-db.mts",
+    "db:truncate": "tsx db/tools/truncate-all.mts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
